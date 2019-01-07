@@ -1,0 +1,15 @@
+View the device numbers...
+
+	as.character(DevicesFrame[["part_id"]])
+
+
+list the rtdf files in the current directory...
+	system("ls *rtdf",intern=TRUE)
+
+	or
+
+	dir(pattern="rtdf$")
+
+
+find index for a testname...
+	match("MY_TESTNAME",ParametersFrame[["testname"]],nomatch=0)

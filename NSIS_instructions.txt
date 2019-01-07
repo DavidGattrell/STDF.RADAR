@@ -1,0 +1,53 @@
+The goal
+========
+Use NSIS to create an install.exe file for RADAR for windows.
+
+
+Issues with Windows Vista and later, with the new sysadmin stuff.  
+Haven't been able to get around the wanting to run at 2 levels:
+- sysadmin level, all users, for installing R if it hasn't been installed
+- user level, for installing the RADAR folder, and desktop shortcut
+It worked fine in WindowsXP, but yet to figure out the 'correct' way now.
+
+so....
+
+for now, just check if R has been installed.  If not, error message and quit.
+
+
+Installing NSIS
+===============
+nsis-2.46-setup.exe from nsis.sourceforge.net
+
+...also need to install UAC.dll to /Program Files (x86)/NSIS/Plugins?
+...also need to install inetc.dll...
+
+...see http://nsis.sourceforge.net/How_can_I_install_a_plugin
+
+UAC.zip from nsis.sourceforge.net/UAC_plug-in (v0.2.4 20111123)
+Inetc.zip from nsis.sourceforge.net/Inetc_plug-in (v?? 20090804)
+
+	copy UAC.dll to .../NSIS/Plugins
+	copy UAC.nsh to .../NSIS/Include
+
+	copy inetc.dll to .../NSIS/Plugins
+	
+	
+How to use NSIS...
+==================
+Make an NSIS version of the .Rprofile with variable name substitution...
+
+
+click on .nsi file and right click to get menu option to compile NSIS script
+(I must have installed NSIS software to get this!)
+(Or if using wine, drag and drop .nsi file onto NSIS compiler window)
+
+the RADAR package folder must be in the same folder as the .nsi file.
+
+(please keep a copy of the .nsi file and these instructions in the RADAR
+ package folder also)
+
+
+----
+1oct2013
+
+

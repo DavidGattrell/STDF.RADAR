@@ -1,0 +1,835 @@
+===================================================================
+Version 0v6p8 -- 2Aug2014
+===================================================================
+
+Improvements and Fixes:
+=======================
+- ConvertStdf
+  * add auto_flex flag, to strip out channel numbers from flex
+    testnames to keep them common between sites
+  * remove trailing whitespace from wafer_id if it is present
+  * deal with flex TSR's where "<> comment..." is missing compared to
+    matching PTR
+  * add support for Advantest T2000 files
+    - MPR 2nd+ occurrences without testnames and without pinlists
+    - TSR/SBR/HBR site_num/head_num convention for "all_sites"
+  * add an enVision variant to DTR parsing
+  * fix parsing hiccups that occur at 100MByte boundaries 
+    (introduced in previous update to handle large stdf files)
+  * now tracks and gives a warning with the number of unknown records
+  * suppress warnings about LTX HFi gratuitous "PATTERNS" TSRs
+  * add workaround fix for 93K bug for corrupt FTR for failing test... having
+    a modulo 8 =0 number of pins resulted in an extra byte inserted in record.
+    
+- ConvertEDL
+  * resolve warnings with newer versions of R
+  * deal with Linux based EDL files that have Site lines before
+    Start Testflow lines
+  * add sublot_id support
+  * fix bug so start_t gets properly populated
+  * append pat_label to some functional testnames
+  * fix bug that occurred if all results for a test were undefined 
+  
+- SplitWafers
+  * now deals with multiple occurrences of the same waferid,
+    appends _run2, etc to filenames for repeat occurrences
+    
+- WaferMap
+  * now allows customization of parametric wafer map coloring
+  * for parametric maps, now gracefully handles if WaferMapGui tclvalue()
+    stripped off trailing whitespace from the testname
+  * fix bug where hbin pass/fail flag wasn't pulling info from HbinInfoFrame
+  *... maybe... not done yet...
+    save/reuse sbin/hbin color assignments so consistent between wafers
+    for the same product
+    
+- PlotTestvsTest
+  * now gracefully handles if PlotTestvsTestGui tclvalue()
+    stripped off trailing whitespace from the testnames
+
+- FilterByResult
+  * now gracefully handles if FilterByResultGui tclvalue() 
+    stripped off trailing whitespace from the testname
+    
+- TkRadar
+  * ... dir vs filename if browse for dir first.. behaviour changed
+
+- ConvertCsvGui  
+  * switch directory browser to start where the last Rtdf file was,
+    not the Rtdfs_dir directory
+  * update an internal variable name to be less confusing
+  	csv_in_dir --> csv_out_csv_dir... directory to write csv file to
+  * fix bug where it would occasionally get confused when creating
+    transposed csv files.  ("r2c" vs. "r2ct" directory/filename tracking)
+    
+    
+===================================================================
+Version 0v6p7 -- 8Dec2013
+===================================================================
+
+		
+New Scripts:
+=============
+- NSIS installer script for Windows users
+
+- FilterByIndices
+   This script replaces RemoveDevicesAtIndices.  It allows you to Keep or Remove
+   or Report the devices at the specified indices.  It also accepts a logic
+   indices array, in which case it recycles the array.  (ie  c(T,F,F,F) to select
+   every 4th device)
+   
+- FindFirstFails
+	This script will add (or overwrite) 2 fields in the DevicesFrame, 
+	
+- Fingerprint
+	This script will look at tests that have very good device vs. population resolution
+	to determine if the part_ids have been scrambled or the parts mixed up.  Useful
+	when sanitizing 1000 hour HTOL pulls, etc.  It can use either a list of tests to use,
+    or 2 reference RTDF data sets with matching parts to determine the list.
+
+- PlotVsRun
+   Variant of the control chart without the control chart focus.
+   Allows you to plot several datasets/files per test in a 
+   result vs. time/run order fashion
+
+- Rtdf2Deducer
+   Combines information from the ParametersFrame, DevicesFrame and ResultsMatrix
+   into a single Frame that Deducer can readily deal with.  
+   - filters testnames to have only Deducer acceptable characters
+   - appends testnames and units to Results column names
+   - Combines DevicesFrame and ResultsMatrix into a single Frame
+
+
+Improvements and Fixes:
+=======================
+- ConvertStdf
+  * Extract summary info from PRR records and add to .summary file
+  * add Hbin summary info to .summary file
+  * add Sbin per site info to .summary file
+  * add Sbin per site objects to RTDF
+  * Fix bug where it read U4 as I4, resolves warnings about readBin() doesn't
+    support U4
+  * Fix bug with 93k data, if auto_93k flag but no valid results for test
+  * Add default endian option to GUI, set to "little" for Flex stdf files
+    occasionally have DTR records before the FAR record. (tsk, tsk)
+  * Add DTR record parsing to extract "trace_id" (specific user case)
+    also switch readChar() to rawToChar() to handle 'nul' inside strings
+  * read Stdf file in 100MB chunks rather than the whole thing
+    should resolve windows 500MB limit, and the signed int 2.2GB limit
+    1.3Gb stdf ran 13.41 minutes with 100MB chunks
+    1.3Gb stdf ran 13.36 minutes with 1300MB chunk... so negligible impact!
+  * modify code to deal with occasional -1 for sbin_count from 93K 7.x.
+    The code now violates standard, but not issue if sbin_count < 4billion,
+    so should be ok for a while :)
+  * Add optional max_count that only extracts the data for the first n devices,
+    can speed things up on huge files with "too much information"
+  * Add ll_ge and ul_ge flag fields to ParametersFrame
+  * Add job_rev field to LotInfoFrame
+  * Fix bug where WafersFrame wasn't being reinitialized.  Impacted you if you 
+    processed a multiwafer stdf file followed by an stdf file with less wafers.
+  * Add auto_demangle flag. Occasionally stdf files get corrupted moving between 
+    Microsoft and other OS's, either by inserting 0x0d's before occurrences of
+    0x0a's or removing 0x0d's from 0x0d then 0x0a sequences.  Setting this flag
+    will enable the detection and attempted repair of cases where 0x0d's have 
+    been removed.  (ie.  if dos2unix was unintentionally run on the stdf file)
+  
+- FilterByResultGui
+    numeric value entry is now in gui, not in popup window. 
+  
+- LoadRtdf / SaveRtdf
+	Add support for Sbin per-site objects
+	    
+- PlotRtdf
+	Add option for 2-sided robust statistics
+
+- ConvertCsv / Gui
+  * add default variable (also to .Rprofile) to set default radiobutton
+    to either rows=tests or cols=tests
+  * fix bug that occurred in rtdf->csv with cols=tests and multiple test
+    conditions where conditions contained unusual characters like []:;,
+  * add option to put start_t and finish_t from the LotInfoFrame portion
+    in ascii rather than posix time
+  * add option to include ul_eq_pass/ll_eq_pass fields in .csv file (aka ll_ge
+    and ul_ge fields in ParametersFrame in rtdf)
+  * add job_rev field to LotInfoFrame section
+  * add auto_open flag, so ideally your default spreadsheet opens up once the
+    conversion has finished.
+    
+- SplitConditions
+  * Updated to support ConvertStdf additional DevicesFrame fields of
+    "trace_id" and "device_id"
+    
+- PlotTestvsTest
+  * sets x,y scales based on parts that have both valid x and valid y data
+    makes it a bit more immune to bad data points
+  * add option to explicitly set x/y min/max plot limits
+        	
+- TkRadarDefaultsGui
+  * add "delete" option to Settings File popup
+  * add ConvertCsv default variables
+  
+- MergeRtdf
+  * add support for ll_ge and ul_ge fields of ParametersFrame
+  * more robust merging of LotInfoFrame
+  * add support for WafersFrame, wafer_id when merging
+  
+  
+===================================================================
+Version 0v6p6 -- 3April2012
+===================================================================
+
+New Scripts:
+=============
+- ConvertEagleCSV.R
+	Add support for Eagle ETS-500 ascii csv .log datalog format
+	* add support for duplicate testnames by optionally appending
+	  testnumbers, similar to ConvertStdf.R
+	* generate .summary from .log, similar to ConvertStdf.R
+
+- Convert9470CSV.R
+	Add support for csv format generated by HP9472 testers
+
+- ConvertETS.R
+	Add support for Eagle ETS-300 ascii datalog format
+
+- ConvertKDF.R
+	Add support for Keithley tester's ascii datalog format
+	
+- RemoveAtXY.R
+	93K occasionally adds bogus die at X=-1,y=-1 in data files...
+	This script just removes them so wafermaps come out ok.
+
+
+Improvements and Fixes:
+=======================
+- TkRadar.R
+	for Vista/Windows7, directory browser now opens in intended directory,
+	not top level "Computer" folder
+
+- MergeRtdf.R
+	fixed bug with row.names in merged DevicesFrame that would
+	stop you from easily viewing the DevicesFrame.
+
+- PlotRtdf.R and Gui
+	add option to just have superimposed histograms rather than
+	individual histograms + superimposed histogram
+
+	add option to have normal probability plots rather than histograms
+
+	add option to create plots in .png files per test rather than single .pdf
+
+	split checkboxes into 2 columns instead of one.  This makes the
+	window not quite as tall, so it works better on laptops.
+
+- AsciiWaferMap.R
+	fixed bug that caused script to crash if wafer was less
+	than 5 die wide
+
+- ConvertStdf.R
+	On LTX/Cx modified so it reports the TSR's for the first TSR site it
+	encounters, since, at least in single site, there isn't an overall
+	summary TSR record.   This probably breaks LTX/Cx multi-site, but no
+	examples to work from.
+
+	Add explicit support for Eagle:
+	- Tweak Duplicate_testnames to work with Eagle STDF files, since only
+	  first PTR has testname, rest just have testnum.
+	- Remove first device if it is bogus (just PTR's with testnames, 
+	  silly data
+
+	Add ability to generate TestFlagMatrix as well as ResultsMatrix.  
+	TestFlagMatrix contains pass/fail flag information on a per test
+	basis.  0=pass, 1=pass alternate limits, 2=fail, 4=invalid, NaN=
+	test was not run.
+
+	fix typo in ConvertStdfGui window... do_conditions
+
+	For 93000, use TSR's if site=0 for all sites summary.  (STDF standard
+	is site=255 for all sites)
+
+- ConvertEDL.R
+	now pull Wafer ID from EDL file if it is present.
+	better tolerate applicat's that put <cr> in lotid strings, etc.
+
+- ConvertHP9400 renamed to ConvertHP9490
+	HP9470's are completely different systems than HP9490's, so this
+	is to resolve that confusion.  NOTE HP9490 ascii format should
+	be similar to HP94000 ascii format.
+
+- TkRadarDefaultsGui.R
+	add support for ConvertEagleCSVGui default settings
+
+
+===================================================================
+Version 0v6p5 -- 11Dec10
+===================================================================
+
+
+New Features:
+=============
+- SplitBySubstr.R
+	This script provides an alternate method of dealing with test conditions
+	by encoding them in the testnames separated by underscores.
+
+- ConvertFrugal.R
+	Add support for the Frugal tester's ascii datalog format
+
+- ConvertHP9400.R
+	Add support for HP9400 tester's ascii datalog format
+
+- TkRadar.R
+	Added button to bring up PDF documentation
+
+
+Improvements and Fixes:
+=======================
+- PlotRtdfGui.R, WaferMapGui.R ControlChartGui.R
+	scripts that generate pdf file outputs can now automatically
+	open the PDF file in your default PDF viewer when done
+
+- AsciiWaferMap.R and Gui.R
+	now has option to do map of bin values, rather than just 1's and x's.  This
+	enables multiple variant assembly... (ie assemble all bin 1's into one 
+	sublot, all bin 7's into a second sublot)
+	also added a terse mode so only some of the bins are shown, the rest
+	stay as x's.
+
+	added option which tries to determine which untested die coordinates are 
+	on the wafer and use the "-" character instead of the "." character
+	for these die.  (makes the alignment for some pick'n'place machines smoother)
+
+	also fixed bug where it was grabbing hardbin pass/fail info from softbin
+	frame instead of hardbin frame
+
+- ConvertCsvGui.R
+	fixed bug where it got confused about input directory when
+	doing Csv-to-Rtdf and the Csv directory was the default, but
+	the Rtdf one was not.
+
+- ConvertCsv.R
+	now properly handles units if they are "NA"
+
+	now handles bad or missing finish_t value in LotInfoFrame
+
+	now force some CSV fields to as.numeric when reading in to avoid
+	rude crashes on occasional bad data
+
+- ConvertParametersGui.R
+	fixed bug wher it was using Rtdf_name, but not the associated Rtdf_dir
+
+- ConvertStdf.R
+	fixed bug where conversion broke if file had only one device
+
+	now tolerates files that have only PIR/PRR records, allowing wafer maps
+	to be generated
+
+	if MPR had no rtn_indx, bug introduced in release 0v6p4, now works again
+
+	strips off "< No Name >" that gets gratuitously added to testnames
+	in LTX R14.4.1 and possibly other releases.
+
+	added option for LTX/enVision files where everything after "/" can be stripped
+	off the testnames
+	
+- ConvertEDL.R
+	fixed bug where conversion broke if file had only one device
+
+	now doesn't choke if functional patterns have per pin pass information
+	turned on.  (which should really be turned off, but if it is on, you still
+	want to be able to convert the file)
+	
+	now supports multisite EDL files
+
+- ConvertJ9.R, ConvertA5xx.R
+	fixed bug where conversion broke if file had only one device
+
+- ConvertStdfGui.R
+	fixed bug where using Output_dir instead of Rtdfs_dir
+
+	now recognizes .std as well as .stdf as an extension that can be 
+	replaced with .rtdf, previously would create xxxxx.std.rtdf files
+
+- SplitConditions.R
+	forces casting to numeric of conditions vectors.  sometimes it would 
+	give an error when list of numeric
+
+- RtdfTransform.R
+	added log transform options -1 and -2 for inverse 10*log10 and 20*log10
+
+- WaferMap.R, WaferMapGui.R
+	added option to print "NOTCH" on the wafer maps
+
+	adjusted 2nd multi-pass bin green colour... on some monitors/
+	graphics cards, the colour isn't that different from the 1st
+	colour.
+
+	parametric maps for all tests now more tolerant of occasional test
+	with junk data, or with files with bad sbin or hbin data
+
+- SplitBySubstrGui.R
+	input browse button went to wrong directory
+
+- SplitBySubstr.R
+	originally required substring to be surrounded by "_" or else
+	be at end of testname.  Now doesn't require an "_" after it,
+	just something that isn't alphanumeric [0-9a-zA-Z]
+
+- TkRadar.R and TkRadarDefaultsGui.R
+	updated to reflect above additions and changes
+
+- xxxxGui.R
+	now check to see if Vista or Vista with lipstick (aka Windows7),
+	and reverse order of browse file type list since these interpret
+	the list backwards compared to Linux, Windows XP, Windows 2000, Mac, etc...
+
+- ConvertParameters.R
+	now tolerates units of "NA"
+
+- PlotRtdf.R and PlotRtdfGui.R
+	add options to have a superimposed histogram as well as individual ones
+
+	add option to plot to widest of either limits or values
+
+	autoscale flag can now be turned off
+
+- TkRadarDefaultsGui.R
+	added variables for...
+	directories: frugal and hp9400
+
+	auto open pdf files for various scripts that generate pdf files
+
+	new options added to asciiwafermap, plotrtdf, wafermap
+
+===================================================================
+Version 0v6p4 -- 21Jan10
+===================================================================
+
+New Features:
+=============
+- AsciiWaferMap.R
+	Generates an ascii version of a wafermap from an .rtdf file
+	that is acceptable by most assembly houses.
+
+
+Improvements and Fixes:
+=======================
+- Various .R
+	exists() changed to exists(...,inherits=FALSE) to keep variable
+	search to within the particular scripts namesspace
+
+- Various GUI.R
+	originally were all sharing the pdf_name variable, now each
+	window has its own local pdf_name variable.
+
+- ConvertStdf.R
+	Fix bug where ResultsMatrix ended up being a vector instead of  
+	a matrix if the stdf file only contained one device run.  
+	
+	Now tolerates if MPR record has more results than pins
+
+	Now supports MPR records where only the first occurence has
+	limits and pin information
+
+	Now has option to support duplicate testnames 
+
+	Now has option to not ignore MPR records with invalid pass/fail flags
+	(some Credence programs)
+
+- MergeRtdf.R & MergeRtdfGui.R (& .Rprofile & TkRadarDefaultsGui.R)
+	added support to enable/disable appending extra tests if these  
+	tests don't exist in the first file but do in any of the other
+	ones to be merged.
+
+	Drastically improve speed if merged files contain a lot of devices
+
+	Now also merges Sbin and Hbin InfoFrames rather than just 
+	using the Frame from the first file.
+
+- ConvertCsv.R
+	Fixed bug where it didn't create a proper csv file if the
+	rtdf file was a "merged" one that had multiple LotInfoFrame
+	rows.
+
+	Now tolerates scaler = NA
+
+- ConvertCsvGui.R
+	Fixed bug introduced in previous release that broke the output
+	file browse button behaviour.
+
+	Now has separate rtdf in and out directory fields
+
+- TkRadar.R
+	starting directory for directory browsing now behaves
+	as intended.
+
+- WaferMap.R
+	now uses SbinInfoFrame or HbinInfoFrame pass/fail bin type 
+	information if available when determining pass status
+	of bins if pass bins are not explicitly set.  Previously,
+	it just assumed bin 1 for hbins, or sbins that corresponded
+	to hbin=1.
+
+	now will generate parametric wafer maps for all tests if parameter field
+	is empty
+
+- ConvertEDL.R
+	added support for yet another test method format variant
+	pinname PASSED [value1 units .. value2 units]
+	
+- ShrinkRetests.R
+	can now optionally use x_coord and y_coord rather than
+	part_id to determine if the device is a retest.
+
+- PlotTestVsTest.R & PlotTestVsTestGui.R
+	add option to send output to .png file 
+
+- TkRadarDefaultsGui.R
+	add "clear" button to subdirectories in Directories tab
+
+- All xxxGui.R
+	- if generating RTDF files, now outputs to Rtdfs_dir, not Output_dir
+	- explicitly sets directory rather than assuming in correct directory
+	- use paste(tclObj()) instead of as.character(tclObj()), now handles
+	  empty strings, strings with spaces, etc properly
+	- TkRadar.log file will consistently be appended to in the same directory
+	  the script is writing its other output to.
+
+Retired:
+========
+removed JustBin1s - This is the default settings for FilterByBinning
+	which does this and more.
+
+===================================================================
+Version 0v6p3b -- 2Nov09
+===================================================================
+
+Improvements and Fixes:
+=======================
+- MergeRtdfGui.R
+	updated code for multiple file selection hadn't fully
+	propagated to this function.
+
+
+
+===================================================================
+Version 0v6p3 -- 1Nov09
+===================================================================
+
+New Features:
+=============
+- Documentation
+	
+- ReplaceTestnames.R
+	Primarily for J9 files, will use reference .rtdf file to change
+	testnames based on matching test numbers.  Generate one rtdf 
+	file from the ascii datalog which has intact testnames, and
+	then when processing stdf files for that j9 program, use this
+	reference .rtdf to correctly set the testnames since the j9
+	stdf files do not contain proper testnames.
+
+- ControlCharts.R
+	Generates control charts in .pdf format from an .rtdf file
+
+- TkRadar.log
+	TkRadar commands are now logged to a text file with timestamps,
+	with the option to turn off this logging.
+
+- No_Vlo_Vhi.R
+	semi-custom script for stripping off _VHI and _VLO from end of
+	testnames.  Useful example code for doing similar things.
+
+- Conditions - ConvertStdf, ConvertCsv, SplitConditions 
+	ConvertStdf now can treat parametric tests that have testnames
+	beginning with "CONDITION=" as conditions rather than tests.
+	ConvertCsv has been updated to support arbitrarily defined
+	conditions, and SplitConditions.R has been added that will
+	split an RTDF file into multiple files based on conditions.
+
+- TkDefaultsGui.R
+	allows you to load and save directories and default settings in 
+	settings files so that you can quickly and easily switch between 
+	different products
+
+
+Improvements and Fixes:
+=======================
+- PlotTestvsTest
+	tidied up some tk and environment variable behaviours
+
+- RemoveDevicesAtIndices
+	made "Indices Entry" parser a little more lenient, numbers
+	can be separated by spaces, commas or both
+
+- RemoveDevicesAtIndicesGui
+	removed extraneous line in code that caused error message
+	and stopped the window from 'RUN & QUIT'ing properly
+
+- FilterByResultsGui
+	fixed bug where it didn't update the default rtdf filename
+	after running, but instead printed an error message in 
+	the R console
+
+- WaferMap
+	* added hbin support as well as existing sbin and parameter options
+	* added multiple pass bin support
+	* increased color binning to 9 pass and 9 fail bins (was 1 and 6)
+	* now handles LotInfoFrame of length>1 
+	* auto shrinks font of Lot/Yield line if it gets too long for page
+
+- WaferMapGui
+	* added some defaults to .Rprofile for per user customization
+	* added output_dir field to window so it is now more consistent
+	  with the other windows
+
+- MergeRtdfGui
+	* fix typo that prevented GUI from actually sending the
+	  MergeRtdf command to the console
+	* added in_file directory browser
+	* file browsing should work as expected now
+
+- ConvertStdf
+	filter out <CR>s from lot_id, sublot_id and wafer_id if they
+	exist.  (an occasional 93K'ism)
+
+- ConvertStdfGui
+	* added some defaults to .Rprofile for per user customization
+	* stdf_browser now consistently starts browsing from the correct
+	  directory
+
+- PlotRtdfGui
+	added some defaults to .Rprofile for per user customization
+
+- .Rprofile
+	added quite a few more default variables to this file to
+	allow more user customization.
+
+- removed obsoleted functions from the package
+	FindDevices.R 
+	RemoveDevices.R
+	RemoveResults.R
+	FilterDevices.R
+
+- RtdfTransformGui, ReplaceTestnamesGui, FilterByResultGui, and
+	FilterbyBinningGui
+	out_file browsing was using "Open" instead of "Save" browser.
+	so you could only select existing names via the browser
+
+- ConvertJ9
+	* append testnumber to testname since testnames aren't always
+	  unique otherwise.
+	* now properly initializes LotInfoFrame for files where
+	  the header is missing
+	* should run about 20% faster now
+
+- ConvertXXXXXGui
+	various convert windows and the ExpandMPRsGui too have 
+	been modified to allow you to select multiple files at 
+	once.  Also they no longer clobber their input directories
+	on opening or resetting defaults.
+
+	ConvertStdfGui
+	ConvertA5xxGui
+	ConvertEDLGui
+	ConvertJ9Gui
+	ExpandMPRsGui
+	ConvertCsvGui
+	MergeRtdfGui
+
+- ConvertEDL
+	* now handles if testnumbers aren't turned on
+	* now handles Pin Results where: [pinname] PASSED P = result
+	* now recognized parametic tests which don't have Pin Results
+	* now properly initializes LotInfoFrame for files where
+	  the header is missing
+	* should run about 33% faster now
+
+- PlotRtdf
+	only plotted tests found in the first RTDF file.  Will now 
+	plot all tests found in any of the RTDF files unless a
+	parameters file is specified.
+
+- directory browser
+	called by various windows, now uses choose.dir if in 
+	windows instead of tkchooseDirectory.  tkchooseDirectory
+	in windows doesn't support resizing (but works ok in linux). 
+	(tcltk v8.5)
+
+- ConvertA5xx
+	* now properly initializes LotInfoFrame for files where
+	  the header is missing
+	* should run about 10% faster now
+
+
+===================================================================
+Version 0v6p2 -- 21Jun09
+===================================================================
+
+New Features:
+=============
+- FilterByBinning.R
+	A more generic version of JustBin1s, that allow you to 
+	specify one or more bins.
+
+- ConvertCsv.R
+	Dumps the 4 main objects of the rtdf file into a single CSV
+	file for viewing and modifying in a spreadsheet.  It can
+	also read in a CSV file in that format and generate the
+	respective RTDF file.
+
+- RtdfTransform.R
+	In its most basic use, it allows you to translate test names/
+	numbers for comparing similar data from different test 
+	systems by way of a CSV formatted command file.  It also allows 
+	you to create new rtdf files with tests that are transforms of 
+	tests and data of an existing rtdf file.
+	ie.  create a test R_PULLUP from an IIL test, or convert 
+	voltage to dBm
+
+- TkRadar.R
+	Add Gui interfaces for the above new commands.  Also, window
+	was getting a bit long, so change some of the buttons to 
+	detachable menus ("tearoff")
+
+- .Rprofile
+	add call to TkRadar(), so it starts automatically
+
+- Radar.R
+	add the above 3 new scripts to Radar package
+
+
+Improvements and Fixes:
+=========================
+- TkRadar
+	When adding ConvertA5xxGui to TkRadar in 0v6p1, inadvertently removed 
+	sourcing of ConvertEDLGui.R...  put missing line back in
+
+- WaferMap
+	forgot to add updated version to 0v6p1 package... does
+	a better job of ignoring bad coordinates or bin name info
+	rather than crashing.
+
+- ConvertEDL.R
+	now works with wafer sort EDL files too.
+
+- ConvertStdf.R
+	- for J9 generated files which don't seem to have proper testnames,
+	  build names from function name + test number so that they are
+	  unique
+	- properly initialize testnumbers array each run, fixes bug
+	  when running multiple times in a session on files that
+	  don't have testnames in the PTR/FTR/MPRs
+	- suppress warning messages for a535 files where SBR pass/fail
+	  flag is empty rather than "p" or "f"
+	- added code to support STDF v3.. but have no example files to
+	  verify debug, so it probably doesn't work.
+
+- FilterByResultGui.R, MergeRtdfGui.R,
+	now updates default rtdf file name to newly created file,
+	similar to other rtdf generating windows	
+
+
+===================================================================
+Version 0v6p1 -- 12Mar09
+===================================================================
+
+New Features:
+=============
+- ConvertA5xx - for when you have the A500 or Catalyst .data file, but
+	not the .stdf file.  This will import the data from the .data
+	file
+
+
+
+Improvements and Fixes:
+=========================
+- ConvertStdf 
+	- would choke if gzip'ed compression was better than 20x,
+	  backed off error checking to 30x.
+	- SbinInfoFrame, HbinInfoFrame, summary file weren't properly
+	  cleared, so would sometimes be wrong if doing multiple
+	  ConvertStdf runs in same session.
+	
+- PlotRtdfGui 
+	- fixed bug with browse vs. empty output pdf file name
+	- added the add_normal_curve default to ones that can be
+	  personalized in the .Rprofile
+
+- PlotRtdf 
+	- increased error checking for when the do_guardbands or
+	  do_xy_plots flags are set, but there is only a single
+	  data set.  Now prints a warning and turns off option
+	  rather than cryptic internal message and crashing.
+
+
+===================================================================
+Version 0V6 -- 25Feb09
+===================================================================
+
+New Features:
+=============
+- cleaned up R workspace, putting all the RADAR
+	local variables and functions into hidden
+	environments, resolving variable contention
+	issues, adding top level RADAR scripts to
+	commands search path
+
+- added SaveRtdf and LoadRtdf to TkRadar to allow easier
+	manual edits of datasets
+
+- added DevicesFrame field for multisite, added SplitSites
+	function to separate data based on site.
+
+- added support for per-user setting of some of the
+	default values in PlotRtdf such as:
+	* min_plots_per_page
+	* use_OOCalc_csv
+	* use_csv_formulas
+
+- added ExpandMPRs, converts multipin MPR records into a series
+  of PTR records and outputs in STDF format.  For those people
+  who insist on using dataPOWER with 93K/HPUX stdf files.
+
+- added ConvertEDL for 93K/HPUX programs that have >128 tests in
+  a test method.  The stdf files only contain the first 128 tests
+  per test method.  (93K/Linux versions should be ok).  EDL is the
+  ascii output from the EDF binary file.
+
+- added ConvertJ9 for J971 ascii datalogs.  Not a fully featured
+  conversion, but good enough for what was needed at the time.
+
+
+
+Improvements and Fixes:
+=======================
+- ConvertStdf 
+	* now runs significantly faster for files with
+	  many tests per device (>2K tests).
+	* for MPR records with no pinlist, generates place
+	  holder names no_pin1, no_pin2, etc...
+	* now properly supports interleaved multisite data. 
+
+- FilterByResult now works properly when filtering by
+  device (did the opposite before!)
+
+- JustBin1s now writes all the optional rtdf objects too if present in 
+  original file
+
+- PlotRtdf now gracefully reduces font size when testnames are so
+  long they would overlap limits
+
+- PlotTestvsTest now has flag to print "part_id" field beside each point in 
+  plot
+
+- SplitWafers now passes on TSRFrame
+
+- TkRadar
+	* setting default output directory should 
+	  work more consistently now
+	* ConvertStdf - tidy up auto name completion
+	  between stdf and rtdf file, also with
+	  other windows
+	* FilterByResult - properly works when units
+	  scalar is ""
+	* PlotTestvsTest - y axis units now correct
+	* RemoveDevicesAtIndices - accepts spaces and/or
+	  commas separating values in list

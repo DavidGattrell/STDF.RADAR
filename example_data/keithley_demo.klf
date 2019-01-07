@@ -1,0 +1,46 @@
+#Keithley Parameter Limits File
+Version,1.0
+File,/home/david/RADAR_Debug/debug.klf
+Date,02/16/2011
+Comment,apple apps store is getting greedy at 30%
+<EOH>
+ID,vtp1
+NAM,vtp1
+UNT,V
+RPT,1
+CRT,4
+TAR, 0.0000e+00
+AF,0
+AL,0
+VAL,-1.0000e+16, 1.0000e+16
+SPC, 3.0000e-01, 9.0000e-01
+CNT,-1.0000e+16, 1.0000e+16
+ENG,-1.0000e+16, 1.0000e+16
+<EOL> 
+ID,vtp3
+NAM,vtp3
+UNT,V
+RPT,1
+CRT,4
+TAR, 0.0000e+00
+AF,0
+AL,0
+VAL,-1.0000e+16, 1.0000e+16
+SPC, 3.0000e-01, 9.0000e-01
+CNT,-1.0000e+16, 1.0000e+16
+ENG,-1.0000e+16, 1.0000e+16
+<EOL> 
+ID,idds
+NAM,idds
+UNT,A
+RPT,1
+CRT,4
+TAR, 0.0000e+00
+AF,0
+AL,0
+VAL,-1.0000e+16, 1.0000e+16
+SPC,-1.0000e+16, 1.3000e-09
+CNT,-1.0000e+16, 1.0000e+16
+ENG,-1.0000e+16, 1.0000e+16
+<EOL> 
+

@@ -1,0 +1,425 @@
+BASICS
+======
+
+# -- comment delimiter... rest of line is comment.
+
+
+command history...  use arrow keys up/down to select
+    command, use left/right arrow keys + Delete to remove
+    parts, type to enter new parts
+	ctrl-r text_string  will find most recent history command containing text_string
+	
+history() - opens up a second window with a history of the
+	commands executed... you can select lines and paste to console
+
+q() -- quit session
+
+ see R Data Import/Export manual???
+
+.Rdata files are like .mat files... binary formatted saved data
+
+.R files are like .m files.... ascii command files
+
+
+flush.console() -- inside fn to see messages immediately
+                     ctrl-W  toggles buffering   see Misc. menu
+
+
+     
+
+BASIC COMMANDS
+==============
+example(solve) as well as help, you can get an example too!
+
+
+help(solve)    shows help file for solve function
+               help("[[") -- need "s or 's for some helps...
+               special characters, and if, for, function
+               (things that might otherwise be interpreted)
+
+search()
+
+ls(num)         similar to objects (?)  -- use search() first
+
+objects(num)    lists all objects (variables, arrays, stings, structures..)
+
+q()            quit   q("yes") - saves workspace  q("no") doesn't ?
+
+rm(x, y, z)    remove variables x, y, z
+
+rm(list = ls())  -- clears all variables [doesn't reset system ones if you've changed those]
+
+sink("filename") - direct output to filename ..eg "output.lis"
+
+source("stdf2r.r") - run the command file "stdf2r.r"
+
+system("whoami", intern=TRUE)
+
+Sys.sleep()
+
+Sys.getenv() -- get environment variables
+Sys.putenv() -- set environment variables
+
+
+getwd()  -- get working directory
+setwd()  -- set working directory
+
+help.search("keyword") will search help files for "keyword"
+
+save(object1, object2, object3, ... , file="filename.Rdata", compress=TRUE)
+load("filename.Rdata")
+
+
+Graphing Commands
+=================
+=== basic kinds of graphs ===
+hist(x)
+hist(x,nclass=n)  -- number of bins in histogram
+hist(x,breaks=b)
+hist(....,probability=TRUE) -- y axis is %, not actual count.
+
+plot(x,y)  -- scatter plot of x vs. y
+
+qqnorm(x)
+qqline(x)
+dotchart()
+image(x,y,z,...)
+contour()
+persp()
+
+rainbow()
+# plot pie chart, 50 slices, rainbow color spectrum
+pie(rep(1,50),col=rainbow(50,start=0.0,end=1.0))	
+
+=== arguments to pass to above graph commands ===
+
+add=TRUE  -- don't erase current plot, add this one to it
+axes=FALSE
+log="x" or "y" or "xy" -- log scale for that axis
+type = 
+xlab = 
+
+== multiple plots on a page ===
+par(mfcol=, mfrow=, mfg=)
+par(fig=)
+
+layout()
+
+split.screen()
+
+grid()  -- package
+
+lattice()  -- package
+
+
+=== plot windows ===
+
+dev.off()
+
+windows()
+X11()
+pdf()
+png()
+
+
+VARIABLES / Vector addressing
+==============================
+c()            concatenate... turns list of variables into vector
+
+x <- c(1.1, 2.2, 3.3, 4.4, 5.5)  creates vector x with 5 elements
+
+or x=c(1.1, 2.2, 3.3, 4.4, 5.5)
+
+or assign("x", c(1.1, 2.2, 3.3, 4.4, 5.5)
+
+or c(1.1, 2.2, 3.3, 4.4, 5.5) -> x
+
+or x=1.1:5.1  # gives 1.1, 2.1, 3.1, 4.1, 5.1   
+
+or x=seq(1.1,5.5,by=1.1)   #need to specify if 3rd param is by= or length=
+
+or x=seq(from=1.1,to=5.5,by=1.1)
+
+print contents of x:
+x
+
+y = c(x, 6.6, x)  # creates 11 element vector...
+
+y = rep(x, times=5)  # gives 1.1, 2.2, ... 5.5, 1.1, ...
+
+y = rep(x, each=5)   # gives 1.1, 1.1 .... 1.1, 2.2, 2.2, 2.2 ...
+
+complex numbers:  -17+0i (vs. -17)  sqrt() will work with first, NaN with 2nd
+
+
+y = x>4  # gives vector of TRUE/FALSE for x vector elements vs. 4
+
+Special values: NA, NaN, Inf
+
+y = x[!is.na(x)]
+y = x[3:5]  -- just elements 3,4,5 of x become y
+y = x[-(3:5)] -- all elements but 3,4,5 of x become y
+
+names(x) = c("ann","bob","cal","don","ed","flo")
+y = x[c("bob","don")]
+
+y[3:5] = x[1:3]
+
+y[y<0] = 0   -- make all negative elements zero.
+
+which(y>3)  -- return indices of y where value is >3 -- NA and NaN's not included.
+
+y = x[2 * 1:3]  -- y becomes just even elements  2,4,6 of x
+
+--- matrices and arrays
+    -- vector is one dimensional array
+    -- matrix is two dimensional array
+array()
+matrix()
+
+dim(a) = c(3,4,2)
+the data vector is stored in this order:
+a[1,1,1], a[2,1,1], a[3,1,1], a[1,2,1], ... a[2,4,2], a[3,4,2]
+
+so consider which way you will process the most and choose order
+intelligently!
+
+a[2,,] -- is the subset... a 4x2 array
+a[,,] is the same a referencing a
+
+i = array(c(1:3,3:1), dim=c(3,2))  # 3x2 array { 1 2 3, 3 2 1 }
+
+--- factors
+factor()
+ordered()
+tapply()
+
+--- lists
+
+my_list = list(testname="Idd", testnum=1004,lolim=3.2e-3,
+               units="A",scaler="m")
+
+my_list[[1]] same as my_list[["testname"]] same as my_list$testname
+
+
+--- data frames
+vector of lists?  matrix with columns of differing modes/attribs
+
+attach()
+detach()
+
+
+
+Character variables
+-------------------
+\n - new line
+\t - tab
+\b - backspace
+\\ - backslash
+
+
+
+MATH FUNCTIONS
+==============
++-*/^
+
+%%    -- modulus
+%/%   -- integer division
+
+<, <=, >, >=, ==, !=  comparison operators (return boolean: TRUE or FALSE)
+
+logic operators:  ! & && | || xor(a,b) isTRUE(x)
+	** | and & are for element wise stuff, use && and || in if statements
+
+bitwise math: if (as.raw(opt_flag) & as.raw(64+16))==0) { ... }
+
+as.character() -- converts numbers to character strings 1 --> "1", etc.
+as.integer()   -- converts strings to numbers.... "123" --> 123
+as.vector()  -- converts matrix into vector
+attributes() -- 
+cbind() -- bind vectors together as columns to form matrix (see rbind)
+class() -- like mode, but can also be "list" "matrix" "array", "factor" ...
+cos()
+cut(vector,breaks=min+bin_size*(0:bins)) -- build histogram binning info
+exists("var")  -- TRUE if var exists, else FALSE
+factor() -- 
+hist(vector)  -- draw histogram in plot window
+           hist(vector,seq(min,max,step))
+is.na()  -- returns boolean vector with TRUE if element is NA (or NaN)
+is.nan() -- returns boolean vector with TRUE if element is NaN
+length() -- use nchar() for strings!! length is always 1
+levels(my_factor) -- 
+log()
+match() -- returns vector location of first match  match("adc",my_strings)
+max()  -- largest of vector elements
+mean() -- mean of vector elements
+min()  -- smallest element of vector
+mode()  -- one of numeric, complex, logical, character, or raw
+nchar() -- the number of characters in a string
+ncol()  -- number of columns in array
+nrow()  -- number of rows in array
+order() -- something like sort... but returns indices, not sorted vector?
+pnorm() -- plot normal distribution curve ?
+rbind() -- bind vectors together as rows to form matrix (see cbind)
+scan()
+sin()
+sort() -- returns vector sorted in increasing order.. also see order()
+split() -- split vector based on factor... histogram bins??
+sqrt()
+sum()  -- sum of all the elements of a vector
+t()    -- transpose array
+tan()
+var()  -- variance of vector elements
+which(x>7)  -- return vector of indices of x where x>7
+
+
+STRING FUNCTIONS
+================
+my_string = "la-di-da"
+
+paste() -- NOTE: does interesting things with vectors of strings!
+
+strsplit("Pop goes the weasel"," ")  -- creates list of vector of 4 words
+strsplit("Pop goes the weasel"," ")[[1]]  -- creates vector of 4 words
+
+match()
+substr()
+sub() -- substitution
+grep()
+nchar() -- number of characters in string  dim() and length() dont do it!!
+
+
+IO FUNCTIONS
+============
+--- reading text files ---
+read.table()
+scan()
+
+--- binary i/o ----
+file("filename","rb")  -- 2nd arg does open for you?
+gzfile("filename.gz","rb")  -- allows you to read a gzip compressed file
+
+open(con,"rb")   --- open connection to file/ done by file()
+close(con)  --- close connection to file
+isOpen(con,"rb")
+
+readBin(con,what,n=, size = , endian =
+	con = connection
+	what = {numeric(), integer(), logical(), character(), complex(), raw() OR "double" or "int"}
+	n = number of elements to read
+	size = # of bytes for integer/numeric
+		1,2,4,8 for integers
+		2,4,8,12,16 for reals
+	endian = 
+	signed =   ... default = true .. for integers
+writeBin()
+readChar(con,nchars)
+writeChar()
+
+unlink("filename")  deletes the file (unix rm filename)
+
+
+-- moving around in the directories --
+dir()  -- like unix pwd
+dir.create(path,...)
+
+file.create()
+file.exists()
+file.remove()
+file.rename(from, to)
+file.copy(from, to, overwrite=FALSE)
+file.symlink(from, to)
+
+
+        
+CONTROL STATEMENTS
+==================
+if (expr_1) {expr_2} else {expr_3}
+for (name in expr_1) {expr_2}  -- for (index in 1:20) {sum = sum + bob[[index]]}
+while (condition) {expr}
+repeat { ... break ...} 
+
+
+
+FUNCTIONS
+=========
+function_name <- function(arg_1, agr_2, ...) expression
+
+   in function can pass arguments "..."
+    function2(arg_A, ...)
+
+
+Debugging
+==============
+options(error = recover)
+	on error go into recover menu... 0 to exit
+	# to select which function to examine in browser
+
+	when in browser... c = to return to recover menu
+
+** note, this seems to slow things down a fair bit... only
+	use when debugging.
+
+	to turn off... options(error = NULL)
+
+options(warn=2)		# force warnings to become errors, default is 0
+
+
+browser() -- add to code where you want to trap...
+	you can then examine objects, change values, step 
+	through program...
+	c  (cont)  - exit browser, continue running program
+	n - enter step through debugger -- see debug()
+	where
+	Q - quit browser and program.. go to top level prompt.
+
+debug()
+
+	n - step to next line
+	c - continue to end of loop or end of function
+	where 
+	Q 
+
+.. also you can use the debug package...
+	to install this:
+		in windows, pulldown menu for packages
+
+	then require(debug)  in your session (or in your .Rprofile if you always want it)
+
+	then: 
+	
+	mtrace(my_function_to_be_debugged)
+
+	OR
+	
+	mtrace(my_function_to_be_debugged,FALSE)
+	mtrace(my_function_to_be_debugged,tracing=FALSE) 	# to turn off debugging
+
+	then when that function is called (either directly or indirectly), the
+	debugger should come up...
+
+	In windows, the html help should now contain information in the
+	packages section about the debug package.
+
+	help(debug) will give you the choice of package help as well as the debug() command help
+
+	here's a few of the commands, features:
+
+	<enter>  execute a single line
+	go()	continue to end or next breakpoint...
+	go(n)	continues until line n
+	qqq()	quit the debugger
+	bp(5)	set breakpoint at line 5
+	bp(5,a>b)	will break at line 5 if a>5... 
+
+Packages
+==========
+to create a package...
+
+package.skeleton()
+
+once package has been created from functions and namespace in .GlobalEnv
+(or somewhere else), it can be loaded up with
+
+library("package:mypackagename")  or maybe "mypackagename"...
+

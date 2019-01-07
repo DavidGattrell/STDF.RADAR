@@ -1,0 +1,47 @@
+# strawman guess at Keithley data file...
+TYP,test_struct_v1
+LOT,w1101003
+PRC,bicmos 0.25 4M 2P 200mm
+DEV,dunno
+TST,Keithley 3000
+SYS,marshmallow
+TSN,345964
+OPR,david
+STT,15-Oct-2010 14:46
+LMT,limits_file.txt
+WDF,xxx.wdf
+<EOH>
+1,blah,blah,C23A7
+north,2,3
+vtp1,0.64573
+vtp3,0.65839
+idds,1.34253e-9
+<EOS>
+south,2,1
+vtp1,0.67653
+vtp3,0.67698
+idds,0.94253e-9
+<EOS>
+center,2,2
+vtp1,0.62373
+vtp3,0.71839
+idds,0.64253e-9
+<EOS>
+<EOW>
+2,blah,blah,F43E9
+west,1,2
+vtp1,0.68773
+vtp3,0.63739
+idds,645.65e-12
+<EOS>
+east,3,2
+vtp1,0.64373
+vtp3,0.69839
+idds,1.23453e-9
+<EOS>
+center,2,2
+vtp1,0.66873
+vtp3,0.66739
+idds,0.77253e-9
+<EOS>
+<EOW>

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Encoding=UTF-8
+Name=RADAR
+Type=Application
+Terminal=false
+Icon[en_CA]=gnome-panel-launcher
+Name[en_CA]=RADAR
+Exec=gnome-terminal -e /home/david/RADAR/RADAR.sh
+Icon=/home/david/RADAR/Rlogo4.png
+Comment[en_CA]=
+GenericName[en_CA]=
