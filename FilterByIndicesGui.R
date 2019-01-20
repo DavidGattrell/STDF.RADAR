@@ -1,6 +1,6 @@
 # FilterByIndicesGui.R
 #
-# $Id: FilterByIndicesGui.R,v 1.1 2013/09/01 23:45:44 david Exp $
+# $Id: FilterByIndicesGui.R,v 1.2 2015/04/18 01:51:32 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling FilterByIndices.R
 # called by TkRadar.R
@@ -32,6 +32,7 @@ if(!exists(".TkRadar.env")) .TkRadar.env <- new.env()
 
 fbi_out_file <- tclVar("screened.rtdf")
 fbi_action <- tclVar("remove")
+fbi_noaction <- tclVar(0)	# 1 = report only, no action taken
 fbi_indices <- tclVar(0)
 fbi_logic <- tclVar(0)		# 1 = indices is boolean, 0 is integer
 fbi_in_name <- tclVar("")
@@ -41,6 +42,7 @@ fbi_in_dir <- tclVar("")
 #----------------------------------------------------
 FilterByIndicesGui_defaults <- function() {
 	tclvalue(fbi_action) <- "remove"
+	tclvalue(fbi_noaction) <- 0
 	tclvalue(fbi_indices) <- 0
 	tclvalue(fbi_logic) <- 0	# if 1, then indices is logical, not numeric
 	
@@ -110,9 +112,19 @@ run_FilterByIndices <-function(done=FALSE,...) {
 
 	in_file_ <- paste(tclObj(fbi_in_name),sep="",collapse=" ")
 	action_ <- as.character(tclObj(fbi_action))
+	no_action <- as.logical(tclObj(fbi_noaction))
+	if(no_action)  action_ = "report"
 	logic <- as.logical(tclObj(fbi_logic))
-	cmd <- as.character(tclObj(fbi_indices))
+	#cmd <- as.character(tclObj(fbi_indices))
+	cmd <- paste(tclObj(fbi_indices),sep="",collapse=" ")
 	tmp <- try(eval(parse(text=cmd)),silent=TRUE)
+	if(class(tmp) == "try-error") {
+		# check if legacy RemoveDevicesAtIndices.R syntax... 
+		my_entry = gsub('[[:blank:]]+',",",cmd)
+		my_entry = gsub(",{2,}",",",my_entry)
+		my_entry = paste("c(",my_entry,")",sep="")
+		tmp = try(eval(parse(text=my_entry)),silent=TRUE)
+	}
 	if(class(tmp) != "try-error") {
 		if(logic) {
 			indices_ <- as.logical(tmp)
@@ -292,11 +304,10 @@ FilterByIndicesGui <- function() {
 						value="keep",
 						variable=fbi_action)
 	tkpack(action_keep,side="left")
-	action_rep <- tkradiobutton(action_frame,
-						text="report",
-						value="report",
-						variable=fbi_action)
-	tkpack(action_rep,side="left")
+	no_action <- tkcheckbutton(action_frame,
+						text="report only (no action)",
+						variable=fbi_noaction)
+	tkpack(no_action,side="left")
 	tkpack(action_frame,side="top",anchor="w")
 
 	num_entry_label <- tklabel(num_entry_frame,
@@ -305,10 +316,23 @@ FilterByIndicesGui <- function() {
 	tkpack(num_entry_label,side="left")
 	tkpack(num_entry,side="left",fill="x",expand=1)
 	tkbind(num_entry,"<KeyRelease>",function() {
-					cmd <- as.character(tclObj(fbi_indices))
+					#cmd <- as.character(tclObj(fbi_indices))  # erroneously takes "1 2 3" and sets cmd to "3"
+					cmd <- paste(tclObj(fbi_indices),sep="",collapse=" ")
+					#cat(sprintf("entry...>>%s<< \n",cmd))
 					tmp <- try(eval(parse(text=cmd)),silent=TRUE)
 					if(class(tmp) == "try-error") {
-						tkconfigure(num_entry,background="yellow")
+						# check if legacy RemoveDevicesAtIndices.R syntax... 
+						# if so, we'll handle in run_FilterByIndices
+						my_entry = gsub('[[:blank:]]+',",",cmd)
+						my_entry = gsub(",{2,}",",",my_entry)
+						my_entry = paste("c(",my_entry,")",sep="")
+						tmp = try(eval(parse(text=my_entry)),silent=TRUE)
+						if(class(tmp) != "try-error") {
+							tkconfigure(num_entry,background="white")
+							tclvalue(fbi_logic) <- 0
+						} else {
+							tkconfigure(num_entry,background="yellow")
+						}
 					} else {
 						if( is.logical(tmp) ) {
 							tkconfigure(num_entry,background="white")

@@ -1,11 +1,11 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.46 2014/08/03 00:53:54 david Exp $
+# $Id: TkRadar.R,v 1.49 2016/07/25 00:20:43 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
 #
-# Copyright (C) 2008-2014 David Gattrell
+# Copyright (C) 2008-2016 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -104,6 +104,7 @@ sys.source("ControlChartsGui.R",envir=.TkRadar.env)
 sys.source("PlotRtdfGui.R",envir=.TkRadar.env)
 sys.source("PlotTestvsTestGui.R",envir=.TkRadar.env)
 sys.source("PlotVsRunGui.R",envir=.TkRadar.env)
+sys.source("ProbeVsReprobeGui.R",envir=.TkRadar.env)
 sys.source("WaferMapGui.R",envir=.TkRadar.env)
 
 sys.source("LoadRtdfGui.R",envir=.TkRadar.env)
@@ -579,6 +580,45 @@ pdf_browser <-function(my_name) {
 
 
 #----------------------------------------------------
+csv_browser <-function(my_name) {
+	orig_name = as.character(tclObj(my_name))
+	if ((length(orig_name)<1) || (nchar(orig_name)<1))  orig_name="output.csv"
+
+	output_dir = paste(tclObj(Output_dir),sep="",collapse=" ")
+	if (nchar(output_dir)<1) {
+		output_dir <- paste(tclObj(Orig_dir),sep="",collapse=" ")
+	}
+	if(as.numeric(tclObj(Bad_Vista))>0) {
+		my_str = "{{All files} *} {{CSV Files} {.csv .CSV}}"
+	} else {
+		my_str = "{{CSV Files} {.csv .CSV}} {{All files} *}"
+	}
+	if (nchar(output_dir)>0) {
+		name <- tclvalue(tkgetSaveFile(
+				initialfile=orig_name,
+				initialdir=output_dir,
+				filetypes=my_str))
+	} else {
+		name <- tclvalue(tkgetSaveFile(
+				initialfile=orig_name,
+				filetypes=my_str))
+	}
+
+	if (nchar(name)>0) {
+		my_filepath = sub("/[^/]*$","",name)	# strip off filename, just path left
+		name=sub("^.*/","",name)
+		tclvalue(my_name) <- name
+
+		# if we changed directory... update paths
+		my_pwd = paste(tclObj(Output_dir),sep="",collapse=" ")
+		if(my_filepath != my_pwd) {
+			change_Output_dir(my_filepath)
+		}
+	}
+}
+
+
+#----------------------------------------------------
 wmap_browser <-function(wmap_name) {
 	orig_name = paste(tclObj(wmap_name),sep="",collapse=" ")
 	if ((length(orig_name)<1) || (nchar(orig_name)<1))  orig_name="ascii.wmap"
@@ -900,7 +940,7 @@ TkRadar <- function() {
 
 
 	my_main_win <- tktoplevel()
-	tkwm.title(my_main_win, "RADAR 0v6p8 GUI 2aug2014")
+	tkwm.title(my_main_win, "RADAR 0v6p9dev GUI 24jul2016")
 
 	# if user has been stuck with Vista or Windows7 (aka Vista with lipstick),
 	# set flag for alternate behaviour...
@@ -1569,6 +1609,20 @@ TkRadar <- function() {
 				tkfocus(plotvsrun_win)
 			}
 		)
+	tkadd(plot_menu,"command",label="ProbeVsReprobe",
+			command=function() {
+				if (exists("probevsreprobe_win",envir=.TkRadar.wins,inherits=FALSE)) {
+					probevsreprobe_win <- get("probevsreprobe_win",envir=.TkRadar.wins)
+				}
+				if (exists("probevsreprobe_win") && 
+					as.logical(tkwinfo("exists",probevsreprobe_win)))  tkraise(probevsreprobe_win)
+				else {
+					ProbeVsReprobeGui()
+					probevsreprobe_win <- get("probevsreprobe_win",envir=.TkRadar.wins)
+				}
+				tkfocus(probevsreprobe_win)
+			}
+		)
 	tkadd(plot_menu,"command",label="WaferMap",
 			command=function() {
 				if (exists("wafermap_win",envir=.TkRadar.wins,inherits=FALSE)) {
@@ -1658,7 +1712,7 @@ TkRadar <- function() {
 							src_dir <- paste(tclObj(Source_dir),sep="",collapse=" ")
 							setwd(src_dir)
 							# system("ls RADAR_documentation_*.pdf",intern=TRUE)
-							my_pdf = "RADAR_documentation_0v6p8.pdf"
+							my_pdf = "RADAR_documentation_0v6p9.pdf"
 							if (as.character(Sys.info()["sysname"])=="Windows") {
 								os_com = "cmd /c start"
 							} else if (as.character(Sys.info()["sysname"])=="Darwin") { # aka Mac
@@ -1826,6 +1880,10 @@ TkRadar <- function() {
 								plotvsrun_win <- get("plotvsrun_win",envir=.TkRadar.wins)
 								tkdestroy(plotvsrun_win)
 							}
+							if (exists("probevsreprobe_win",envir=.TkRadar.wins,inherits=FALSE)) {
+								probevsreprobe_win <- get("probevsreprobe_win",envir=.TkRadar.wins)
+								tkdestroy(probevsreprobe_win)
+							}
 							if (exists("wafermap_win",envir=.TkRadar.wins,inherits=FALSE)) {
 								wafermap_win <- get("wafermap_win",envir=.TkRadar.wins)
 								tkdestroy(wafermap_win)
@@ -1901,6 +1959,10 @@ rm(rtdf_browser)
 environment(pdf_browser)<-.TkRadar.env
 assign("pdf_browser",pdf_browser,envir=.TkRadar.env)
 rm(pdf_browser)
+
+environment(csv_browser)<-.TkRadar.env
+assign("csv_browser",csv_browser,envir=.TkRadar.env)
+rm(csv_browser)
 
 environment(wmap_browser)<-.TkRadar.env
 assign("wmap_browser",wmap_browser,envir=.TkRadar.env)

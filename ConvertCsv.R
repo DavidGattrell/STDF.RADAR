@@ -1,11 +1,11 @@
 #  ConvertCsv.R
 #
-# $Id: ConvertCsv.R,v 1.14 2013/10/08 01:58:48 david Exp $
+# $Id: ConvertCsv.R,v 1.15 2015/04/18 01:36:23 david Exp $
 #
 #  R script that reads either csv or rtdf files and generates
 #  the equivalent rtdf or csv version.  
 #
-# Copyright (C) 2009-13 David Gattrell
+# Copyright (C) 2009-15 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -484,6 +484,10 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 					cat(the_string,file=csv_conn)
 					tmp = as.character(DevicesFrame[[cond_name]])
 					tmp[which(is.na(DevicesFrame[[cond_name]]))]=""
+					# remove any double quotes from condition 'values'
+					tmp = gsub("\"","",tmp)
+					# add leading and trailing double quotes to condition 'values'
+					tmp = sub("(.*)","\"\\1\"",tmp)
 					cat(tmp,file=csv_conn,sep=",")
 					cat("\n",file=csv_conn)
 				}
@@ -551,7 +555,8 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 				    testname=paste('"',testname,'"',sep="")
 				}
 				#  REVISIT...
-				the_string = sprintf("2,%d,%s,%s,%s,%s,%s,%s%s,%s,",
+				# testnum can be > %d, so change to %.0f
+				the_string = sprintf("2,%.0f,%s,%s,%s,%s,%s,%s%s,%s,",
 						ParametersFrame[[i,"testnum"]],
 						testname,		#ParametersFrame[[i,"testname"]],
 						prefix,
@@ -768,11 +773,16 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 					# but behaves okay one-at-a-time, so now use for loop...
 					first_loop = TRUE
 					for (j in cond_fields) {
+						cond_value = as.character(DevicesFrame[i,j])
+						# for values that contain ,'s, we need to double quote,
+						# so need to make sure no double quotes in values first
+						cond_value = gsub("\"","",cond_value)
+						cond_value = sub("(.*)","\"\\1\"",cond_value)
 						if(first_loop) {
 							first_loop = FALSE
-							cond_string = as.character(DevicesFrame[i,j])
+							cond_string = cond_value
 						} else {
-							cond_string = paste(cond_string,as.character(DevicesFrame[i,j]),
+							cond_string = paste(cond_string,cond_value,
 											sep=",",collapse=",")
 						}
 					}

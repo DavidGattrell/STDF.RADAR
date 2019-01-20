@@ -1,10 +1,10 @@
 # WaferMap.R
 #
-# $Id: WaferMap.R,v 1.19 2014/08/03 00:48:39 david Exp $
+# $Id: WaferMap.R,v 1.21 2016/07/24 23:54:27 david Exp $
 #
 # reads in rtdf file(s) and generates wafermap(s)
 #
-# Copyright (C) 2006-2014 David Gattrell
+# Copyright (C) 2006-2015 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 			rotate_ccw=0,x_reverse_polarity=0,y_reverse_polarity=0,
 			x_shift=0,y_shift=0,
 			param_col_start=0.03,param_col_end=0.24,param_col_rev_flag=FALSE,
-			bin_vs_colors="") {
+			bin_vs_colors="",borders_off=7000) {
     # rtdf_name -- name of the rtdf file to read
     # pdf_name -- name of the pdf file to generate
     # type = "sbin"  or "hbin" or "parameter" 
@@ -88,7 +88,10 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 	#              will contain a cross reference of bins and colors used.
 	#              On future wafermaps, you can input this file so that the
 	#              bin to color mapping is consistent across wafermaps
-	#
+	# borders_off -- If die count is >= borders_off, then turn off border
+	#            that is drawn around each die in the wafer map
+	#            if -1, always do border
+	#            if 0, always suppress border
     ### other things not yet done... ###
     # - minx, maxx, miny, maxy to override wafer map size
     # - add vector for gaps for panels.. X or X and Y??
@@ -227,9 +230,11 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
     # single or multiple wafer plots?
     #---------------------------------
     if (exists("WafersFrame",inherits=FALSE)) {
-		wafers_count = dim(WafersFrame)
-		wafers_count = wafers_count[1]
+		#wafers_count = dim(WafersFrame)
+		#wafers_count = wafers_count[1]
 		all_wi = as.integer(DevicesFrame[,"wafer_index"])
+		unique_wis = unique(all_wi)
+		wafers_count = length(unique_wis)
     } else {
 		wafers_count = 1
     }
@@ -312,7 +317,7 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 			# extract x,y, and sbin info from Frame
 			#---------------------------------------
 			if (exists("WafersFrame",inherits=FALSE)) {
-				indxs = which(all_wi==wafer)
+				indxs = which(all_wi==unique_wis[wafer])
 				xs = all_xs[indxs]
 				ys = all_ys[indxs]
 				sbins = all_sbins[indxs]
@@ -468,6 +473,8 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					good_die=0
 				}
 			}
+			if( (total_die<borders_off)||(borders_off<0) )  do_borders = TRUE
+			else  do_borders = FALSE
 
 
 			# do text stuff in top portion
@@ -902,7 +909,9 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					y= min_y + floor((bin1s-1)/xdim)
 					if (i>8)  my_col = pass_colors[9]
 					else  my_col = pass_colors[i]
-					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col)
+					if (do_borders)  my_border = NULL
+					else  my_border = my_col
+					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
 				}
 				for( i in 1:length(xrefs)) {
 					fbins=which(my_map==sbins[xrefs[i]])
@@ -910,7 +919,9 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					y= min_y + floor((fbins-1)/xdim)
 					if (i>8)  my_col = fail_colors[9]
 					else  my_col = fail_colors[i]
-					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col)
+					if (do_borders)  my_border = NULL
+					else  my_border = my_col
+					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
 				}
 			} else if (type=="hbin") {
 				for( i in 1:length(good_hbins)) {
@@ -919,7 +930,9 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					y= min_y + floor((bin1s-1)/xdim)
 					if (i>8)  my_col = pass_colors[9]
 					else  my_col = pass_colors[i]
-					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col)
+					if (do_borders)  my_border = NULL
+					else  my_border = my_col
+					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
 				}
 				for( i in 1:length(xrefs)) {
 					fbins=which(my_hbin_map==hbins[xrefs[i]])
@@ -927,7 +940,9 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					y= min_y + floor((fbins-1)/xdim)
 					if (i>8)  my_col = fail_colors[9]
 					else  my_col = fail_colors[i]
-					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col)
+					if (do_borders)  my_border = NULL
+					else  my_border = my_col
+					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
 				}
 			} else if ((type=="parameter") && valid_map) {
 				results_map[is.finite(results_map) & (results_map>breaks[100])] = breaks[100]
@@ -941,7 +956,10 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					if (length(die)>0) {
 						x = min_x + ((die-1) %% xdim)
 						y = min_y + floor((die-1)/xdim)
-						rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_colors[i])
+						if (do_borders)  my_border = NULL
+						else  my_border = my_colors[i]
+						#rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_colors[i])
+						rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_colors[i],border=my_border)
 					}
 				}
 			}

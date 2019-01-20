@@ -1,12 +1,12 @@
 # FilterByIndices.R
 #
-# $Id: FilterByIndices.R,v 1.1 2013/09/01 23:44:02 david Exp $
+# $Id: FilterByIndices.R,v 1.2 2015/04/18 01:49:02 david Exp $
 #
 # script that removes or keeps individual devices from the rtdf file
 #
 # part of RADAR scripts, see sites.google.com/site/stdfradar
 #
-# Copyright (C) 2013 David Gattrell
+# Copyright (C) 2014 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -36,8 +36,8 @@ FilterByIndices <- function(in_file="",indices=NaN,action="remove",
     #            NOTE: this is not part_id's
 	#			 ie. if indices is c(TRUE,FALSE,FALSE), then every
 	#            first of three devices would be selected.
-	# action - one of "remove", "keep", or "report", hopefully
-	#            this is self explanatory
+	# action - one of "remove", "keep", or "report",
+	#            hopefully this is self explanatory
 	# out_file - the name of the RTDF file to create (unless action
 	#            is "report", in which case this is ignored)
 	# in_dir    - directory to look for in_file if not same as
@@ -52,34 +52,50 @@ FilterByIndices <- function(in_file="",indices=NaN,action="remove",
     my_objs = load(in_file)
 	if (in_dir != "")  setwd(my_dir)
 
-    keepers = rep(TRUE,dim(DevicesFrame)[1])
+    selection = rep(FALSE,dim(DevicesFrame)[1])
 
 	if (is.logical(indices)) {
-		keepers = rep(indices,length.out=length(keepers))
+		selection = rep(indices,length.out=length(selection))
 	} else {
-    	keepers[indices] = FALSE
+    	selection[indices] = TRUE
 	}
 
+	selected_count = length(which(selection==TRUE))
 
-	# keep track of objects loaded, use that list for saving?
 
 	if(action=="remove") {
-	    DevicesFrame = DevicesFrame[keepers,]
-	    ResultsMatrix = ResultsMatrix[keepers,]
+	    DevicesFrame = DevicesFrame[!selection,]
+	    ResultsMatrix = ResultsMatrix[!selection,]
+		if(is.finite(match("TestFlagMatrix",my_objs))) {
+			TestFlagMatrix = TestFlagMatrix[!selection,]
+		}
 		do_outfile = TRUE
+		cat(sprintf("%d devices removed (%d devices kept) \n",
+				selected_count,length(selection)-selected_count))
 	}
 	else if(action=="keep") {
-	    DevicesFrame = DevicesFrame[!keepers,]
-	    ResultsMatrix = ResultsMatrix[!keepers,]
+	    DevicesFrame = DevicesFrame[selection,]
+	    ResultsMatrix = ResultsMatrix[selection,]
+		if(is.finite(match("TestFlagMatrix",my_objs))) {
+			TestFlagMatrix = TestFlagMatrix[selection,]
+		}
 		do_outfile = TRUE
+		cat(sprintf("%d devices kept (%d devices removed) \n",
+				selected_count,length(selection)-selected_count))
 	} 
-	else {	# action=="report" 
-		indices = which(keepers==TRUE)
+	else {	# action=="report..." 
+		indices = which(selection==TRUE)
     	device_names = DevicesFrame[indices,"part_id"]
 		for (i in 1:length(indices)) {
 		    cat(sprintf("Index: %-3d  Part_id: %-5s \n",
 			indices[i],device_names[i]))	
 		}
+		if(length(indices)==1)
+			cat(sprintf("%d device selected (%d devices not selected) \n",
+				length(indices),length(selection)-length(indices)))
+		else
+			cat(sprintf("%d devices selected (%d devices not selected) \n",
+				length(indices),length(selection)-length(indices)))
 		do_outfile = FALSE
 	}
 
@@ -88,6 +104,8 @@ FilterByIndices <- function(in_file="",indices=NaN,action="remove",
 		if (out_file=="") {
 			out_file = in_file
 		}
+
+	# keep track of objects loaded, use that list for saving?
 
 #		my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
 #		if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"

@@ -1,10 +1,10 @@
 # AsciiWaferMap.R
 #
-# $Id: AsciiWaferMap.R,v 1.6 2011/03/22 01:02:10 David Exp $
+# $Id: AsciiWaferMap.R,v 1.7 2015/04/17 01:24:38 david Exp $
 #
 # reads in rtdf file(s) and generates ascii wafermap(s)
 #
-# Copyright (C) 2009-11 David Gattrell
+# Copyright (C) 2009-11,2015 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -252,11 +252,13 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		bad_i_s = which(bads)
 
 		unique_bins = sort(unique(my_bins))
-		if(max(unique_bins)>99)  digits=3
+		if(max(unique_bins)>999)  digits=4
+		else if(max(unique_bins)>99)  digits=3
 		else  digits=2
 		
 		if(multi_binning && !multi_bin_terse) {
-			if(digits>2)  die_str = "... "
+			if(digits>3)  die_str = ".... "
+			else if(digits>2)  die_str = "... "
 			else  die_str = ".. "
 		} else {
 			die_str = "."
@@ -374,7 +376,8 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 						terse_bin[i]=0
 						my_str = "x"
 					}
-				} else if(digits>2)  my_str = sprintf("%03d ",unique_bins[i])
+				} else if(digits>3)  my_str = sprintf("%04d ",unique_bins[i])
+				else if(digits>2)  my_str = sprintf("%03d ",unique_bins[i])
 				else  my_str = sprintf("%02d ",unique_bins[i])
 				indices = which(my_bins==unique_bins[i])
 				if(length(indices)>0) {
@@ -387,16 +390,20 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 				bin_names[i] = ""
 				if (type=="sbin") {
 					if(is.finite(match("SbinInfoFrame",my_objs))) {
-						idx = match(unique_bins[i],SbinInfoFrame[["sbin_num"]])
-						if(length(idx)>0) {
+						idx = match(unique_bins[i],SbinInfoFrame[["sbin_num"]],nomatch=0)
+						if( (length(idx)>0) && (idx[1]>0) ) {
 							bin_names[i] = as.character(SbinInfoFrame[[idx[1],"sbin_nam"]])
+						} else {
+							bin_names[i] = ""
 						}
 					}
 				} else {
 					if(is.finite(match("HbinInfoFrame",my_objs))) {
-						idx = match(unique_bins[i],HbinInfoFrame[["hbin_num"]])
-						if(length(idx)>0) {
+						idx = match(unique_bins[i],HbinInfoFrame[["hbin_num"]],nomatch=0)
+						if( (length(idx)>0) && (idx[1]>0) ) {
 							bin_names[i] = as.character(HbinInfoFrame[[idx[1],"hbin_nam"]])
+						} else {
+							bin_names[i] = ""
 						}
 					}
 				}	
@@ -462,7 +469,8 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		}
 
 		if(multi_binning && !multi_bin_terse) {
-			if(digits>2)  a_max_x = a_max_x * 4
+			if(digits>3)  a_max_x = a_max_x * 5
+			else if(digits>2)  a_max_x = a_max_x * 4
 			else if(digits>1)  a_max_x = a_max_x * 3
 		}
 
@@ -488,7 +496,7 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 					type_str)
 			cat(the_string,file=out_conn)
 			for (i in 1:length(unique_bins)) {
-				the_string = sprintf("Bin: %3d  %5d   %4.1f%%   %s   %s\n",
+				the_string = sprintf("Bin: %4d  %5d   %4.1f%%   %s   %s\n",
 					unique_bins[i],bin_counts[i],100.0*bin_counts[i]/total,
 					bin_flags[i],bin_names[i])
 				cat(the_string,file=out_conn)
@@ -501,13 +509,13 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		} else if(multi_binning) {
 			if(type=="sbin")  type_str = "Sbin"
 			else  type_str = "Hbin"
-			the_string = sprintf("\nBin: Num  Count  Yield  P/F  %s_Name\n",
+			the_string = sprintf("\nBin:  Num   Count  Yield  P/F  %s_Name\n",
 					type_str)
 			cat(the_string,file=out_conn)
 			for (i in 1:length(unique_bins)) {
 				if(terse_bin[i]>0) {
 					# REVISIT.... i vs. unique_bins[i] ...
-					the_string = sprintf("Bin: %2d  %5d   %4.1f%%   %s   %s\n",
+					the_string = sprintf("Bin: %4d  %5d   %4.1f%%   %s   %s\n",
 						terse_bin[i],bin_counts[i],100.0*bin_counts[i]/total,
 						bin_flags[i],bin_names[i])
 					cat(the_string,file=out_conn)

@@ -1,11 +1,11 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.44 2014/08/03 00:27:49 david Exp $
+# $Id: ConvertStdf.R,v 1.47 2016/07/25 00:07:58 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
 #
-# Copyright (C) 2006-2014 David Gattrell
+# Copyright (C) 2006-2015 David Gattrell
 #               2012 Chad Erven
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -138,6 +138,7 @@ assign("Duplicate_testnames",FALSE,envir=.ConvertStdf.env) # if T testname = tes
 assign("Use_MPR_invalid_pf_data",FALSE,envir=.ConvertStdf.env) # Credence weirdness
 
 assign("Auto_flex",TRUE,envir=.ConvertStdf.env) 	# remove channels from testnames, keeps multisite testnames consistent
+assign("Keep_alarmed_values",FALSE,envir=.ConvertStdf.env) 	# if alarm detected, still update ResultsMatrix if TRUE
 
 assign("Executive_type",'',envir=.ConvertStdf.env)	# "enVision" or "Image" or ...
 													# use to make some PTR interpretation
@@ -159,6 +160,7 @@ assign("Wafer_count",0,envir=.ConvertStdf.env)		# number of wafers processed (WI
 assign("TSR_count",0,envir=.ConvertStdf.env)		# number of TSR records processed 
 assign("TSR_count_siteA",0,envir=.ConvertStdf.env)	# number of TSR records processed for first site
 assign("TSR_siteA",NA,envir=.ConvertStdf.env)		# first TSR site
+assign("Do_Raw_TSRs",0,envir=.ConvertStdf.env)		# 0= track TSRs with matching PTR/FTR/MPRs? (slower) 
 assign("Hbin_count",0,envir=.ConvertStdf.env)		# number of Hard bins processed (HBR records)
 assign("Sbin_count",0,envir=.ConvertStdf.env)		# number of Soft bins processed (SBR records)
 assign("Previous_param_i",0,envir=.ConvertStdf.env) # the ParametersFrame index from the previous PTR/FTR/MPR
@@ -292,7 +294,8 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 						stdf_dir="",do_conditions=FALSE,duplicate_testnames=FALSE,
 						use_MPR_invalid_pf_data=FALSE,ltx_ignore_testname_objects=TRUE,
 						do_testflag_matrix=FALSE,do_DTRs=FALSE,max_parts=-1,
-						auto_demangle=FALSE,auto_flex=TRUE) {
+						auto_demangle=FALSE,auto_flex=TRUE,keep_alarmed_values=FALSE,
+						skip_TSRs=FALSE,raw_TSRs=FALSE) {
     # stdf_name - name of stdf formatted file to convert to rtdf format
     # rtdf_name - name to give to rtdf formatted file
     # auto_93k  - if stdf is from HP/Agilent/Verigy 93K, try to auto fix
@@ -341,6 +344,12 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	#             (should we also - set duplicate_testnames to TRUE...) 
 	#             - remove channel from testnames so that testnames are consistent between sites.
 	#               testname pinname channel <> comment; channel = d+.ad+ (ie 9.b5 or 12.a7..)
+	# keep_alarmed_values - if an alarm was detected during a test, the resulting measurement will be
+	#             ignored (ie NaN in ResultsMatrix) unless this flag is set to true.
+	#             (impacts PTR records with test_flg bit 0 set to 1)
+	# skip_TSRs - if true, skip the whole processing of TSR records (Test Synopsis Records)
+	# raw_TSRs - if true, then don't check that there are matching FTR/PTR/MPRs for TSRs, just
+	#        	  dump all the TSRs.  (faster than if checking)
     #---------------------------------------------
 	#attach(.ConvertStdf.env) #...environment() is better approach?
 
@@ -365,6 +374,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	TSR_count <<- 0
 	TSR_count_siteA <<- 0
 	TSR_siteA <<- NA
+	Do_Raw_TSRs <<- raw_TSRs
     Hbin_count <<- 0
     Sbin_count <<- 0
 	ResultsMatrix <<- array(NaN, dim=c(0,0))
@@ -379,6 +389,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	Good_guesses2 <<- 0
 	Demangle <<- 0
 	Auto_flex <<- auto_flex
+	Keep_alarmed_values <<- keep_alarmed_values
 	
 	LotInfoFrame[["lotid"]] <<- ""
 	LotInfoFrame[["sublotid"]] <<- ""
@@ -417,7 +428,8 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	DTRsMatrix <<- array(NaN, dim=c(0,0))
 
 	Use_MPR_invalid_pf_data <<- use_MPR_invalid_pf_data
-	Duplicate_testnames <<- duplicate_testnames || use_MPR_invalid_pf_data
+	#Duplicate_testnames <<- duplicate_testnames || use_MPR_invalid_pf_data
+	Duplicate_testnames <<- duplicate_testnames 
 
     my_list = list(hbin_num=NaN, hbin_cnt=NaN, hbin_pf="",hbin_nam="")
     HbinInfoFrame <<- data.frame(rbind(my_list))
@@ -542,7 +554,12 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
     while (in_bytes > 0) {
 		Stdf_ptr <<- Stdf_ptr + Ptr - 1		# overall pointer, for progress tracking
 		if(length(Stdf)>0) {
-			Stdf <<- c(Stdf[Ptr:length(Stdf)],MoreStdf)
+			#browser()
+			if(Ptr>length(Stdf)) {
+				Stdf <<- MoreStdf
+			} else {
+				Stdf <<- c(Stdf[Ptr:length(Stdf)],MoreStdf)
+			}
 		} else {
 			Stdf <<- MoreStdf
 		}
@@ -610,7 +627,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 				}
 
 			}
-			parse_stdf_record(rec_typ,rec_sub,rec_len,Endy) # also uses Stdf,Ptr
+			parse_stdf_record(rec_typ,rec_sub,skip_TSRs,rec_len,Endy) # also uses Stdf,Ptr
 			
 			if ((Ptr+1) <= in_bytes) {
 				rec_len = readBin(Stdf[Ptr:(Ptr+1)],integer(),n=1,size=2,
@@ -1450,7 +1467,7 @@ readSTDFbits <- function(bytes,endy) {
 
 
 ###############################################################################
-parse_stdf_record <- function(rec_typ,rec_sub,...) {
+parse_stdf_record <- function(rec_typ,rec_sub,skip_TSRs,...) {
 
 	# NOTE: also update valid_record_type() any time there is a change to the 
 	# record types
@@ -1515,9 +1532,7 @@ parse_stdf_record <- function(rec_typ,rec_sub,...) {
             if (Verbose2) cat("skipping RDR record... \n")
             ignore_STDF_record(...)
         } else if (rec_sub == 80) {
-            #parse_SDR_record(...)
-            if (Verbose2) cat("skipping SDR record... \n")
-            ignore_STDF_record(...)
+            parse_SDR_record(...)
         } else if (rec_sub == 90) {
             #parse_PSR_record(...)
             if (Verbose2) cat("skipping PSR record... \n")
@@ -1603,7 +1618,11 @@ parse_stdf_record <- function(rec_typ,rec_sub,...) {
             parse_FDR_record(...)	# stdf v3 only!
         } else if (rec_sub == 30) {
             if (Verbose2) cat("processing TSR record... \n")
-            parse_TSR_record(...)
+            if (skip_TSRs) {
+				ignore_STDF_record(...)
+            } else {
+				parse_TSR_record(...)
+			}
         } else {
             if (Verbose2) cat(sprintf(
                 "skipping unknown record: type %d subtype %d... \n",
@@ -2165,6 +2184,171 @@ parse_MIR_record <- function(rec_len,endy) {
 					test_cod=test_cod)
         LotInfoFrame <<- data.frame(rbind(my_list))
     }
+}
+
+	
+#############################################################################
+parse_SDR_record <- function(rec_len,endy) {
+
+    # initialize variables
+    head_num = 0
+	site_grp = 0
+	site_cnt = 0
+	site_nums = 0
+	hand_typ = ''
+	hand_id = ''
+	card_typ = ''
+	card_id = ''
+	load_typ = ''
+	load_id = ''
+	dib_typ = ''
+	dib_id = ''
+	cabl_typ = ''
+	cabl_id = ''
+	cont_typ = ''
+	cont_id = ''
+	lasr_typ = ''
+	lasr_id = ''
+	extr_typ = ''
+	extr_id = ''
+
+    valid_record = TRUE
+
+
+    if (rec_len<20) {
+        valid_record = FALSE
+        cat("WARNING: SDR record shorter than expected \n")
+        #bit_bucket = readBin(STDF,integer(),n=rec_len,size=1)
+        Ptr <<- Ptr + rec_len
+        rec_len = 0
+	} else {
+        head_num = as.integer(Stdf[Ptr])
+        site_grp = as.integer(Stdf[Ptr+1])
+        site_cnt = as.integer(Stdf[Ptr+2])
+        Ptr <<- Ptr + 3
+        rec_len = rec_len - 3
+	}
+
+	if (rec_len >= site_cnt) {
+		if (site_cnt > 0) {
+			site_nums = as.integer(Stdf[Ptr:(Ptr+site_cnt-1)])
+			Ptr <<- Ptr + site_cnt
+			rec_len = rec_len - site_cnt
+		}
+	} else {
+        #cat(sprintf("WARNING: SDR record incomplete \n"))
+        Ptr <<- Ptr + rec_len
+        rec_len = 0
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		hand_typ = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		hand_id = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		card_typ = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		card_id = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		load_typ = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		load_id = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		dib_typ = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		dib_id = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		cabl_typ = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		cabl_id = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		cont_typ = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		cont_id = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		lasr_typ = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		lasr_id = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		extr_typ = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+	if (rec_len >0) {
+		str_list = readSTDFstring(rec_len)
+		extr_id = str_list$string
+		rec_len = str_list$bytes_left
+	}
+
+
+    # throw away any remaining portion of the record we aren't interested in...
+    #--------------------------------------------------------------------------
+    #bit_bucket = readBin(STDF,integer(),n=rec_len,size=1)
+    Ptr <<- Ptr + rec_len
+    rec_len = 0
+
+
+	if (valid_record) {
+
+		LotInfoFrame[1,"handler"] <<- hand_id
+	}
 }
 
 
@@ -3357,6 +3541,9 @@ parse_TSR_record <- function(rec_len,endy) {
 		if (site_num>0)  valid_record = FALSE
 	} else if (Executive_type=="enVision") {
 		# If single site, then TSR for site only, no overall TSR provided...
+		# NOTE: overall TSR is optional! for multi-site, so
+		# we really do need to track all sites and if no overall count, generate it from sum of sites
+		#
 		if (site_num>0) {
 			if (!is.finite(TSR_siteA)) TSR_siteA <<- site_num
 			if (site_num != TSR_siteA)  valid_record = FALSE
@@ -3389,7 +3576,7 @@ parse_TSR_record <- function(rec_len,endy) {
 		if (Duplicate_testnames) {
 			test_nam = sprintf("%s_%d",test_nam,test_num)
 		}
-        if (Parameter_count>0) {
+        if ((Parameter_count>0) && (!Do_Raw_TSRs)) {
 			if ((Previous_param_i < Parameter_count) &&
 					(test_nam==Parameters_Names[Previous_param_i+1])) {
 				par_index = Previous_param_i+1
@@ -3404,9 +3591,12 @@ parse_TSR_record <- function(rec_len,endy) {
         
         if (Debug5) {
             cat(sprintf("Doing TSR for %s testnum %d \n",test_nam,test_num))
+			cat(sprintf("     par_index = %d, TSR_count = %d, Good_guesses = %d \n",
+					par_index,TSR_count,Good_guesses))
+		
         }
 
-        if (par_index<1) {
+        if ((par_index<1) && (!Do_Raw_TSRs)) {
             if (exec_cnt>0) {
                 # check if it is an MPR record...
                 # ParametersFrame will have testnam + "/" + pinname
@@ -4254,7 +4444,7 @@ parse_PTR_record <- function(rec_len,endy) {
     # is this a valid record to update ParametersFrame and ResultsMatrix ?
     #----------------------------------------------------------------------
     if (valid_record) {
-        if ( (as.raw(test_flg)&as.raw(1))==0 ) {
+        if ( ((as.raw(test_flg)&as.raw(1))==0) || Keep_alarmed_values ) {
             valid_result = TRUE
         } else {
             valid_result = FALSE
@@ -5213,7 +5403,8 @@ parse_FDR_record <- function(rec_len,endy) {
             Parameters_scaler[Parameter_count] <<- 0
             Parameters_units[Parameter_count] <<- 'fails'
             Parameters_ll[Parameter_count] <<- NaN
-            Parameters_ul[Parameter_count] <<- NaN
+            #Parameters_ul[Parameter_count] <<- NaN
+            Parameters_ul[Parameter_count] <<- 0.5		# seems like a sensible thing to do
             Parameters_plot_ll[Parameter_count] <<- NaN
             Parameters_plot_ul[Parameter_count] <<- NaN
 
@@ -5628,7 +5819,8 @@ parse_FTR_record <- function(rec_len,endy) {
             Parameters_scaler[Parameter_count] <<- 0
             Parameters_units[Parameter_count] <<- 'fails'
             Parameters_ll[Parameter_count] <<- NaN
-            Parameters_ul[Parameter_count] <<- NaN
+            #Parameters_ul[Parameter_count] <<- NaN
+            Parameters_ul[Parameter_count] <<- 0.5		# seems like a sensible thing to do
             Parameters_plot_ll[Parameter_count] <<- NaN
             Parameters_plot_ul[Parameter_count] <<- NaN
 
@@ -5771,6 +5963,7 @@ parse_DTR_record <- function(rec_len,endy) {
 	environment(ignore_STDF_record)<-.ConvertStdf.env
 	environment(parse_MIR_record)<-.ConvertStdf.env
 	environment(parse_MRR_record)<-.ConvertStdf.env
+	environment(parse_SDR_record)<-.ConvertStdf.env
 	environment(parse_PMR_record)<-.ConvertStdf.env
 	environment(parse_WCR_record)<-.ConvertStdf.env
 	environment(parse_WIR_record)<-.ConvertStdf.env
@@ -5815,6 +6008,9 @@ rm(parse_MIR_record)
 
 assign("parse_MRR_record",parse_MRR_record,envir=.ConvertStdf.env)
 rm(parse_MRR_record)
+
+assign("parse_SDR_record",parse_SDR_record,envir=.ConvertStdf.env)
+rm(parse_SDR_record)
 
 assign("parse_PMR_record",parse_PMR_record,envir=.ConvertStdf.env)
 rm(parse_PMR_record)

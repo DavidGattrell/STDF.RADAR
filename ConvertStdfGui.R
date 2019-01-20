@@ -1,11 +1,11 @@
 # ConvertStdfGui.R
 #
-# $Id: ConvertStdfGui.R,v 1.20 2014/03/03 03:10:50 david Exp $
+# $Id: ConvertStdfGui.R,v 1.22 2015/08/02 01:05:44 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
 #
-# Copyright (C) 2008-2014 David Gattrell
+# Copyright (C) 2008-2015 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -45,6 +45,8 @@ do_testflag_matrix <- tclVar(0)
 max_parts <- tclVar(-1)
 do_demangle <- tclVar(0)
 auto_flex <- tclVar(1)
+keep_alarmed_values <- tclVar(0)
+do_raw_tsrs <- tclVar(0)
 
 stdf_count <- tclVar(1)
 stdf_index <- tclVar(1)
@@ -66,6 +68,8 @@ default_duplicate_testnames <- tclVar(0)		# per user customizing
 default_use_MPR_invalid_pf_data <- tclVar(0)	# per user customizing
 default_ltx_ignore_testname_objects <- tclVar(1) # per user customizing
 default_do_testflag_matrix <- tclVar(0)			# per user customizing
+default_keep_alarmed_values <- tclVar(0)	
+default_do_raw_tsrs <- tclVar(0)	
 
 
 #----------------------------------------------------
@@ -246,6 +250,8 @@ ConvertStdfGui_defaults <- function() {
 	tclvalue(max_parts) <- -1
 	tclvalue(do_demangle) <- 0
 	tclvalue(auto_flex) <- 1
+	tclvalue(keep_alarmed_values) <- tclObj(default_keep_alarmed_values)
+	tclvalue(do_raw_tsrs) <- tclObj(default_do_raw_tsrs)
 }
 
 #----------------------------------------------------
@@ -273,7 +279,9 @@ run_ConvertStdf <-function(done=FALSE,...) {
 	if(!is.finite(max_parts_))  max_parts_ = -1
 	auto_demangle_ <- as.logical(tclObj(do_demangle))
 	auto_flex_ <- as.logical(tclObj(auto_flex))
-
+	keep_alarmed_values_ <- as.logical(tclObj(keep_alarmed_values))
+	do_raw_tsrs_ <- as.logical(tclObj(do_raw_tsrs))
+	
 	# go to output directory...
 	full_path = output_dir
 	if (nchar(full_path)<1)  full_path <- paste(tclObj(Output_dir),sep="",collapse=" ")
@@ -295,7 +303,9 @@ run_ConvertStdf <-function(done=FALSE,...) {
 						ltx_ignore_testname_objects=ltx_ignore_testname_objects_,
 						do_testflag_matrix=do_testflag_matrix_,
 						do_DTRs=do_dtrs_,max_parts=max_parts_,
-						auto_demangle=auto_demangle_,auto_flex=auto_flex_)
+						auto_demangle=auto_demangle_,auto_flex=auto_flex_,
+						keep_alarmed_values=keep_alarmed_values_,
+						raw_TSRs=do_raw_tsrs_)
 		)
 		tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 		tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -531,6 +541,16 @@ ConvertStdfGui <- function() {
 						text="auto_flex",
 						variable=auto_flex)
 	tkpack(autoflex_button,side="top",anchor="w")
+
+	keep_alarmed_button <- tkcheckbutton(convertstdf_win,
+						text="keep_alarmed_values",
+						variable=keep_alarmed_values)
+	tkpack(keep_alarmed_button,side="top",anchor="w")
+
+	do_raw_tsrs_button <- tkcheckbutton(convertstdf_win,
+						text="raw_TSRs",
+						variable=do_raw_tsrs)
+	tkpack(do_raw_tsrs_button,side="top",anchor="w")
 
 	endian_frame <- tkframe(convertstdf_win)
 	endian_label <- tklabel(endian_frame, text="default endian:")

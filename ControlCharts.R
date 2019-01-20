@@ -1,10 +1,10 @@
 #  ControlCharts.R
 #
-# $Id: ControlCharts.R,v 1.2 2010/01/03 02:00:15 David Exp $
+# $Id: ControlCharts.R,v 1.4 2015/04/18 01:33:55 david Exp $
 #
 # script used to generate control charts on a test by test basis from Rtdf files
 #
-# Copyright (C) 2009 David Gattrell
+# Copyright (C) 2009,2014 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -231,168 +231,174 @@ ControlCharts <- function(rtdf_name="",pdf_name="",param_name="",
 		
 		# auto scaling
 		#--------------
-		if (auto_scale) {
-			range = max(abs(samples))
-			if(is.finite(range) && (range>0.0)) {
-				if(range>0.99e9)		scaler=-9
-				else if(range>0.99e6)	scaler=-6
-				else if(range>0.99e3)	scaler=-3
-				else if(range>0.99)		scaler=0
-				else if(range>0.99e-3)  scaler=3
-				else if(range>0.99e-6)  scaler=6
-				else if(range>0.99e-9)  scaler=9
-				else   scaler=12
+		if(my_parts>0) {
+			if (auto_scale) {
+				range = max(abs(samples))
+				if(is.finite(range) && (range>0.0)) {
+					if(range>0.99e9)		scaler=-9
+					else if(range>0.99e6)	scaler=-6
+					else if(range>0.99e3)	scaler=-3
+					else if(range>0.99)		scaler=0
+					else if(range>0.99e-3)  scaler=3
+					else if(range>0.99e-6)  scaler=6
+					else if(range>0.99e-9)  scaler=9
+					else   scaler=12
+				}
 			}
-		}
-        if (scaler<0) {
-            prefix = big_prefixes[-1*scaler]
-        } else if (scaler==0) {
-			prefix = ""
-        } else {
-            prefix = lil_prefixes[scaler]
-        }
-        my_units = paste(prefix,sep="",units)
+			if (scaler<0) {
+				prefix = big_prefixes[-1*scaler]
+			} else if (scaler==0) {
+				prefix = ""
+			} else {
+				prefix = lil_prefixes[scaler]
+			}
+			my_units = paste(prefix,sep="",units)
 
-        scale = 10^scaler
-        if(is.finite(ll))  ll=ll*scale
-        if(is.finite(ul))  ul=ul*scale
-		results_vector = results_vector*scale
-		samples = samples*scale
+			scale = 10^scaler
+			if(is.finite(ll))  ll=ll*scale
+			if(is.finite(ul))  ul=ul*scale
+			results_vector = results_vector*scale
+			samples = samples*scale
+			
+
+			# to determine plot y axis, need to get mean and sd first
+			#---------------------------------------------------------
+			stop_n = start_n + count_n - 1
+			if (stop_n>results_count) {
+				stop_n = results_count
+			}
+			if (start_n>results_count) {
+				start_n = 1
+			}
+			# my_mean = mean(results_vector[start_n:stop_n])
+			# my_sd =     sd(results_vector[start_n:stop_n])
+			# USE ROBUST STATISTICS!
+			stat_parts = results_vector[start_n:stop_n]
+			stat_parts = stat_parts[which(is.finite(stat_parts))]
+			my_mean = median(stat_parts)
+			my_q25 = quantile(stat_parts,0.25)
+			my_q75 = quantile(stat_parts,0.75)
+			my_sd = abs(my_q75 - my_q25)/1.34898
+			
+
+			# 3 colors of parts...
+			# color 1: green - the parts in control
+			# color 2: blue - the ones used to gen mean/sd
+			# color 3: red - the ones out of control
+			#----------------------------
+			my_colors = rep(1,times=results_count)
+			my_colors[start_n:stop_n] = 2
 
 
-		# to determine plot y axis, need to get mean and sd first
-		#---------------------------------------------------------
-		stop_n = start_n + count_n - 1
-		if (stop_n>results_count) {
-			stop_n = results_count
-		}
-		if (start_n>results_count) {
-			start_n = 1
-		}
-		# my_mean = mean(results_vector[start_n:stop_n])
-		# my_sd =     sd(results_vector[start_n:stop_n])
-		# USE ROBUST STATISTICS!
-		stat_parts = results_vector[start_n:stop_n]
-		stat_parts = stat_parts[which(is.finite(stat_parts))]
-		my_mean = median(stat_parts)
-        my_q25 = quantile(stat_parts,0.25)
-        my_q75 = quantile(stat_parts,0.75)
-        my_sd = abs(my_q75 - my_q25)/1.34898
-		
+			# Western Electric rules for outliers
+			#-------------------------------------
+			if(do_western_electric && is.finite(my_sd) && (my_sd>0.0)) {
 
-		# 3 colors of parts...
-		# color 1: green - the parts in control
-		# color 2: blue - the ones used to gen mean/sd
-		# color 3: red - the ones out of control
-		#----------------------------
-		my_colors = rep(1,times=results_count)
-		my_colors[start_n:stop_n] = 2
+				end = my_parts
+
+				# rule2: 2 of 3 consecutive parts >+2sd or 
+				#        2 of 3 consecutive parts <-2sd
+				#----------------------------------------
+				zones = as.integer(samples>(my_mean + 2*my_sd))
+				filt = filter(zones,rep(1,3)/2,method="conv",sides=1)
+				filt2 = as.integer(filt>=1)
+				filt2[(end+1):(end+2)]=0
+				filt3 = filter(filt2,rep(1,3),method="conv",sides=1)[3:(end+2)]
+				bad_parts = which((zones>=1) & (filt3>=1))
+				my_colors[xrefs[bad_parts]] = 6
+
+				zones = as.integer(samples<(my_mean - 2*my_sd))
+				filt = filter(zones,rep(1,3)/2,method="conv",sides=1)
+				filt2 = as.integer(filt>=1)
+				filt2[(end+1):(end+2)]=0
+				filt3 = filter(filt2,rep(1,3),method="conv",sides=1)[3:(end+2)]
+				bad_parts = which((zones>=1) & (filt3>=1))
+				my_colors[xrefs[bad_parts]] = 6
+
+				# rule3: 4 of 5 consecutive parts >+1sd or 
+				#        4 of 5 consecutive parts <-1sd
+				#----------------------------------------
+				zones = as.integer(samples>(my_mean + my_sd))
+				filt = filter(zones,rep(1,5)/4,method="conv",sides=1)
+				filt2 = as.integer(filt>=1)
+				filt2[(end+1):(end+4)]=0
+				filt3 = filter(filt2,rep(1,5),method="conv",sides=1)[5:(end+4)]
+				bad_parts = which((zones>=1) & (filt3>=1))
+				my_colors[xrefs[bad_parts]] = 6
+
+				zones = as.integer(samples<(my_mean - my_sd))
+				filt = filter(zones,rep(1,5)/4,method="conv",sides=1)
+				filt2 = as.integer(filt>=1)
+				filt2[(end+1):(end+4)]=0
+				filt3 = filter(filt2,rep(1,5),method="conv",sides=1)[5:(end+4)]
+				bad_parts = which((zones>=1) & (filt3>=1))
+				my_colors[xrefs[bad_parts]] = 6
+
+				# rule4: 9 consecutive parts on same side of mean 
+				#-------------------------------------------------
+				zones = as.integer(samples>my_mean)
+				filt = filter(zones,rep(1,9)/9,method="conv",sides=1)
+				filt2 = as.integer(filt>=1)
+				filt2[(end+1):(end+8)]=0
+				filt3 = filter(filt2,rep(1,9),method="conv",sides=1)[9:(end+8)]
+				bad_parts = which((zones>=1) & (filt3>=1))
+				my_colors[xrefs[bad_parts]] = 6
+
+				zones = as.integer(samples<my_mean)
+				filt = filter(zones,rep(1,9)/9,method="conv",sides=1)
+				filt2 = as.integer(filt>=1)
+				filt2[(end+1):(end+8)]=0
+				filt3 = filter(filt2,rep(1,9),method="conv",sides=1)[9:(end+8)]
+				bad_parts = which((zones>=1) & (filt3>=1))
+				my_colors[xrefs[bad_parts]] = 6
+
+				# variant...
+				# rule4 should be 8 consecutive parts
+				# add trend rules:
+				# 6 consecutive parts trending in same direction
+				# 14 consecutive parts alternating trend direction
+				#--------------------------------------------------
+			}
+
+			if(is.finite(my_sd)) {
+				# rule1: any point outside +/-3sd
+				#-----------------------------------
+				clip = my_mean + 3.0*my_sd
+				bad_parts = which(results_vector>clip)
+				my_colors[bad_parts] = 3
+
+				clip = my_mean - 3.0*my_sd
+				bad_parts = which(results_vector<clip)
+				my_colors[bad_parts] = 3
+			}
+
+			bad_count = length(which(my_colors==3))
+
+			weco_count = length(which(my_colors==6)) + bad_count + length(which(my_colors==7))
 
 
-		# Western Electric rules for outliers
-		#-------------------------------------
-		if(do_western_electric && is.finite(my_sd) && (my_sd>0.0)) {
-
-			end = my_parts
-
-			# rule2: 2 of 3 consecutive parts >+2sd or 
-			#        2 of 3 consecutive parts <-2sd
-			#----------------------------------------
-			zones = as.integer(samples>(my_mean + 2*my_sd))
-			filt = filter(zones,rep(1,3)/2,method="conv",sides=1)
-			filt2 = as.integer(filt>=1)
-			filt2[(end+1):(end+2)]=0
-			filt3 = filter(filt2,rep(1,3),method="conv",sides=1)[3:(end+2)]
-			bad_parts = which((zones>=1) & (filt3>=1))
-			my_colors[xrefs[bad_parts]] = 6
-
-			zones = as.integer(samples<(my_mean - 2*my_sd))
-			filt = filter(zones,rep(1,3)/2,method="conv",sides=1)
-			filt2 = as.integer(filt>=1)
-			filt2[(end+1):(end+2)]=0
-			filt3 = filter(filt2,rep(1,3),method="conv",sides=1)[3:(end+2)]
-			bad_parts = which((zones>=1) & (filt3>=1))
-			my_colors[xrefs[bad_parts]] = 6
-
-			# rule3: 4 of 5 consecutive parts >+1sd or 
-			#        4 of 5 consecutive parts <-1sd
-			#----------------------------------------
-			zones = as.integer(samples>(my_mean + my_sd))
-			filt = filter(zones,rep(1,5)/4,method="conv",sides=1)
-			filt2 = as.integer(filt>=1)
-			filt2[(end+1):(end+4)]=0
-			filt3 = filter(filt2,rep(1,5),method="conv",sides=1)[5:(end+4)]
-			bad_parts = which((zones>=1) & (filt3>=1))
-			my_colors[xrefs[bad_parts]] = 6
-
-			zones = as.integer(samples<(my_mean - my_sd))
-			filt = filter(zones,rep(1,5)/4,method="conv",sides=1)
-			filt2 = as.integer(filt>=1)
-			filt2[(end+1):(end+4)]=0
-			filt3 = filter(filt2,rep(1,5),method="conv",sides=1)[5:(end+4)]
-			bad_parts = which((zones>=1) & (filt3>=1))
-			my_colors[xrefs[bad_parts]] = 6
-
-			# rule4: 9 consecutive parts on same side of mean 
-			#-------------------------------------------------
-			zones = as.integer(samples>my_mean)
-			filt = filter(zones,rep(1,9)/9,method="conv",sides=1)
-			filt2 = as.integer(filt>=1)
-			filt2[(end+1):(end+8)]=0
-			filt3 = filter(filt2,rep(1,9),method="conv",sides=1)[9:(end+8)]
-			bad_parts = which((zones>=1) & (filt3>=1))
-			my_colors[xrefs[bad_parts]] = 6
-
-			zones = as.integer(samples<my_mean)
-			filt = filter(zones,rep(1,9)/9,method="conv",sides=1)
-			filt2 = as.integer(filt>=1)
-			filt2[(end+1):(end+8)]=0
-			filt3 = filter(filt2,rep(1,9),method="conv",sides=1)[9:(end+8)]
-			bad_parts = which((zones>=1) & (filt3>=1))
-			my_colors[xrefs[bad_parts]] = 6
-
-			# variant...
-			# rule4 should be 8 consecutive parts
-			# add trend rules:
-			# 6 consecutive parts trending in same direction
-			# 14 consecutive parts alternating trend direction
-			#--------------------------------------------------
-		}
-
-		if(is.finite(my_sd)) {
-			# rule1: any point outside +/-3sd
+			# clip results outside +/-4sd
 			#-----------------------------------
-			clip = my_mean + 3.0*my_sd
-			bad_parts = which(results_vector>clip)
-			my_colors[bad_parts] = 3
+			if (is.finite(my_sd) && (my_sd>0.0)) {
+				clip = my_mean + 4.01*my_sd
+				bad_parts = which(results_vector>clip)
+				my_colors[bad_parts] = 4
+				results_vector[bad_parts] = clip
 
-			clip = my_mean - 3.0*my_sd
-			bad_parts = which(results_vector<clip)
-			my_colors[bad_parts] = 3
+				clip = my_mean - 4.01*my_sd
+				bad_parts = which(results_vector<clip)
+				my_colors[bad_parts] = 5
+				results_vector[bad_parts] = clip
+			}
+
+			valid_results = results_vector[which(is.finite(results_vector))]
+			my_max = max(valid_results)
+			my_min = min(valid_results)
+		} else {
+			# invalid data... we'll want to do an empty plot...
+			# but need to make sure parameter text variables are set
+			my_units = paste(prefix,sep="",units)
 		}
-
-		bad_count = length(which(my_colors==3))
-
-		weco_count = length(which(my_colors==6)) + bad_count + length(which(my_colors==7))
-
-
-		# clip results outside +/-4sd
-		#-----------------------------------
-		if (is.finite(my_sd) && (my_sd>0.0)) {
-			clip = my_mean + 4.01*my_sd
-			bad_parts = which(results_vector>clip)
-			my_colors[bad_parts] = 4
-			results_vector[bad_parts] = clip
-
-			clip = my_mean - 4.01*my_sd
-			bad_parts = which(results_vector<clip)
-			my_colors[bad_parts] = 5
-			results_vector[bad_parts] = clip
-		}
-
-		valid_results = results_vector[which(is.finite(results_vector))]
-		my_max = max(valid_results)
-		my_min = min(valid_results)
 
 
         # print out title line for this parameter
@@ -400,7 +406,7 @@ ControlCharts <- function(rtdf_name="",pdf_name="",param_name="",
         subscreen_num = split.screen(matrix(c(0.0,1.0,ytop-title_height,ytop),
                         1,4,byrow=FALSE),erase=FALSE)
         screen(subscreen_num)
-        my_title = sprintf("%d  %s",test_num,test_nam)
+        my_title = sprintf("%.0f  %s",test_num,test_nam)	# test_num can be >%d, use %.0f (uint32)
         my_limits = sprintf("LL=%.2f  UL=%.2f  %s",ll,ul,my_units)
 		# determine font size if testname+limits is too big for page width
 		title_width = strwidth(my_title,cex=1.0)
@@ -424,22 +430,27 @@ ControlCharts <- function(rtdf_name="",pdf_name="",param_name="",
         subscreen_num = split.screen(matrix(c(0.0,stats_width,ytop-chart_height,ytop),
                                 1,4,byrow=FALSE),erase=FALSE)
         screen(subscreen_num)
-        text(0.0,0.84,sprintf("Mean = %.3f",my_mean),pos=4,cex=0.6)
-        text(0.0,0.70,sprintf("SDev = %.3f",my_sd),pos=4,cex=0.6)
-        text(0.0,0.56,sprintf("Count = %d",my_parts),pos=4,cex=0.6)
-		if (bad_count>0) {
-	        text(0.0,0.42,sprintf("3sdev Fails = %d",bad_count),pos=4,cex=0.6,col="red")
-		} else {
-	        text(0.0,0.42,sprintf("3sdev Fails = %d",bad_count),pos=4,cex=0.6)
-        }
-		if (do_western_electric) {
-			if (weco_count>0) {
-				text(0.0,0.28,sprintf("WER Fails = %d",weco_count),pos=4,cex=0.6,col="red")
+		if(my_parts>0) {
+			text(0.0,0.84,sprintf("Mean = %.3f",my_mean),pos=4,cex=0.6)
+			text(0.0,0.70,sprintf("SDev = %.3f",my_sd),pos=4,cex=0.6)
+			text(0.0,0.56,sprintf("Count = %d",my_parts),pos=4,cex=0.6)
+			if (bad_count>0) {
+				text(0.0,0.42,sprintf("3sdev Fails = %d",bad_count),pos=4,cex=0.6,col="red")
 			} else {
-				text(0.0,0.28,sprintf("WER Fails = %d",weco_count),pos=4,cex=0.6)
+				text(0.0,0.42,sprintf("3sdev Fails = %d",bad_count),pos=4,cex=0.6)
 			}
+			if (do_western_electric) {
+				if (weco_count>0) {
+					text(0.0,0.28,sprintf("WER Fails = %d",weco_count),pos=4,cex=0.6,col="red")
+				} else {
+					text(0.0,0.28,sprintf("WER Fails = %d",weco_count),pos=4,cex=0.6)
+				}
+			}
+		} else {
+			text(0.0,0.84,sprintf("Mean = na"),pos=4,cex=0.6)
+			text(0.0,0.70,sprintf("SDev = na"),pos=4,cex=0.6)
+			text(0.0,0.56,sprintf("Count = 0"),pos=4,cex=0.6)
 		}
-
 		close.screen(subscreen_num)
 
 
@@ -450,59 +461,61 @@ ControlCharts <- function(rtdf_name="",pdf_name="",param_name="",
         screen(subscreen_num)
 
 		par(plt=c(0.1,0.95,0.20,0.95))
-		chart_min = my_mean-3.1*my_sd
-		chart_max = my_mean+3.1*my_sd
-		if(!is.finite(chart_min) || (my_min<chart_min))  chart_min = my_min
-		if(!is.finite(chart_max) || (my_max>chart_max))  chart_max = my_max
-		if (is.finite(my_sd)&&(my_sd<=0.0)) {
-			if (is.finite(ul)&&(ul>my_mean)) {
-				chart_max = ul
-				clip = chart_max
-				bad_parts = which(results_vector>clip)
-				my_colors[bad_parts] = 4
-				results_vector[bad_parts] = clip
+		if(my_parts>0) {
+			chart_min = my_mean-3.1*my_sd
+			chart_max = my_mean+3.1*my_sd
+			if(!is.finite(chart_min) || (my_min<chart_min))  chart_min = my_min
+			if(!is.finite(chart_max) || (my_max>chart_max))  chart_max = my_max
+			if (is.finite(my_sd)&&(my_sd<=0.0)) {
+				if (is.finite(ul)&&(ul>my_mean)) {
+					chart_max = ul
+					clip = chart_max
+					bad_parts = which(results_vector>clip)
+					my_colors[bad_parts] = 4
+					results_vector[bad_parts] = clip
+				}
+				if (is.finite(ll)&&(ll<my_mean)) {
+					chart_min = ll
+					clip = chart_min
+					bad_parts = which(results_vector<clip)
+					my_colors[bad_parts] = 5
+					results_vector[bad_parts] = clip
+				}
 			}
-			if (is.finite(ll)&&(ll<my_mean)) {
-				chart_min = ll
-				clip = chart_min
-				bad_parts = which(results_vector<clip)
-				my_colors[bad_parts] = 5
-				results_vector[bad_parts] = clip
-			}
+			x_range = c(1,results_count)
+			y_range = c(chart_min,chart_max)
+			plot(x_range,y_range,type="n",main="",xlab="",ylab="",
+				bty="o",mgp=c(2,0.4,0),cex.axis=0.6,xaxs="i")
+			abline(h=my_mean,lty="dashed",col="blue")
+			abline(h=(my_mean+my_sd),lty="dotted",col="cyan")
+			abline(h=(my_mean-my_sd),lty="dotted",col="cyan")
+			abline(h=(my_mean+2*my_sd),lty="dotted",col="cyan")
+			abline(h=(my_mean-2*my_sd),lty="dotted",col="cyan")
+			abline(h=(my_mean+3*my_sd),lty="dashed",col="cyan")
+			abline(h=(my_mean-3*my_sd),lty="dashed",col="cyan")
+			if (is.finite(ll))  abline(h=ll,lty="dashed",lwd=2,col="red")
+			if (is.finite(ul))  abline(h=ul,lty="dashed",lwd=2,col="red")
+			lines(results_vector)
+
+			indices = which(my_colors==5)
+			points(indices,results_vector[indices],cex=0.6,pch=6,col="red",main="",xlab="",ylab="")
+			indices = which(my_colors==4)
+			points(indices,results_vector[indices],cex=0.6,pch=2,col="red",main="",xlab="",ylab="")
+			indices = which(my_colors==7)
+			points(indices,results_vector[indices],cex=0.6,col="yellow",main="",xlab="",ylab="")
+			indices = which(my_colors==6)
+			points(indices,results_vector[indices],cex=0.6,col="orange",main="",xlab="",ylab="")
+			indices = which(my_colors==3)
+			points(indices,results_vector[indices],cex=0.6,col="red",main="",xlab="",ylab="")
+
+			indices = which(my_colors==2)
+			points(indices,results_vector[indices],cex=0.6,col="blue",main="",xlab="",ylab="")
+
+			indices = which(my_colors==1)
+			points(indices,results_vector[indices],cex=0.6,col="green",main="",xlab="",ylab="")
+
+			grid(ny=NA)
 		}
-		x_range = c(1,results_count)
-		y_range = c(chart_min,chart_max)
-		plot(x_range,y_range,type="n",main="",xlab="",ylab="",
-			bty="o",mgp=c(2,0.4,0),cex.axis=0.6,xaxs="i")
-		abline(h=my_mean,lty="dashed",col="blue")
-		abline(h=(my_mean+my_sd),lty="dotted",col="cyan")
-		abline(h=(my_mean-my_sd),lty="dotted",col="cyan")
-		abline(h=(my_mean+2*my_sd),lty="dotted",col="cyan")
-		abline(h=(my_mean-2*my_sd),lty="dotted",col="cyan")
-		abline(h=(my_mean+3*my_sd),lty="dashed",col="cyan")
-		abline(h=(my_mean-3*my_sd),lty="dashed",col="cyan")
-		if (is.finite(ll))  abline(h=ll,lty="dashed",lwd=2,col="red")
-		if (is.finite(ul))  abline(h=ul,lty="dashed",lwd=2,col="red")
-		lines(results_vector)
-
-		indices = which(my_colors==5)
-		points(indices,results_vector[indices],cex=0.6,pch=6,col="red",main="",xlab="",ylab="")
-		indices = which(my_colors==4)
-		points(indices,results_vector[indices],cex=0.6,pch=2,col="red",main="",xlab="",ylab="")
-		indices = which(my_colors==7)
-		points(indices,results_vector[indices],cex=0.6,col="yellow",main="",xlab="",ylab="")
-		indices = which(my_colors==6)
-		points(indices,results_vector[indices],cex=0.6,col="orange",main="",xlab="",ylab="")
-		indices = which(my_colors==3)
-		points(indices,results_vector[indices],cex=0.6,col="red",main="",xlab="",ylab="")
-
-		indices = which(my_colors==2)
-		points(indices,results_vector[indices],cex=0.6,col="blue",main="",xlab="",ylab="")
-
-		indices = which(my_colors==1)
-		points(indices,results_vector[indices],cex=0.6,col="green",main="",xlab="",ylab="")
-
-        grid(ny=NA)
         close.screen(subscreen_num)
         ytop = ytop - chart_height
 

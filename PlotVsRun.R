@@ -1,10 +1,10 @@
 #  PlotVsRun.R
 #
-# $Id: PlotVsRun.R,v 1.1 2012/09/20 01:33:29 david Exp $
+# $Id: PlotVsRun.R,v 1.2 2015/04/18 01:57:54 david Exp $
 #
 # script used plot data with x-axis being device run from Rtdf files
 #
-# Copyright (C) 2012 David Gattrell
+# Copyright (C) 2012,2014 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -795,7 +795,7 @@ PlotVsRun <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
                             1,4,byrow=FALSE),erase=FALSE)
             screen(subscreen_num)
             my_units = paste(prefix,sep="",units)
-            my_title = sprintf("%d  %s",test_num,test_nam)
+            my_title = sprintf("%.0f  %s",test_num,test_nam)  # change tnum from %d to %.0f for uint32
 			title_width = strwidth(my_title,cex=1.0*scex)
             if (valid_alt_limits) {
                 if(is.finite(alt_ll))  alt_ll=alt_ll*scale
@@ -1047,7 +1047,7 @@ PlotVsRun <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
                             1,4,byrow=FALSE),erase=FALSE)
             screen(subscreen_num)
             my_units = paste(prefix,units,sep="")
-            my_title = sprintf("%d  %s",test_num,test_nam)
+            my_title = sprintf("%.0f  %s",test_num,test_nam)  # changed %d to %.0f for uint32
 			title_width = strwidth(my_title,cex=1.0*scex)
             if (valid_alt_limits) {
                 if(is.finite(alt_ll))  alt_ll=alt_ll*scale

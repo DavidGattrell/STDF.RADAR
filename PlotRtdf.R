@@ -1,10 +1,10 @@
 #  PlotRtdf.R
 #
-# $Id: PlotRtdf.R,v 1.25 2012/09/20 01:26:27 david Exp $
+# $Id: PlotRtdf.R,v 1.26 2015/04/18 01:56:41 david Exp $
 #
 # script used to generate statistics, histograms, and xy plots from Rtdf files
 #
-# Copyright (C) 2006-2012 David Gattrell
+# Copyright (C) 2006-2014 David Gattrell
 #               2010 Vincent Horng
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -849,7 +849,8 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
                             1,4,byrow=FALSE),erase=FALSE)
             screen(subscreen_num)
             my_units = paste(prefix,sep="",units)
-            my_title = sprintf("%d  %s",test_num,test_nam)
+			# changed test_num from %d to %.0f for very large tnums
+            my_title = sprintf("%.0f  %s",test_num,test_nam)
 			title_width = strwidth(my_title,cex=1.0*scex)
             if (valid_alt_limits) {
                 if(is.finite(alt_ll))  alt_ll=alt_ll*scale
@@ -1072,8 +1073,9 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 					else  my_llim = ""
 					if(is.finite(ulim))  my_ulim = sprintf("%g",ulim)
 					else  my_ulim = ""
+					# tnum is uint32, not int32, so %d doesn't always work, changed to %.0f
 					# cols A,B,C,D,E,F,G,H,I,
-					the_string = sprintf("%d,%d,%s,%d,%s,%s,%s,%g,%g,",
+					the_string = sprintf("%d,%.0f,%s,%d,%s,%s,%s,%g,%g,",
 								page_count,        test_num,        test_nam,
 								j,                my_units,        my_llim,
 								my_ulim,        the_mean,        the_sdev)
@@ -1755,7 +1757,8 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
                             1,4,byrow=FALSE),erase=FALSE)
             screen(subscreen_num)
             my_units = paste(prefix,units,sep="")
-            my_title = sprintf("%d  %s",test_num,test_nam)
+			# test_num is uint32, %d is only int32, so changed to %.0f
+            my_title = sprintf("%.0f  %s",test_num,test_nam)
 			title_width = strwidth(my_title,cex=1.0*scex)
             if (valid_alt_limits) {
                 if(is.finite(alt_ll))  alt_ll=alt_ll*scale

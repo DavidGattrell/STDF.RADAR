@@ -1,11 +1,11 @@
 # WaferMapGui.R
 #
-# $Id: WaferMapGui.R,v 1.9 2014/03/24 01:07:39 david Exp $
+# $Id: WaferMapGui.R,v 1.10 2016/07/24 23:56:30 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling WaferMap.R
 # called by TkRadar.R
 #
-# Copyright (C) 2008-2014 David Gattrell
+# Copyright (C) 2008-2015 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -49,6 +49,8 @@ wmap_param_col_start <- tclVar(0.03)
 wmap_param_col_end <- tclVar(0.24)
 wmap_param_col_rev <- tclVar(0)		# false
 
+wmap_borders_off <- tclVar(7000)
+
 wmap_pdf_name <- tclVar("wafer_map.pdf")
 wmap_xform_pdf_name <- tclVar("xform_wafer_map.pdf")
 
@@ -63,6 +65,8 @@ default_wmap_autoopen <- tclVar(1)	# per user customizing
 default_wmap_param_col_start <- tclVar(0.03)
 default_wmap_param_col_end <- tclVar(0.24)
 default_wmap_param_col_rev <- tclVar(0)		# false
+
+default_wmap_borders_off <- tclVar(7000)
 
 default_wmap_rotate_ccw <- tclVar(0)		# per user customizing
 default_wmap_x_rev_polarity <- tclVar(0)	# per user customizing
@@ -88,6 +92,8 @@ WaferMapGui_defaults <- function(...) {
 	tclvalue(wmap_param_col_end) <- tclObj(default_wmap_param_col_end)
 	tclvalue(wmap_param_col_rev) <- tclObj(default_wmap_param_col_rev)
 
+	tclvalue(wmap_borders_off) <- tclObj(default_wmap_borders_off)
+
 	tclvalue(wmap_rotate_ccw) <- tclObj(default_wmap_rotate_ccw)
 	tclvalue(wmap_x_rev_polarity) <- tclObj(default_wmap_x_rev_polarity)
 	tclvalue(wmap_y_rev_polarity) <- tclObj(default_wmap_y_rev_polarity)
@@ -112,6 +118,8 @@ run_WaferMap <-function(done=FALSE,...) {
 	param_col_end_ <- as.numeric(tclObj(wmap_param_col_end))
 	param_col_rev_flag_ <- as.logical(tclObj(wmap_param_col_rev))
 
+	borders_off_ <- as.numeric(tclObj(wmap_borders_off))
+
 	wmap_autoopen_ <- as.logical(tclObj(wmap_autoopen))
 	if(wmap_notch_=="x")  wmap_notch_ = ""
 
@@ -132,14 +140,16 @@ run_WaferMap <-function(done=FALSE,...) {
 					parameter=wmap_param,rtdf_dir=rtdf_dir_,
 					notch=wmap_notch_,
 					param_col_start=param_col_start_,param_col_end=param_col_end_,
-					param_col_rev_flag=param_col_rev_flag_)
+					param_col_rev_flag=param_col_rev_flag_,
+					borders_off=borders_off_)
 		)
 	} else {
 		my_expr = substitute(
 			WaferMap(rtdf_name=wmap_rtdf,pdf_name=wmap_pdf_,
 					type=wmap_type_,x_coord_alpha=x_coord_alpha_,
 					panel=panel_,x_left=x_left_,y_down=y_down_,
-					rtdf_dir=rtdf_dir_,notch=wmap_notch_)
+					rtdf_dir=rtdf_dir_,notch=wmap_notch_,
+					borders_off=borders_off_)
 		)
 	}
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
@@ -204,6 +214,8 @@ run_XformWaferMap <-function(done=FALSE,...) {
 	param_col_end_ <- as.numeric(tclObj(wmap_param_col_end))
 	param_col_rev_flag_ <- as.logical(tclObj(wmap_param_col_rev))
 
+	borders_off_ <- as.numeric(tclObj(wmap_borders_off))
+
 	wmap_autoopen_ <- as.logical(tclObj(wmap_autoopen))
 	if(wmap_notch_=="x")  wmap_notch_ = ""
 
@@ -234,8 +246,8 @@ run_XformWaferMap <-function(done=FALSE,...) {
 					y_reverse_polarity=y_rev_polarity_,
 					x_shift=x_shift_,y_shift=y_shift_,
 					param_col_start=param_col_start_,param_col_end=param_col_end_,
-					param_col_rev_flag=param_col_rev_flag_
-					)
+					param_col_rev_flag=param_col_rev_flag_,
+					borders_off=borders_off_)
 		)
 	} else {
 		my_expr = substitute(
@@ -248,8 +260,8 @@ run_XformWaferMap <-function(done=FALSE,...) {
 					y_reverse_polarity=y_rev_polarity_,
 					x_shift=x_shift_,y_shift=y_shift_,
 					param_col_start=param_col_start_,param_col_end=param_col_end_,
-					param_col_rev_flag=param_col_rev_flag_
-					)
+					param_col_rev_flag=param_col_rev_flag_,
+					borders_off=borders_off_)
 		)
 	}
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
@@ -317,7 +329,12 @@ WaferMapGui <-function(...) {
 						width=7,
 						background="white",
 						textvariable=wmap_param_col_end)
-	
+	border_off_frame <- tkframe(wafermap_win)
+	border_off_entry <- tkentry(border_off_frame,
+						width=7,
+						background="white",
+						textvariable=wmap_borders_off)
+
 	bottom_row <- tkframe(wafermap_win)
 	default_button <- tkbutton(bottom_row,
 					text="DEFAULTS",
@@ -539,6 +556,28 @@ WaferMapGui <-function(...) {
 	tkpack(col_rev_button,side="top",anchor="w")
 	tkpack(param_col_frame,side="top",anchor="w")
 
+	#border_off_frame <- tkframe(wafermap_win) -- moved to prior to DEFAULTS button
+	border_off_label <- tklabel(border_off_frame,
+						width=15,
+						text="borders_off")
+	tkpack(border_off_label,side="left")
+	#border_off_entry <- tkentry(border_off_frame,  -- moved to prior to DEFAULTS button
+	#					width=7,
+	#					background="white",
+	#					textvariable=wmap_borders_off)
+	tkpack(border_off_entry,side="left",anchor="n")
+	tkbind(border_off_entry,"<KeyRelease>",function() {
+					tmp <- as.numeric(tclObj(wmap_borders_off))
+					if( (length(tmp)>0) && is.finite(tmp) &&
+							(tmp>-1.5)  && (tmp<1e6) ) {
+						tkconfigure(border_off_entry,background="white")
+					} else {
+						tkconfigure(border_off_entry,background="yellow")
+					}
+					tcl('update')
+				})
+	tkpack(border_off_frame,side="top",anchor="w")
+
 	autoopen_button <- tkcheckbutton(wafermap_win,
 						text="auto_open_pdf",
 						variable=wmap_autoopen)
@@ -565,6 +604,11 @@ XformWaferMapGui <-function(...) {
 						width=7,
 						background="white",
 						textvariable=wmap_param_col_end)
+	border_off_frame <- tkframe(xformwafermap_win)
+	border_off_entry <- tkentry(border_off_frame,
+						width=7,
+						background="white",
+						textvariable=wmap_borders_off)
 	
 	bottom_row <- tkframe(xformwafermap_win)
 	default_button <- tkbutton(bottom_row,
@@ -786,6 +830,28 @@ XformWaferMapGui <-function(...) {
 						variable=wmap_param_col_rev)
 	tkpack(col_rev_button,side="top",anchor="w")
 	tkpack(param_col_frame,side="top",anchor="w")
+
+	#border_off_frame <- tkframe(wafermap_win) -- moved to prior to DEFAULTS button
+	border_off_label <- tklabel(border_off_frame,
+						width=15,
+						text="borders_off")
+	tkpack(border_off_label,side="left")
+	#border_off_entry <- tkentry(border_off_frame,  -- moved to prior to DEFAULTS button
+	#					width=7,
+	#					background="white",
+	#					textvariable=wmap_borders_off)
+	tkpack(border_off_entry,side="left",anchor="n")
+	tkbind(border_off_entry,"<KeyRelease>",function() {
+					tmp <- as.numeric(tclObj(wmap_borders_off))
+					if( (length(tmp)>0) && is.finite(tmp) &&
+							(tmp>-1.5)  && (tmp<1e6) ) {
+						tkconfigure(border_off_entry,background="white")
+					} else {
+						tkconfigure(border_off_entry,background="yellow")
+					}
+					tcl('update')
+				})
+	tkpack(border_off_frame,side="top",anchor="w")
 
 	rotate_frame <- tkframe(xformwafermap_win)
 	rotate_label <- tklabel(rotate_frame, text="rotate_ccw")

@@ -1,13 +1,13 @@
 # ConvertParameters.R
 #
-# $Id: ConvertParameters.R,v 1.8 2012/02/01 02:35:22 David Exp $
+# $Id: ConvertParameters.R,v 1.9 2015/04/18 01:38:00 david Exp $
 #
 # script that extracts the ParametersFrame information from an
 # rtdf file and converts it to text or csv format, or reads in the
 # text or csv format and generates an rtdf file with the information
 # stored in a ParametersFrame object
 #
-# Copyright (C) 2006-2010 David Gattrell
+# Copyright (C) 2006-2014 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -219,7 +219,8 @@ ConvertParameters <- function(in_file="",out_file="",in_dir="") {
 		    else  my_plot_ll = ""
 		    if(is.finite(plot_ul))  my_plot_ul = sprintf("%g",plot_ul)
 		    else  my_plot_ul = ""
-		    the_string = sprintf("%d,%s,%s,%s,%s,%s,%s,%s\n",
+		    # change tnum from %d to %.0f, %d is int32, need uint32 for tnum
+			the_string = sprintf("%.0f,%s,%s,%s,%s,%s,%s,%s\n",
 			    tnum,
 			    testname,
 			    prefix,
@@ -236,7 +237,7 @@ ConvertParameters <- function(in_file="",out_file="",in_dir="") {
 			the_string = "test_num_ test_name_________ pref_ units___ lowlim hi_lim plotll plothl \n"
 			cat(the_string,file=out_conn)
 		    }
-		    the_string = sprintf("%9d %18s %5s %8s %6g %6g %6g %6g \n",
+		    the_string = sprintf("%9.0f %18s %5s %8s %6g %6g %6g %6g \n",
 			    tnum,
 			    testname,
 			    prefix,

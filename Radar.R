@@ -7,12 +7,12 @@
 #  Analysis
 #  Resources
 #
-# $Id: Radar.R,v 1.22 2013/10/06 21:33:04 david Exp $
+# $Id: Radar.R,v 1.23 2015/05/07 00:47:58 david Exp $
 #
 # This script loads the various RADAR command scripts until such
 # time as it gets put into a proper R package.
 #
-# Copyright (C) 2006-2013 David Gattrell
+# Copyright (C) 2006-2015 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -75,6 +75,7 @@ sys.source("SplitSites.R",envir=.Radar)
 sys.source("SplitWafers.R",envir=.Radar)
 sys.source("PlotTestvsTest.R",envir=.Radar)
 sys.source("PlotVsRun.R",envir=.Radar)
+sys.source("ProbeVsReprobe.R",envir=.Radar)
 sys.source("RtdfTransform.R",envir=.Radar)
 sys.source("ReplaceTestnames.R",envir=.Radar)
 sys.source("ControlCharts.R",envir=.Radar)

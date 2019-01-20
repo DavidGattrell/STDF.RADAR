@@ -1,6 +1,6 @@
 # TkRadarDefaultsGui.R
 #
-# $Id: TkRadarDefaultsGui.R,v 1.16 2014/08/03 00:50:29 david Exp $
+# $Id: TkRadarDefaultsGui.R,v 1.19 2015/08/02 01:06:26 david Exp $
 #
 # Tk/Tcl GUI wrapper for loading and saving .TkRadar files which
 # define default directories and settings for TkRadar sessions
@@ -74,6 +74,9 @@ defaults_set_default_duplicate_testnames <- tclVar(0)
 defaults_set_default_use_MPR_invalid_pf_data <- tclVar(0)
 defaults_set_default_ltx_ignore_testname_objects <- tclVar(0)
 defaults_set_default_do_testflag_matrix <- tclVar(0)
+defaults_set_default_keep_alarmed_values <- tclVar(0)
+defaults_set_default_do_raw_tsrs <- tclVar(0)
+
 # MergeRtdf
 defaults_set_default_merge_union_of_tests <- tclVar(0)
 # PlotRtdf
@@ -84,6 +87,9 @@ defaults_set_default_add_normal_curve <- tclVar(0)
 defaults_set_default_do_robust_stats <- tclVar(0)
 defaults_set_default_plotrtdf_autoopen <- tclVar(0)
 defaults_set_default_superimpose_hist <- tclVar(0)
+# ProbeVsReprobe
+defaults_set_default_pvsrp_site_pct <- tclVar(0)
+defaults_set_default_pvsrp_type <- tclVar(0)
 # ShrinkRetests
 defaults_set_default_use_xy_coords <- tclVar(0)
 # WaferMap
@@ -195,6 +201,8 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_use_MPR_invalid_pf_data) <- 0
 	tclvalue(defaults_set_default_ltx_ignore_testname_objects) <- 0
 	tclvalue(defaults_set_default_do_testflag_matrix) <- 0	
+	tclvalue(defaults_set_default_keep_alarmed_values) <- 0	
+	tclvalue(defaults_set_default_do_raw_tsrs) <- 0	
 
 	tclvalue(defaults_set_default_merge_union_of_tests) <- 0
 
@@ -205,6 +213,9 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_do_robust_stats) <- 0
 	tclvalue(defaults_set_default_plotrtdf_autoopen) <- 0
 	tclvalue(defaults_set_default_superimpose_hist) <- 0
+
+	tclvalue(defaults_set_default_pvsrp_site_pct) <- 0
+	tclvalue(defaults_set_default_pvsrp_type) <- 0
 
 	tclvalue(defaults_set_default_use_xy_coords) <- 0
 	
@@ -323,7 +334,7 @@ save_default_settings_file <- function() {
 	}
 
 	if (as.logical(tclObj(defaults_set_TkRadar_verbose))) {
-		the_string = "tclvalue(defafrug_dirults_set_TkRadar_verbose) <- 1 \n"
+		the_string = "tclvalue(defaults_set_TkRadar_verbose) <- 1 \n"
 		cat(the_string,file=out_conn)
 		my_value <- as.integer(tclObj(TkRadar_verbose))
 		the_string = sprintf("tclvalue(TkRadar_verbose) <- %d \n",my_value)
@@ -477,7 +488,6 @@ save_default_settings_file <- function() {
 		the_string = sprintf("tclvalue(default_csv_lim_eq_pass_flags) <- %d \n",my_value)
 		cat(the_string,file=out_conn)
 	}
-	# REVISIT.. got as far as here about adding the 3 variables and the tab...
 
 
 	# ConvertEagleCSV
@@ -561,6 +571,21 @@ save_default_settings_file <- function() {
 		the_string = sprintf("tclvalue(default_do_testflag_matrix) <- %d \n",my_value)
 		cat(the_string,file=out_conn)
 	}
+	if (as.logical(tclObj(defaults_set_default_keep_alarmed_values))) {
+		the_string = "tclvalue(defaults_set_default_keep_alarmed_values) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_keep_alarmed_values))
+		the_string = sprintf("tclvalue(default_keep_alarmed_values) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+
+	if (as.logical(tclObj(defaults_set_default_do_raw_tsrs))) {
+		the_string = "tclvalue(defaults_set_default_do_raw_tsrs) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_do_raw_tsrs))
+		the_string = sprintf("tclvalue(default_do_raw_tsrs) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
 
 	# MergeRtdf
 	if (as.logical(tclObj(defaults_set_default_merge_union_of_tests))) {
@@ -619,6 +644,22 @@ save_default_settings_file <- function() {
 		cat(the_string,file=out_conn)
 		my_value <- as.integer(tclObj(default_superimpose_hist))
 		the_string = sprintf("tclvalue(default_superimpose_hist) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+
+	# ProbeVsReprobe
+	if (as.logical(tclObj(defaults_set_default_pvsrp_site_pct))) {
+		the_string = "tclvalue(defaults_set_default_pvsrp_site_pct) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_pvsrp_site_pct))
+		the_string = sprintf("tclvalue(default_pvsrp_site_pct) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_pvsrp_type))) {
+		the_string = "tclvalue(defaults_set_default_pvsrp_type) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- paste(tclObj(default_pvsrp_type),sep="",collapse=" ")
+		the_string = sprintf("tclvalue(default_pvsrp_type) <- \"%s\" \n",my_value)
 		cat(the_string,file=out_conn)
 	}
 
@@ -893,6 +934,7 @@ TkRadarDefaultsGui <- function() {
 	tab4 <- ttkframe(tabs)		# ConvertStdf
 	tab7 <- ttkframe(tabs)		# MergeRtdf
 	tab5 <- ttkframe(tabs)		# PlotRtdf
+	tab12 <- ttkframe(tabs)		# ProbeVsReprobe
 	tab9 <- ttkframe(tabs)		# ShrinkRetests
 	tab6 <- ttkframe(tabs)		# WaferMap
 
@@ -1387,6 +1429,26 @@ TkRadarDefaultsGui <- function() {
 						variable=default_do_testflag_matrix)
 	tkpack(testflag_button,side="left",anchor="n")
 	tkpack(do_testflag_frame,side="top",anchor="w",fill="x")
+	alarmed_frame <- tkframe(tab4)
+	set_alarmed_button <- tkcheckbutton(alarmed_frame,
+						text="Set",
+						variable=defaults_set_default_keep_alarmed_values)
+	tkpack(set_alarmed_button,side="left",anchor="n")
+	alarmed_button <- tkcheckbutton(alarmed_frame,
+						text="default keep_alarmed_values",
+						variable=default_keep_alarmed_values)
+	tkpack(alarmed_button,side="left",anchor="n")
+	tkpack(alarmed_frame,side="top",anchor="w",fill="x")
+	raw_tsrs_frame <- tkframe(tab4)
+	set_raw_tsrs_button <- tkcheckbutton(raw_tsrs_frame,
+						text="Set",
+						variable=defaults_set_default_do_raw_tsrs)
+	tkpack(set_raw_tsrs_button,side="left",anchor="n")
+	do_raw_tsrs_button <- tkcheckbutton(raw_tsrs_frame,
+						text="default do_raw_tsrs",
+						variable=default_do_raw_tsrs)
+	tkpack(do_raw_tsrs_button,side="left",anchor="n")
+	tkpack(raw_tsrs_frame,side="top",anchor="w",fill="x")
 
 	# === PlotRtdf tab ===
 	min_plots_ppage_frame <- tkframe(tab5)
@@ -1937,6 +1999,38 @@ TkRadarDefaultsGui <- function() {
 	tkpack(do_convcsv_eq_lims_frame,side="top",anchor="w",fill="x")
 
 
+	# === ProbeVsReprob tab ===
+	do_pvsrp_type_frame <- tkframe(tab12)
+	pvsrp_set_type_button <- tkcheckbutton(do_pvsrp_type_frame,
+						text="Set",
+						variable=defaults_set_default_pvsrp_type)
+	tkpack(pvsrp_set_type_button,side="left",anchor="n")
+	pvsrp_type_label <- tklabel(do_pvsrp_type_frame, text="default ")
+	tkpack(pvsrp_type_label,side="left")
+	pvsrp_to_sbins <- tkradiobutton(do_pvsrp_type_frame,
+						text="use soft bins",
+						value="sbin",
+						variable=default_pvsrp_type)
+	tkpack(pvsrp_to_sbins,side="left")
+	pvsrp_to_hbins <- tkradiobutton(do_pvsrp_type_frame,
+						text="use hard bins",
+						value="hbin",
+						variable=default_pvsrp_type)
+	tkpack(pvsrp_to_hbins,side="left")
+	tkpack(do_pvsrp_type_frame,side="top",anchor="w",fill="x")
+
+	do_pvsrp_site_pct_frame <- tkframe(tab12)
+	pvsrp_set_site_pct_button <- tkcheckbutton(do_pvsrp_site_pct_frame,
+						text="Set",
+						variable=defaults_set_default_pvsrp_site_pct)
+	tkpack(pvsrp_set_site_pct_button,side="left",anchor="n")
+	pvsrp_site_pct_button <- tkcheckbutton(do_pvsrp_site_pct_frame,
+						text="default site_pct_vs_site",
+						variable=default_pvsrp_site_pct)
+	tkpack(pvsrp_site_pct_button,side="left",anchor="n")
+	tkpack(do_pvsrp_site_pct_frame,side="top",anchor="w",fill="x")
+
+
 # add tabs to notebook
 
 	tkadd(tabs,tab1,text="Directories")
@@ -1948,6 +2042,7 @@ TkRadarDefaultsGui <- function() {
 	tkadd(tabs,tab4,text="ConvertStdf")
 	tkadd(tabs,tab7,text="MergeRtdf")
 	tkadd(tabs,tab5,text="PlotRtdf")
+	tkadd(tabs,tab12,text="ProbeVsReprobe")
 	tkadd(tabs,tab9,text="ShrinkRetests")
 	tkadd(tabs,tab6,text="WaferMap")
 

@@ -1,10 +1,10 @@
 #  MergeRtdf.R
 #
-# $Id: MergeRtdf.R,v 1.10 2013/12/02 02:44:28 david Exp $
+# $Id: MergeRtdf.R,v 1.12 2015/08/02 01:07:17 david Exp $
 #
 # script that merges multiple rtdf files into a single rtdf file
 #
-# Copyright (C) 2007-2013 David Gattrell
+# Copyright (C) 2007-2014 David Gattrell
 #               2012-2013 Chad Erven
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -180,7 +180,8 @@ MergeRtdf <- function(in_files="",out_file="",in_dirs="",union_of_tests=TRUE) {
 								new_idxs[which(wafer_idxs==valid_idxs[i])] = new_idx
 							} else {
 								last_wafer = last_wafer + 1
-								AllWafersFrame[last_wafer] = WafersFrame[valid_idxs[i],]
+								#browser()
+								AllWafersFrame[last_wafer,] = WafersFrame[valid_idxs[i],]
 								new_idxs[which(wafer_idxs==valid_idxs[i])] = last_wafer
 							}
 						}
@@ -283,7 +284,7 @@ MergeRtdf <- function(in_files="",out_file="",in_dirs="",union_of_tests=TRUE) {
 			
 			if(valid_testflagmatrix && !AllTestFlag_valid) {
 				# create empty flag matrix for preceding files that didn't have any
-				AllTestFlagMatrix = matrix(NaN,nrows=my_dims[1],ncol=my_dims[2])
+				AllTestFlagMatrix = matrix(NaN,nrow=my_dims[1],ncol=my_dims[2])
 				AllTestFlag_valid = TRUE
 			}
 			if(AllTestFlag_valid) {
