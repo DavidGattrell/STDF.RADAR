@@ -1,13 +1,13 @@
 # SplitConditions.R
 #
-# $Id: SplitConditions.R,v 1.7 2013/02/02 23:25:14 david Exp $
+# $Id: SplitConditions.R,v 1.9 2019/02/05 02:06:32 david Exp $
 #
 # script that reads in an rtdf file and generates new rtdf
 # files, one per set of conditions in DevicesFrame
 # ie  Vdd=3.6  or Vdd=3.3 or Vdd=3.0
 #
 #
-# Copyright (C) 2009-13 David Gattrell
+# Copyright (C) 2009-18 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -55,18 +55,23 @@ SplitConditions <- function(in_file="",out_file="",in_dir="") {
 		my_dir = getwd()
 		setwd(in_dir)
 	}
-    load(in_file)
+    my_objs = load(in_file)
 	if (in_dir != "")  setwd(my_dir)
 
     AllDevicesFrame = DevicesFrame
     AllResultsMatrix = ResultsMatrix
+	if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+		AllTestFlagMatrix = TestFlagMatrix
+	}
 
 	# determine conditions...
 	main_fields = c("part_id","temp","x_coord","y_coord","wafer_index",
 			"soft_bin","hard_bin","testtime","site","trace_id","device_id",
-			"source_dataset")
+			"source_dataset","first_fail_test","fail_test_count","orig_partid")
 			# trace_id, device_id are extracted from DTR records...
 			# really custom code for a specific application.
+			# first_fail_test and fail_test_count if ran 'find_first_fails'
+			# orig_partid if ran "XYWid2Partid"
 	my_fields = labels(DevicesFrame[1,])[[2]]
 	which_fields = rep(TRUE,length(my_fields))
 	for (i in 1:length(main_fields)) {
@@ -92,19 +97,23 @@ SplitConditions <- function(in_file="",out_file="",in_dir="") {
 			}
 			DevicesFrame = AllDevicesFrame[my_matches,]
 			ResultsMatrix = AllResultsMatrix[my_matches,]
+			if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+				TestFlagMatrix = AllTestFlagMatrix[my_matches,]
+			}
 
 			cond_id = sprintf("%d",j)
 
 			# need to build conditon_file from out_file + cond_id + ".rtdf"
 			cond_file = paste(out_file,"_cond",cond_id,".rtdf",sep="")
 
-			my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
-			if (exists("HbinInfoFrame",inherits=FALSE))   my_list[length(my_list)+1] = "HbinInfoFrame"
-			if (exists("SbinInfoFrame",inherits=FALSE))   my_list[length(my_list)+1] = "SbinInfoFrame"
-			if (exists("TSRFrame",inherits=FALSE))        my_list[length(my_list)+1] = "TSRFrame"
-			if (exists("WaferInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WaferInfoFrame"
-			if (exists("WafersFrame",inherits=FALSE))     my_list[length(my_list)+1] = "WafersFrame"
-			save(list=my_list,file=cond_file)
+#			my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
+#			if (exists("HbinInfoFrame",inherits=FALSE))   my_list[length(my_list)+1] = "HbinInfoFrame"
+#			if (exists("SbinInfoFrame",inherits=FALSE))   my_list[length(my_list)+1] = "SbinInfoFrame"
+#			if (exists("TSRFrame",inherits=FALSE))        my_list[length(my_list)+1] = "TSRFrame"
+#			if (exists("WaferInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WaferInfoFrame"
+#			if (exists("WafersFrame",inherits=FALSE))     my_list[length(my_list)+1] = "WafersFrame"
+#			save(list=my_list,file=cond_file)
+			save(list=my_objs,file=cond_file)
 		}
 		cat("Done\n")
 	}

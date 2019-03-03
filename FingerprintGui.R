@@ -1,11 +1,12 @@
 # FingerprintGui.R
 #
-# $Id: FingerprintGui.R,v 1.1 2013/09/01 23:47:16 david Exp $
+# $Id: FingerprintGui.R,v 1.2 2019/01/28 00:46:12 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling Fingerprint.R
 # called by TkRadar.R
 #
 # Copyright (C) 2013 David Gattrell
+#               2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -37,6 +38,7 @@ for (j in 1:30) {	# limit testlist to <=30, really 7-10 is ideal.
 	fp_testlist[[j]] <- tclVar("")
 }
 fp_top <- tclVar(7)		
+fp_top_shadow <- tclVar(7)		
 fp_in_name <- tclVar("")
 fp_in_dir <- tclVar("")
 fp_ref_dir <- tclVar("")
@@ -51,6 +53,7 @@ FingerprintGui_defaults <- function() {
 		tclvalue(fp_testlist[[j]]) <- ""
 	}
 	tclvalue(fp_top) <- 7	
+	tclvalue(fp_top_shadow) <- 7	
 	
 	tclvalue(fp_out_file) <- "fingerprinted.rtdf"
 	in_dir <- paste(tclObj(Rtdf_dir),sep="",collapse=" ")
@@ -385,7 +388,7 @@ FingerprintGui <- function() {
 	num_entry <- tkentry(num_entry_frame,
 						width=10,
 						background="white",
-						textvariable=fp_top)
+						textvariable=fp_top_shadow)
 
 
 	bottom_row <- tkframe(fingerprint_win)
@@ -544,9 +547,10 @@ FingerprintGui <- function() {
 	tkpack(num_entry_label,side="left")
 	tkpack(num_entry,side="left")	#,fill="x",expand=1)
 	tkbind(num_entry,"<KeyRelease>",function() {
-					tmp <- as.integer(tclObj(fp_top))
+					tmp <- as.integer(tclObj(fp_top_shadow))
 					if( (length(tmp)>0) && is.finite(tmp)) {
 						tkconfigure(num_entry,background="white")
+						tclvalue(fp_top) <- tmp
 					} else {
 						tkconfigure(num_entry,background="yellow")
 					}

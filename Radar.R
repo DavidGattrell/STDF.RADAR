@@ -7,7 +7,7 @@
 #  Analysis
 #  Resources
 #
-# $Id: Radar.R,v 1.23 2015/05/07 00:47:58 david Exp $
+# $Id: Radar.R,v 1.25 2019/03/03 02:15:42 david Exp $
 #
 # This script loads the various RADAR command scripts until such
 # time as it gets put into a proper R package.
@@ -50,6 +50,7 @@ sys.source("ConvertKDF.R",envir=.Radar)
 sys.source("ConvertStdf.R",envir=.Radar)
 sys.source("ExpandMPRs.R",envir=.Radar)
 sys.source("PlotRtdf.R",envir=.Radar)	
+sys.source("PlotRtdf_2.R",envir=.Radar)	# alternate version
 #sys.source("JustBin1s.R",envir=.Radar)	# obsoleted, use FilterByBinning
 sys.source("ConvertParameters.R",envir=.Radar)
 sys.source("WaferMap.R",envir=.Radar)
@@ -82,6 +83,8 @@ sys.source("ControlCharts.R",envir=.Radar)
 sys.source("No_Vlo_Vhi.R",envir=.Radar)		# sort of custom...
 sys.source("AsciiWaferMap.R",envir=.Radar)
 sys.source("SplitBySubstr.R",envir=.Radar)
+sys.source("XYWid2Partid.R",envir=.Radar)
+sys.source("StackedWaferMap.R",envir=.Radar)
 
 # source("Pareto.R")		# on the to-do list...
 # source("StdfRehab.R")		# on the to-do list...

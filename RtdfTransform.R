@@ -1,15 +1,16 @@
 # RtdfTransform.R
 #
-# $Id: RtdfTransform.R,v 1.2 2010/11/23 01:36:09 David Exp $
+# $Id: RtdfTransform.R,v 1.3 2019/02/01 02:06:52 david Exp $
 #
 # script that transforms parameters in an RTDF file.
 # typically used for getting bench data into a format to compare against ATE data,
 # or to compare data from one tester vs. another when there are some
 # name changes or basic transforms.  One example would be changing
-# leakage tests with pulldowns from current to resistance so aid in correlating
+# leakage tests with pulldowns from current to resistance to aid in correlating
 # against test insert/process data.
 #
 # Copyright (C) 2009-2010 David Gattrell
+#               2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -132,6 +133,9 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 
 	orig_ParametersFrame = ParametersFrame
 	orig_ResultsMatrix = ResultsMatrix
+	if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+		orig_TestFlagMatrix = TestFlagMatrix
+	}
 	orig_testname_list = as.character(ParametersFrame[["testname"]])
 
 
@@ -171,6 +175,9 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 			} else {
 				results = s + m*orig_ResultsMatrix[,index]^p
 			}
+			if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+				testflags = orig_TestFlagMatrix[,index]
+			}
 			if (j==1) {
 				Parameters_Names = testnames[i]
 				Parameters_testnum = tnum
@@ -179,6 +186,9 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 				Parameters_ll = ll
 				Parameters_ul = ul
 				ResultsMatrix = results
+				if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+					TestFlagMatrix = testflags
+				}
 			} else {
 				Parameters_Names[j] = testnames[i]
 				Parameters_testnum[j] = tnum
@@ -187,6 +197,9 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 				Parameters_ll[j] = ll
 				Parameters_ul[j] = ul
 				ResultsMatrix = cbind(ResultsMatrix,results)
+				if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+					TestFlagMatrix = cbind(TestFlagMatrix,testflags)
+				}
 			}
 			j=j+1
 		} else {

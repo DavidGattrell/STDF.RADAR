@@ -1,11 +1,12 @@
 # TkRadarDefaultsGui.R
 #
-# $Id: TkRadarDefaultsGui.R,v 1.19 2015/08/02 01:06:26 david Exp $
+# $Id: TkRadarDefaultsGui.R,v 1.22 2019/03/03 02:11:58 david Exp $
 #
 # Tk/Tcl GUI wrapper for loading and saving .TkRadar files which
 # define default directories and settings for TkRadar sessions
 #
 # Copyright (C) 2009-14 David Gattrell
+#               2019
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -45,6 +46,7 @@ defaults_set_default_ascwmap_yield <- tclVar(0)
 defaults_set_default_ascwmap_multi_bin <- tclVar(0)			
 defaults_set_default_ascwmap_multi_terse <- tclVar(0)			
 defaults_set_default_ascwmap_skip_die_minus <- tclVar(0)			
+defaults_set_default_ascwmap_mirror_die <- tclVar(0)			
 # ControlCharts
 defaults_set_default_do_western_electric <- tclVar(0)
 defaults_set_default_control_start_n <- tclVar(0)
@@ -87,6 +89,8 @@ defaults_set_default_add_normal_curve <- tclVar(0)
 defaults_set_default_do_robust_stats <- tclVar(0)
 defaults_set_default_plotrtdf_autoopen <- tclVar(0)
 defaults_set_default_superimpose_hist <- tclVar(0)
+defaults_set_default_plot_max_tests <- tclVar(0)
+default_max_tests_shadow <- tclVar(0)
 # ProbeVsReprobe
 defaults_set_default_pvsrp_site_pct <- tclVar(0)
 defaults_set_default_pvsrp_type <- tclVar(0)
@@ -99,12 +103,28 @@ defaults_set_default_x_coord_alpha <- tclVar(0)
 defaults_set_default_panel <- tclVar(0)
 defaults_set_default_wmap_notch <- tclVar(0)
 defaults_set_default_wmap_autoopen <- tclVar(0)
+defaults_set_default_wmap_param_col_start <- tclVar(0)
+defaults_set_default_wmap_param_col_end <- tclVar(0)
+defaults_set_default_wmap_param_col_rev <- tclVar(0)	
+defaults_set_default_wmap_bin_vs_col_name <- tclVar(0)
+defaults_set_default_wmap_bin_vs_col_path <- tclVar(0)
+defaults_set_default_wmap_gen_bins_csv <- tclVar(0)
+defaults_set_default_wmap_borders_off <- tclVar(0)
+
+default_wmap_param_col_start_shadow <- tclVar(0)
+default_wmap_param_col_end_shadow <- tclVar(0)
+
+# WaferMap .. XformWaferMap
 defaults_set_default_wmap_rotate_ccw <- tclVar(0)
 defaults_set_default_wmap_x_rev_polarity <- tclVar(0)
 defaults_set_default_wmap_y_rev_polarity <- tclVar(0)
 defaults_set_default_wmap_x_shift <- tclVar(0)
 defaults_set_default_wmap_y_shift <- tclVar(0)
-
+# XYWid2Partid
+defaults_set_default_xyw2partid_save_prev_partid <- tclVar(0)
+defaults_set_default_xyw2partid_xcoord_substr <- tclVar(0)
+defaults_set_default_xyw2partid_ycoord_substr <- tclVar(0)
+defaults_set_default_xyw2partid_waferid_substr <- tclVar(0)
 
 
 #-----------------------------------------------------
@@ -177,6 +197,7 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_ascwmap_multi_bin) <- 0
 	tclvalue(defaults_set_default_ascwmap_multi_terse) <- 0
 	tclvalue(defaults_set_default_ascwmap_skip_die_minus) <- 0
+	tclvalue(defaults_set_default_ascwmap_mirror_die) <- 0
 
 	tclvalue(defaults_set_default_do_western_electric) <- 0
 	tclvalue(defaults_set_default_control_start_n) <- 0
@@ -213,6 +234,7 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_do_robust_stats) <- 0
 	tclvalue(defaults_set_default_plotrtdf_autoopen) <- 0
 	tclvalue(defaults_set_default_superimpose_hist) <- 0
+	tclvalue(defaults_set_default_plot_max_tests) <- 0
 
 	tclvalue(defaults_set_default_pvsrp_site_pct) <- 0
 	tclvalue(defaults_set_default_pvsrp_type) <- 0
@@ -225,11 +247,24 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_panel) <- 0
 	tclvalue(defaults_set_default_wmap_notch) <- 0
 	tclvalue(defaults_set_default_wmap_autoopen) <- 0
+	tclvalue(defaults_set_default_wmap_param_col_start) <- 0
+	tclvalue(defaults_set_default_wmap_param_col_end) <- 0
+	tclvalue(defaults_set_default_wmap_param_col_rev) <- 0
+	tclvalue(defaults_set_default_wmap_bin_vs_col_name) <- 0
+	tclvalue(defaults_set_default_wmap_bin_vs_col_path) <- 0
+	tclvalue(defaults_set_default_wmap_gen_bins_csv) <- 0
+	tclvalue(defaults_set_default_wmap_borders_off) <- 0
+	# WaferMap .. XformWaferMap
 	tclvalue(defaults_set_default_wmap_rotate_ccw) <- 0
 	tclvalue(defaults_set_default_wmap_x_rev_polarity) <- 0
 	tclvalue(defaults_set_default_wmap_y_rev_polarity) <- 0
 	tclvalue(defaults_set_default_wmap_x_shift) <- 0
 	tclvalue(defaults_set_default_wmap_y_shift) <- 0
+
+	tclvalue(defaults_set_default_xyw2partid_save_prev_partid) <- 0
+	tclvalue(defaults_set_default_xyw2partid_xcoord_substr) <- 0
+	tclvalue(defaults_set_default_xyw2partid_ycoord_substr) <- 0
+	tclvalue(defaults_set_default_xyw2partid_waferid_substr) <- 0
 
 	# file should already be in the correct
 	# syntax to source...
@@ -249,6 +284,7 @@ load_default_settings_file <- function() {
 		tclvalue(csv_out_csv_dir) <- temp_dir
 	}
 
+	tclvalue(default_max_tests_shadow) <- tclObj(default_plot_max_tests)
 }
 
 
@@ -418,6 +454,13 @@ save_default_settings_file <- function() {
 		cat(the_string,file=out_conn)
 		my_value <- as.integer(tclObj(default_ascwmap_skip_die_minus))
 		the_string = sprintf("tclvalue(default_ascwmap_skip_die_minus) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_ascwmap_mirror_die))) {
+		the_string = "tclvalue(defaults_set_default_ascwmap_mirror_die) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- paste(tclObj(default_ascwmap_mirror_die),sep="",collapse=" ")
+		the_string = sprintf("tclvalue(default_ascwmap_mirror_die) <- \"%s\" \n",my_value)
 		cat(the_string,file=out_conn)
 	}
 	
@@ -646,6 +689,13 @@ save_default_settings_file <- function() {
 		the_string = sprintf("tclvalue(default_superimpose_hist) <- %d \n",my_value)
 		cat(the_string,file=out_conn)
 	}
+	if (as.logical(tclObj(defaults_set_default_plot_max_tests))) {
+		the_string = "tclvalue(defaults_set_default_plot_max_tests) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_plot_max_tests))
+		the_string = sprintf("tclvalue(default_plot_max_tests) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
 
 	# ProbeVsReprobe
 	if (as.logical(tclObj(defaults_set_default_pvsrp_site_pct))) {
@@ -715,6 +765,56 @@ save_default_settings_file <- function() {
 		the_string = sprintf("tclvalue(default_wmap_autoopen) <- %d \n",my_value)
 		cat(the_string,file=out_conn)
 	}
+	if (as.logical(tclObj(defaults_set_default_wmap_param_col_start))) {
+		the_string = "tclvalue(defaults_set_default_wmap_param_col_start) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.numeric(tclObj(default_wmap_param_col_start))
+		the_string = sprintf("tclvalue(default_wmap_param_col_start) <- %f \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_wmap_param_col_end))) {
+		the_string = "tclvalue(defaults_set_default_wmap_param_col_end) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.numeric(tclObj(default_wmap_param_col_end))
+		the_string = sprintf("tclvalue(default_wmap_param_col_end) <- %f \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_wmap_param_col_rev))) {
+		the_string = "tclvalue(defaults_set_default_wmap_param_col_rev) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_wmap_param_col_rev))
+		the_string = sprintf("tclvalue(default_wmap_param_col_rev) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_wmap_bin_vs_col_name))) {
+		the_string = "tclvalue(defaults_set_default_wmap_bin_vs_col_name) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.character(tclObj(default_wmap_bin_vs_col_name))
+		the_string = sprintf("tclvalue(default_wmap_bin_vs_col_name) <- \"%s\" \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_wmap_bin_vs_col_path))) {
+		the_string = "tclvalue(defaults_set_default_wmap_bin_vs_col_path) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.character(tclObj(default_wmap_bin_vs_col_path))
+		the_string = sprintf("tclvalue(default_wmap_bin_vs_col_path) <- \"%s\" \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_wmap_gen_bins_csv))) {
+		the_string = "tclvalue(defaults_set_default_wmap_gen_bins_csv) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_wmap_gen_bins_csv))
+		the_string = sprintf("tclvalue(default_wmap_gen_bins_csv) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_wmap_borders_off))) {
+		the_string = "tclvalue(defaults_set_default_wmap_borders_off) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_wmap_borders_off))
+		the_string = sprintf("tclvalue(default_wmap_borders_off) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	# WaferMap .. XformWaferMap
 	if (as.logical(tclObj(defaults_set_default_wmap_rotate_ccw))) {
 		the_string = "tclvalue(defaults_set_default_wmap_rotate_ccw) <- 1 \n"
 		cat(the_string,file=out_conn)
@@ -748,6 +848,36 @@ save_default_settings_file <- function() {
 		cat(the_string,file=out_conn)
 		my_value <- as.integer(tclObj(default_wmap_y_shift))
 		the_string = sprintf("tclvalue(default_wmap_y_shift) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+
+	# XYWid2Partid
+	if (as.logical(tclObj(defaults_set_default_xyw2partid_save_prev_partid))) {
+		the_string = "tclvalue(defaults_set_default_xyw2partid_save_prev_partid) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.character(tclObj(default_xyw2partid_save_prev_partid))
+		the_string = sprintf("tclvalue(default_xyw2partid_save_prev_partid) <- \"%s\" \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_xyw2partid_xcoord_substr))) {
+		the_string = "tclvalue(defaults_set_default_xyw2partid_xcoord_substr) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.character(tclObj(default_xyw2partid_xcoord_substr))
+		the_string = sprintf("tclvalue(default_xyw2partid_xcoord_substr) <- \"%s\" \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_xyw2partid_ycoord_substr))) {
+		the_string = "tclvalue(defaults_set_default_xyw2partid_ycoord_substr) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.character(tclObj(default_xyw2partid_ycoord_substr))
+		the_string = sprintf("tclvalue(default_xyw2partid_ycoord_substr) <- \"%s\" \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_xyw2partid_waferid_substr))) {
+		the_string = "tclvalue(defaults_set_default_xyw2partid_waferid_substr) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.character(tclObj(default_xyw2partid_waferid_substr))
+		the_string = sprintf("tclvalue(default_xyw2partid_waferid_substr) <- \"%s\" \n",my_value)
 		cat(the_string,file=out_conn)
 	}
 
@@ -924,6 +1054,42 @@ TkRadarDefaultsGui <- function() {
 
 	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+	tabs_list <- tclVar()
+	tclObj(tabs_list) <- c("Directories",
+							"Log file",
+							"AsciiWaferMap",
+							"ControlCharts",
+							"ConvertCsv",
+							"ConvertEagleCSV",
+							"ConvertStdf",
+							"MergeRtdf",
+							"PlotRtdf",
+							"ProbeVsReprobe",
+							"ShrinkRetests",
+							"WaferMap",
+							"XYWi2Partid")
+
+	# now put a listbox for the tab names on the left side...
+	tabs_listbox_frame <- tkframe(tkradardefaults_win)
+	tabs_listbox <- tklistbox(tabs_listbox_frame,
+						selectmode="single",
+						exportselection=FALSE,
+						listvariable = tabs_list,
+						height=10)
+	tabs_scroll <- tkscrollbar(tabs_listbox_frame,
+						orient="vertical",
+						command=function(...) tkyview(tabs_listbox,...))
+	tkconfigure(tabs_listbox,
+						yscrollcommand=function(...) tkset(tabs_scroll,...))
+
+	tkpack(tabs_listbox,side="left",anchor="n",fill="both",expand=1)
+	tkpack(tabs_scroll,side="right",anchor="n",fill="y")
+	tkpack(tabs_listbox_frame,side="left",anchor="n",fill="both",expand=1)
+
+	tkselection.set(tabs_listbox,0)	# set an initial selection
+
+	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 	tabs <- ttknotebook(tkradardefaults_win)
 	tab1 <- ttkframe(tabs)		# Directories
 	tab2 <- ttkframe(tabs)		# Log file
@@ -937,6 +1103,7 @@ TkRadarDefaultsGui <- function() {
 	tab12 <- ttkframe(tabs)		# ProbeVsReprobe
 	tab9 <- ttkframe(tabs)		# ShrinkRetests
 	tab6 <- ttkframe(tabs)		# WaferMap
+	tab13 <- ttkframe(tabs)		# XYWid2Partid
 
 	# === Directories tab ===
 	outdir_frame <- tkframe(tab1)
@@ -1281,8 +1448,8 @@ TkRadarDefaultsGui <- function() {
 	ctrl_start_browse <- tkbutton(ctrl_start_frame,
 						text="Edit",
 						command=function() index_entry(default_control_start_n))
-	tkpack(ctrl_start_browse,side="right")
-	tkpack(ctrl_start_frame,side="top",anchor="w")
+	tkpack(ctrl_start_browse,side="left")
+	tkpack(ctrl_start_frame,side="top",anchor="w",fill="x")
 	ctrl_count_frame <- tkframe(tab3)
 	set_ctrl_count_button <- tkcheckbutton(ctrl_count_frame,
 						text="Set",
@@ -1300,8 +1467,8 @@ TkRadarDefaultsGui <- function() {
 	ctrl_count_browse <- tkbutton(ctrl_count_frame,
 						text="Edit",
 						command=function() index_entry(default_control_count_n))
-	tkpack(ctrl_count_browse,side="right")
-	tkpack(ctrl_count_frame,side="top",anchor="w")
+	tkpack(ctrl_count_browse,side="left")
+	tkpack(ctrl_count_frame,side="top",anchor="w",fill="x")
 	charts_p_page_frame <- tkframe(tab3)
 	set_charts_p_page_button <- tkcheckbutton(charts_p_page_frame,
 						text="Set",
@@ -1324,7 +1491,7 @@ TkRadarDefaultsGui <- function() {
 						text="-",
 						command=dec_def_charts_p_page)
 	tkpack(charts_pp_minus,side="left")
-	tkpack(charts_p_page_frame,side="top",anchor="w")
+	tkpack(charts_p_page_frame,side="top",anchor="w",fill="x")
 	#... 3 more variables to add here...
 	cont_land_frame <- tkframe(tab3)
 	set_cont_land_button <- tkcheckbutton(cont_land_frame,
@@ -1536,6 +1703,32 @@ TkRadarDefaultsGui <- function() {
 	tkpack(plotrtdf_autoopen_button,side="left",anchor="n")
 	tkpack(plotrtdf_autoopen_frame,side="top",anchor="w",fill="x")
 
+	max_tests_frame <- tkframe(tab5)
+	set_max_tests_button <- tkcheckbutton(max_tests_frame,
+						text="Set",
+						variable=defaults_set_default_plot_max_tests)
+	tkpack(set_max_tests_button,side="left",anchor="n")
+	max_tests_label <- tklabel(max_tests_frame,
+						#width=10,
+						text="default max_tests")
+	tkpack(max_tests_label,side="left")
+	tclvalue(default_max_tests_shadow) <- tclObj(default_plot_max_tests)
+	max_tests_entry <- tkentry(max_tests_frame,
+						width=10,
+						background="white",
+						textvariable=default_max_tests_shadow)
+	tkpack(max_tests_entry,side="left")
+	tkbind(max_tests_entry,"<KeyRelease>",function() {
+					tmp <- as.integer(tclObj(default_max_tests_shadow))
+					if( (length(tmp)>0) && is.finite(tmp)) {
+						tkconfigure(max_tests_entry,background="white")
+						tclvalue(default_plot_max_tests) <- tmp
+					} else {
+						tkconfigure(max_tests_entry,background="yellow")
+					}
+				})
+	tkpack(max_tests_frame,side="top",anchor="w",fill="x")
+
 	# === WaferMap tab ===
 	wmap_xleft_frame <- tkframe(tab6)
 	wmap_xleft_button <- tkcheckbutton(wmap_xleft_frame,
@@ -1633,6 +1826,161 @@ TkRadarDefaultsGui <- function() {
 	tkpack(wmap_autoopen_button,side="left",anchor="n")
 	tkpack(wmap_autoopen_frame,side="top",anchor="w",fill="x")
 
+	wmap_borders_frame <- tkframe(tab6)
+	set_wmap_borders_button <- tkcheckbutton(wmap_borders_frame,
+						text="Set",
+						variable=defaults_set_default_wmap_borders_off)
+	tkpack(set_wmap_borders_button,side="left",anchor="n")
+	wmap_borders_label <- tklabel(wmap_borders_frame,
+						width=10,
+						text="borders_off")
+	tkpack(wmap_borders_label,side="left")
+	wmap_borders_entry <- tklabel(wmap_borders_frame,
+						width=8,
+						relief="sunken",
+						textvariable=default_wmap_borders_off)
+	tkpack(wmap_borders_entry,side="left")
+	wmap_borders_browse <- tkbutton(wmap_borders_frame,
+						text="Edit",
+						command=function() index_entry(default_wmap_borders_off))
+	tkpack(wmap_borders_browse,side="left")
+	tkpack(wmap_borders_frame,side="top",anchor="w",fill="x")
+
+	# ------------------
+
+	wmap_param_col_frame <- tkframe(tab6)
+	wmap_param_col_label <- tklabel(wmap_param_col_frame,
+						text="-------- parametric wafermap color settings --------")
+	tkpack(wmap_param_col_label,side="left")
+	tkpack(wmap_param_col_frame,side="top",anchor="w",fill="x")
+
+	# param_col_start REVISIT.. no error checking for floating # yet!
+	tclvalue(default_wmap_param_col_start_shadow) <- tclObj(default_wmap_param_col_start)
+	param_col_start_frame <- tkframe(tab6)
+	set_param_col_start_button <- tkcheckbutton(param_col_start_frame,
+						text="Set",
+						variable=defaults_set_default_wmap_param_col_start)
+	tkpack(set_param_col_start_button,side="left",anchor="n")
+	param_col_start_label <- tklabel(param_col_start_frame,
+						width=18,
+						text="default param_col_start")
+	tkpack(param_col_start_label,side="left")
+	param_col_start_entry <- tkentry(param_col_start_frame,
+						width=10,
+						background="white",
+						textvariable=default_wmap_param_col_start_shadow)
+	tkpack(param_col_start_entry,side="left")
+	tkbind(param_col_start_entry,"<KeyRelease>",function() {
+					tmp <- as.numeric(tclObj(default_wmap_param_col_start_shadow))
+					if( (length(tmp)>0) && is.finite(tmp) &&
+							(tmp>=0.0)  && (tmp<=1.0) ) {
+						tkconfigure(param_col_start_entry,background="white")
+						tclvalue(default_wmap_param_col_start) <- tmp
+					} else {
+						tkconfigure(param_col_start_entry,background="yellow")
+					}
+					tcl('update')
+				})
+	tkpack(param_col_start_frame,side="top",anchor="w",fill="x")
+
+	# param_col_end
+	tclvalue(default_wmap_param_col_end_shadow) <- tclObj(default_wmap_param_col_end)
+	param_col_end_frame <- tkframe(tab6)
+	set_param_col_end_button <- tkcheckbutton(param_col_end_frame,
+						text="Set",
+						variable=defaults_set_default_wmap_param_col_end)
+	tkpack(set_param_col_end_button,side="left",anchor="n")
+	param_col_end_label <- tklabel(param_col_end_frame,
+						width=18,
+						text="default param_col_end")
+	tkpack(param_col_end_label,side="left")
+	param_col_end_entry <- tkentry(param_col_end_frame,
+						width=10,
+						background="white",
+						textvariable=default_wmap_param_col_end_shadow)
+	tkpack(param_col_end_entry,side="left")
+	tkbind(param_col_end_entry,"<KeyRelease>",function() {
+					tmp <- as.numeric(tclObj(default_wmap_param_col_end_shadow))
+					if( (length(tmp)>0) && is.finite(tmp) &&
+							(tmp>=0.0)  && (tmp<=1.0) ) {
+						tkconfigure(param_col_end_entry,background="white")
+						tclvalue(default_wmap_param_col_end) <- tmp
+					} else {
+						tkconfigure(param_col_end_entry,background="yellow")
+					}
+					tcl('update')
+				})
+	tkpack(param_col_end_frame,side="top",anchor="w",fill="x")
+	
+	wmap_param_col_rev_frame <- tkframe(tab6)
+	wmap_param_col_rev_button <- tkcheckbutton(wmap_param_col_rev_frame,
+						text="default wmap_param_col_rev",
+						variable=default_wmap_param_col_rev)
+	set_wmap_param_col_rev_button <- tkcheckbutton(wmap_param_col_rev_frame,
+						text="Set",
+						variable=defaults_set_default_wmap_param_col_rev)
+	tkpack(set_wmap_param_col_rev_button,side="left",anchor="n")
+	tkpack(wmap_param_col_rev_button,side="left",anchor="n")
+	tkpack(wmap_param_col_rev_frame,side="top",anchor="w",fill="x")
+
+	# ------------------
+
+	wmap_bin_vs_col_frame <- tkframe(tab6)
+	wmap_bin_vs_col_label <- tklabel(wmap_bin_vs_col_frame,
+						text="-------- sbin/hbin wafermap color settings --------")
+	tkpack(wmap_bin_vs_col_label,side="left")
+	tkpack(wmap_bin_vs_col_frame,side="top",anchor="w",fill="x")
+
+	bin_vs_col_name_frame <- tkframe(tab6)
+	set_bin_vs_col_name_button <- tkcheckbutton(bin_vs_col_name_frame,
+						text="Set",
+						variable=defaults_set_default_wmap_bin_vs_col_name)
+	tkpack(set_bin_vs_col_name_button,side="left",anchor="n")
+	bin_vs_col_name_label <- tklabel(bin_vs_col_name_frame,
+						width=18,
+						text="default bin_vs_colors")
+	tkpack(bin_vs_col_name_label,side="left")
+	bin_vs_col_name_entry <- tkentry(bin_vs_col_name_frame,
+						width=20,
+						textvariable=default_wmap_bin_vs_col_name)
+	tkpack(bin_vs_col_name_entry,side="left")
+	tkpack(bin_vs_col_name_frame,side="top",anchor="w",fill="x")
+
+	# bin_vs_col_path
+	bin_vs_col_path_frame <- tkframe(tab6)
+	set_bin_vs_col_path_button <- tkcheckbutton(bin_vs_col_path_frame,
+						text="Set",
+						variable=defaults_set_default_wmap_bin_vs_col_path)
+	tkpack(set_bin_vs_col_path_button,side="left",anchor="n")
+	bin_vs_col_path_label <- tklabel(bin_vs_col_path_frame,
+						width=18,
+						text="default bin_vs_colors")
+	tkpack(bin_vs_col_path_label,side="left")
+	bin_vs_col_path_entry <- tkentry(bin_vs_col_path_frame,
+						width=20,
+						textvariable=default_wmap_bin_vs_col_path)
+	tkpack(bin_vs_col_path_entry,side="left")
+	tkpack(bin_vs_col_path_frame,side="top",anchor="w",fill="x")
+
+	wmap_gen_bins_csv_frame <- tkframe(tab6)
+	wmap_gen_bins_csv_button <- tkcheckbutton(wmap_gen_bins_csv_frame,
+						text="default wmap_gen_bins_csv",
+						variable=default_wmap_gen_bins_csv)
+	set_wmap_gen_bins_csv_button <- tkcheckbutton(wmap_gen_bins_csv_frame,
+						text="Set",
+						variable=defaults_set_default_wmap_gen_bins_csv)
+	tkpack(set_wmap_gen_bins_csv_button,side="left",anchor="n")
+	tkpack(wmap_gen_bins_csv_button,side="left",anchor="n")
+	tkpack(wmap_gen_bins_csv_frame,side="top",anchor="w",fill="x")
+
+	# ------------------
+
+	wmap_xform_frame <- tkframe(tab6)
+	wmap_xform_label <- tklabel(wmap_xform_frame,
+						text="-------- XformWaferMap settings --------")
+	tkpack(wmap_xform_label,side="left")
+	tkpack(wmap_xform_frame,side="top",anchor="w",fill="x")
+
 	wmap_rotate_frame <- tkframe(tab6)
 	set_wmap_rotate_button <- tkcheckbutton(wmap_rotate_frame,
 						text="Set",
@@ -1684,9 +2032,6 @@ TkRadarDefaultsGui <- function() {
 	tkpack(wmap_y_polar_button,side="left",anchor="n")
 	tkpack(wmap_y_polar_frame,side="top",anchor="w",fill="x")
 
-#REVISIT.. as far as here...
-# adding x shift, y shift get integer...
-# also need to revisit above for integer vs character... tab3 ControlCharts example
 	wmap_xshift_frame <- tkframe(tab6)
 	set_wmap_xshift_button <- tkcheckbutton(wmap_xshift_frame,
 						text="Set",
@@ -1704,8 +2049,8 @@ TkRadarDefaultsGui <- function() {
 	wmap_xshift_browse <- tkbutton(wmap_xshift_frame,
 						text="Edit",
 						command=function() integer_entry(default_wmap_x_shift))
-	tkpack(wmap_xshift_browse,side="right")
-	tkpack(wmap_xshift_frame,side="top",anchor="w")
+	tkpack(wmap_xshift_browse,side="left")
+	tkpack(wmap_xshift_frame,side="top",anchor="w",fill="x")
 
 	wmap_yshift_frame <- tkframe(tab6)
 	set_wmap_yshift_button <- tkcheckbutton(wmap_yshift_frame,
@@ -1724,8 +2069,8 @@ TkRadarDefaultsGui <- function() {
 	wmap_yshift_browse <- tkbutton(wmap_yshift_frame,
 						text="Edit",
 						command=function() integer_entry(default_wmap_y_shift))
-	tkpack(wmap_yshift_browse,side="right")
-	tkpack(wmap_yshift_frame,side="top",anchor="w")
+	tkpack(wmap_yshift_browse,side="left")
+	tkpack(wmap_yshift_frame,side="top",anchor="w",fill="x")
 
 
 	# === MergeRtdf tab ===
@@ -1759,7 +2104,7 @@ TkRadarDefaultsGui <- function() {
 						value="hbin",
 						variable=default_ascwmap_type)
 	tkpack(awmap_type_hbin,side="left")
-	tkpack(awmap_type_frame,side="top",anchor="w")
+	tkpack(awmap_type_frame,side="top",anchor="w",fill="x")
 
 	awmap_ydown_frame <- tkframe(tab8)
 	set_awmap_ydown_button <- tkcheckbutton(awmap_ydown_frame,
@@ -1907,6 +2252,21 @@ TkRadarDefaultsGui <- function() {
 	tkpack(awmap_skip_die_minus_button,side="left",anchor="n")
 	tkpack(awmap_skip_die_minus_frame,side="top",anchor="w",fill="x")
 
+	mirror_frame <- tkframe(tab8)
+	set_mirror_button <- tkcheckbutton(mirror_frame,
+						text="Set",
+						variable=defaults_set_default_ascwmap_mirror_die)
+	tkpack(set_mirror_button,side="left",anchor="n")
+	mirror_label <- tklabel(mirror_frame,
+						width=18,
+						text="default mirror_die")
+	tkpack(mirror_label,side="left")
+	mirror_entry <- tkentry(mirror_frame,
+						width=20,
+						textvariable=default_ascwmap_mirror_die)
+	tkpack(mirror_entry,side="left")
+	tkpack(mirror_frame,side="top",anchor="w",fill="x")
+
 	# === ShrinkRetests tab ===
 	use_xy_coords_frame <- tkframe(tab9)
 	set_use_xy_coords_button <- tkcheckbutton(use_xy_coords_frame,
@@ -2030,24 +2390,97 @@ TkRadarDefaultsGui <- function() {
 	tkpack(pvsrp_site_pct_button,side="left",anchor="n")
 	tkpack(do_pvsrp_site_pct_frame,side="top",anchor="w",fill="x")
 
+	# === XYWid2Partid tab ===
+	xyw2p_partid_frame <- tkframe(tab13)
+	xyw2p_set_partid_button <- tkcheckbutton(xyw2p_partid_frame,
+						text="Set",
+						variable=defaults_set_default_xyw2partid_save_prev_partid)
+	tkpack(xyw2p_set_partid_button,side="left",anchor="n")
+	xyw2p_partid_label <- tklabel(xyw2p_partid_frame,
+						width=26,
+						text="default save_prev_part_id")
+	tkpack(xyw2p_partid_label,side="left")
+	xyw2p_partid_entry <- tkentry(xyw2p_partid_frame,
+						width=20,
+						textvariable=default_xyw2partid_save_prev_partid)
+	tkpack(xyw2p_partid_entry,side="left")
+	tkpack(xyw2p_partid_frame,side="top",anchor="w",fill="x")
+
+	xyw2p_xcoord_frame <- tkframe(tab13)
+	xyw2p_set_xcoord_button <- tkcheckbutton(xyw2p_xcoord_frame,
+						text="Set",
+						variable=defaults_set_default_xyw2partid_xcoord_substr)
+	tkpack(xyw2p_set_xcoord_button,side="left",anchor="n")
+	xyw2p_xcoord_label <- tklabel(xyw2p_xcoord_frame,
+						width=26,
+						text="default x_testname")
+	tkpack(xyw2p_xcoord_label,side="left")
+	xyw2p_xcoord_entry <- tkentry(xyw2p_xcoord_frame,
+						width=20,
+						textvariable=default_xyw2partid_xcoord_substr)
+	tkpack(xyw2p_xcoord_entry,side="left")
+	tkpack(xyw2p_xcoord_frame,side="top",anchor="w",fill="x")
+
+	xyw2p_ycoord_frame <- tkframe(tab13)
+	xyw2p_set_ycoord_button <- tkcheckbutton(xyw2p_ycoord_frame,
+						text="Set",
+						variable=defaults_set_default_xyw2partid_ycoord_substr)
+	tkpack(xyw2p_set_ycoord_button,side="left",anchor="n")
+	xyw2p_ycoord_label <- tklabel(xyw2p_ycoord_frame,
+						width=26,
+						text="default y_testname")
+	tkpack(xyw2p_ycoord_label,side="left")
+	xyw2p_ycoord_entry <- tkentry(xyw2p_ycoord_frame,
+						width=20,
+						textvariable=default_xyw2partid_ycoord_substr)
+	tkpack(xyw2p_ycoord_entry,side="left")
+	tkpack(xyw2p_ycoord_frame,side="top",anchor="w",fill="x")
+
+	xyw2p_waferid_frame <- tkframe(tab13)
+	xyw2p_set_waferid_button <- tkcheckbutton(xyw2p_waferid_frame,
+						text="Set",
+						variable=defaults_set_default_xyw2partid_waferid_substr)
+	tkpack(xyw2p_set_waferid_button,side="left",anchor="n")
+	xyw2p_waferid_label <- tklabel(xyw2p_waferid_frame,
+						width=26,
+						text="default w_testname")
+	tkpack(xyw2p_waferid_label,side="left")
+	xyw2p_waferid_entry <- tkentry(xyw2p_waferid_frame,
+						width=20,
+						textvariable=default_xyw2partid_waferid_substr)
+	tkpack(xyw2p_waferid_entry,side="left")
+	tkpack(xyw2p_waferid_frame,side="top",anchor="w",fill="x")
 
 # add tabs to notebook
+# getting too noisy, so make hidden, use listbox on left side instead of tabs
+# across top
 
-	tkadd(tabs,tab1,text="Directories")
-	tkadd(tabs,tab2,text="Log file")
-	tkadd(tabs,tab8,text="AsciiWaferMap")
-	tkadd(tabs,tab3,text="ControlCharts")
-	tkadd(tabs,tab11,text="ConvertCsv")
-	tkadd(tabs,tab10,text="ConvertEagleCSV")
-	tkadd(tabs,tab4,text="ConvertStdf")
-	tkadd(tabs,tab7,text="MergeRtdf")
-	tkadd(tabs,tab5,text="PlotRtdf")
-	tkadd(tabs,tab12,text="ProbeVsReprobe")
-	tkadd(tabs,tab9,text="ShrinkRetests")
-	tkadd(tabs,tab6,text="WaferMap")
+	tkadd(tabs,tab1,text=" ",state="hidden",text="Directories")
+	tkadd(tabs,tab2,text=" ",state="hidden",text="Log file")
+	tkadd(tabs,tab8,text=" ",state="hidden",text="AsciiWaferMap")
+	tkadd(tabs,tab3,text=" ",state="hidden",text="ControlCharts")
+	tkadd(tabs,tab11,text=" ",state="hidden",text="ConvertCsv")
+	tkadd(tabs,tab10,text=" ",state="hidden",text="ConvertEagleCSV")
+	tkadd(tabs,tab4,text=" ",state="hidden",text="ConvertStdf")
+	tkadd(tabs,tab7,text=" ",state="hidden",text="MergeRtdf")
+	tkadd(tabs,tab5,text=" ",state="hidden",text="PlotRtdf")
+	tkadd(tabs,tab12,text=" ",state="hidden",text="ProbeVsReprobe")
+	tkadd(tabs,tab9,text=" ",state="hidden",text="ShrinkRetests")
+	tkadd(tabs,tab6,text=" ",state="hidden",text="WaferMap")
+	tkadd(tabs,tab13,text=" ",state="hidden",text="XYWid2Partid")
 
 	tkpack(tabs,side="top",anchor="w",fill="x")
 
+	#tcl(tabs,"select",0)	# select first tab
+	tkbind(tabs_listbox,"<<ListboxSelect>>",function() {
+			my_index <- as.numeric(tclvalue(tkcurselection(tabs_listbox)))
+			if(is.finite(my_index)) {
+				tcl(tabs,"hide","current")
+				tcl(tabs,"select",my_index)
+			}
+			tcl('update')
+		})
+			
 	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 

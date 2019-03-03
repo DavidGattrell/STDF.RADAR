@@ -1,6 +1,6 @@
 # SplitBySubstr.R
 #
-# $Id: SplitBySubstr.R,v 1.1 2010/11/22 02:16:56 David Exp $
+# $Id: SplitBySubstr.R,v 1.2 2019/02/01 02:12:09 david Exp $
 #
 # script for separating data by conditions that are coded into the
 # parameter names.
@@ -13,6 +13,7 @@
 # data and the third having the Vmax data.
 # 
 # Copyright (C) 2010 David Gattrell
+#               2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -60,7 +61,7 @@ SplitBySubstr <- function(in_file="",substrs="",out_file="",in_dir="") {
     }
 
 
-    my_objects = load(in_file)
+    my_objs = load(in_file)
 
 	tests = dim(ParametersFrame)[1]
 	cat(sprintf("... read in %d parameters \n",tests))
@@ -91,6 +92,9 @@ SplitBySubstr <- function(in_file="",substrs="",out_file="",in_dir="") {
 	# ok, now create the split rtdf files
 	#---------------------------------------
 	OrigResultsMatrix = ResultsMatrix
+	if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+		OrigTestFlagMatrix = TestFlagMatrix
+	}
 	ParametersFrame["testname"] = new_testnames
 	OrigParametersFrame = ParametersFrame
 	for (i in 1:conditions) {
@@ -98,10 +102,13 @@ SplitBySubstr <- function(in_file="",substrs="",out_file="",in_dir="") {
 		if(length(keepers)>0) {
 			ParametersFrame = OrigParametersFrame[keepers,]
 			ResultsMatrix = OrigResultsMatrix[,keepers]
+			if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+				TestFlagMatrix = OrigTestFlagMatrix[,keepers]
+			}
 			out_filename = sprintf("%s_%s.rtdf",out_file,substrs[i])
 			cat(sprintf("... now writing %d parameters to %s \n",
 					length(keepers),out_filename))
-			save(list=my_objects, file=out_filename)
+			save(list=my_objs, file=out_filename)
 		}
 	}
 

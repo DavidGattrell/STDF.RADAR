@@ -1,0 +1,29 @@
+LibreOffice 5.0
+
+Creating cross references
+
+Create title you want to jump to..... highlight this text and also copy it.
+
+	Insert -> Cross-Reference...
+	
+		Set Reference
+
+			highlighted text should already appear in the value box, paste it into the 
+			Name field and hit "Insert"
+
+
+
+Now need to create link that jumps to this location...
+
+	At place where you want to jump-to text, 
+
+	Insert -> Cross-Reference...
+	
+		Insert Reference
+
+		(Insert reference to)
+			Reference
+
+		.. then scroll through Selection list to find the one you just created above.
+		hit "Insert"
+

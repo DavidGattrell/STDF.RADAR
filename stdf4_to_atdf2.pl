@@ -8,6 +8,9 @@
 #                                MPR N1 were being read as U1, fixed
 #                                DTR with \n now has space as first char of next line
 # modified 2014 David Gattrell - closing loop of stdf->atdf->stdf integrity
+# modified 2017 Haino - fix bug in FTR processing TEST_FLG
+# modified 2017 Paul Robins - GDR re-enabled. Corrected GDR B0 (pad byte handling)
+# modified 2017 David Gattrell - revisit PTR and FTR, stdf->atdf->stdf->atdf with a595.stdf
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of either the GNU General Public License or the Artistic
@@ -975,15 +978,15 @@ sub FTR
 	#		1	0	F
 	#		1	1	empty
 	$gAtdfRD{'PassFailFlag'} = 'P';
-	if    (bitand($gStdfRD{'TEST_FLG'}, 0x40))
+	if    (bitand($gAtdfRD{'TEST_FLG'}, 0x40))
 	{
 		$gAtdfRD{'PassFailFlag'} = '';
 	}
-	elsif (bitand($gStdfRD{'TEST_FLG'}, 0x80))
+	elsif (bitand($gAtdfRD{'TEST_FLG'}, 0x80))
 	{
 		$gAtdfRD{'PassFailFlag'} = 'F';
 	}
-	elsif (bitand($gStdfRD{'TEST_FLG'}, 0xC0))
+	elsif (bitand($gAtdfRD{'TEST_FLG'}, 0xC0))
 	{
 		$gAtdfRD{'PassFailFlag'} = '';
 	};
@@ -1017,39 +1020,77 @@ sub FTR
 	#		X= Test aborted
 	#
 	#	STDF to ATDF map
+
 	$gAtdfRD{'AlarmFlags'} = '';
-	if    (bitand($gStdfRD{'TEST_FLG'}, 0x01))
+	if    (bitand($gAtdfRD{'TEST_FLG'}, 0x01))
 	{
-		$gAtdfRD{'AlarmFlags'} = 'A';
+		$gAtdfRD{'AlarmFlags'} .= 'A';
 	}
-	elsif (bitand($gStdfRD{'TEST_FLG'}, 0x02))
+	elsif (bitand($gAtdfRD{'TEST_FLG'}, 0x02))
 	{
-		$gAtdfRD{'AlarmFlags'} = 'U';
+		$gAtdfRD{'AlarmFlags'} .= 'U';
 	}
-	elsif (bitand($gStdfRD{'TEST_FLG'}, 0x04))
+	elsif (bitand($gAtdfRD{'TEST_FLG'}, 0x04))
 	{
-		$gAtdfRD{'AlarmFlags'} = 'T';
+		$gAtdfRD{'AlarmFlags'} .= 'T';
 	}
-	elsif (bitand($gStdfRD{'TEST_FLG'}, 0x08))
+	elsif (bitand($gAtdfRD{'TEST_FLG'}, 0x08))
 	{
-		$gAtdfRD{'AlarmFlags'} = 'N';
+		$gAtdfRD{'AlarmFlags'} .= 'N';
 	}
-	elsif (bitand($gStdfRD{'TEST_FLG'}, 0x10))
+	elsif (bitand($gAtdfRD{'TEST_FLG'}, 0x10))
 	{
-		$gAtdfRD{'AlarmFlags'} = 'X';
+		$gAtdfRD{'AlarmFlags'} .= 'X';
 	};
+
+	# Use OPT_FLAG to set some fields to empty...
+	#
+	# b0 = 1 -> CYCL_CNT not valid
+	# b1 = 1 -> REL_VADR not valid
+	# b2 = 1 -> REPT_CNT not valid
+	# b3 = 1 -> NUM_FAIL not valid
+	# b4 = 1 -> XFAIL_AD and YVALID_AD not valid
+	# b5 = 1 -> VECT_OFF not valid
+	#
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x01))
+	{
+		# a5 still populates this with valid #, even when flag says invalid!
+		# so keep this information
+		#$gAtdfRD{'CYCL_CNT'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x02))
+	{
+		$gAtdfRD{'REL_VADR'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x04))
+	{
+		$gAtdfRD{'REPT_CNT'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x08))
+	{
+		$gAtdfRD{'NUM_FAIL'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x10))
+	{
+		$gAtdfRD{'XFAIL_AD'} = '';
+		$gAtdfRD{'YFAIL_AD'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x20))
+	{
+		$gAtdfRD{'VECT_OFF'} = '';
+	};
+
 };
 
 # GDR()
 
 sub GDR
 {
-	return;
-
 	stdfFieldRead('FLD_CNT', 'U2', 1);
 	my $atdfFldCnt = S2A_U2($gStdfRD{'FLD_CNT'});
 	my $dataTypeCode = undef;
 	my %dataTypeCodeMap = (
+		0  => 'B0',
 		1  => 'U1',
 		2  => 'U2',
 		3  => 'U4',
@@ -1093,10 +1134,25 @@ sub GDR
 				$dataTypeCode
 			);
 		};
-		if ($dataType =~ m/^(U2|U4|I2|I4|R4|R8)$/) # MBSLFD
+		if ($dataType eq 'B0')   # 0 pad byte,used for alignment of MBSLFD values
 		{
-			stdfRead(1); # read B*0 byte
+		#	next;
+			$dataTypeCode = S2A_U1(stdfRead(1));
+			dbugData([$dataTypeCode], ['*GDR::dataTypeCode']);
+			$dataType = $dataTypeCodeMap{$dataTypeCode};
+			dbugData([$dataType], ['*GDR::dataType']);
+			if ($dataType eq '')
+			{
+				fatal(
+					'GDR record contains invalid data type code:',
+					$dataTypeCode
+				);
+			};
 		};
+		#if ($dataType =~ m/^(U2|U4|I2|I4|R4|R8)$/) # MBSLFD
+		#{
+		#	stdfRead(1); # read B*0 byte
+		#};
 		stdfFieldRead('GEN_DATA', $dataType, 1);
 		$r = \&{'S2A_'.$dataType};
 		push(
@@ -1643,9 +1699,9 @@ sub PTR
 	stdfToAtdfField('HLM_SCAL', 'I1');
 	stdfToAtdfField('LO_LIMIT', 'R4');
 	#atdfFormatReal(\$gAtdfRD{'LO_LIMIT'});
-	$gAtdfRD{'LO_LIMIT'} = sprintf("%.9e",$gAtdfRD{'LO_LIMIT'});
+	#$gAtdfRD{'LO_LIMIT'} = sprintf("%.9e",$gAtdfRD{'LO_LIMIT'});
 	stdfToAtdfField('HI_LIMIT', 'R4');
-	$gAtdfRD{'HI_LIMIT'} = sprintf("%.9e",$gAtdfRD{'HI_LIMIT'});
+	#$gAtdfRD{'HI_LIMIT'} = sprintf("%.9e",$gAtdfRD{'HI_LIMIT'});
 	#atdfFormatReal(\$gAtdfRD{'HI_LIMIT'});
 	stdfToAtdfField('UNITS', 'Cn');
 	stdfToAtdfField('C_RESFMT', 'Cn');
@@ -1653,10 +1709,10 @@ sub PTR
 	stdfToAtdfField('C_HLMFMT', 'Cn');
 	stdfToAtdfField('LO_SPEC', 'R4');
 	#atdfFormatReal(\$gAtdfRD{'LO_SPEC'});
-	$gAtdfRD{'LO_SPEC'} = sprintf("%.9e",$gAtdfRD{'LO_SPEC'});
+	#$gAtdfRD{'LO_SPEC'} = sprintf("%.9e",$gAtdfRD{'LO_SPEC'});
 	stdfToAtdfField('HI_SPEC', 'R4');
 	#atdfFormatReal(\$gAtdfRD{'HI_SPEC'});
-	$gAtdfRD{'HI_SPEC'} = sprintf("%.9e",$gAtdfRD{'HI_SPEC'});
+	#$gAtdfRD{'HI_SPEC'} = sprintf("%.9e",$gAtdfRD{'HI_SPEC'});
 
 	# set the parametric Pass/Fail Flag
 	#
@@ -1854,6 +1910,49 @@ sub PTR
 	if (bitand($gAtdfRD{'PARM_FLG'}, 0x80))
 	{
 		$gAtdfRD{'LimitCompare'} .= 'H';
+	};
+
+	# clear invalid fields based on OPT_FLG
+	#
+	# b0 = 1 -> RES_SCAL invalid
+	# b1 = 1 -> reserved, should be 1
+	# b2 = 1 -> LO_SPEC invalid
+	# b3 = 1 -> HI_SPEC invalid
+	# b4 = 1 -> LO_LIMIT and LLM_SCAL invalid, use first PTR
+	# b5 = 1 -> HI_LIMIT and HLM_SCAL invalid, use first PTR
+	# b6 = 1 -> LO_LIMIT and LLM_SCAL invalid
+	# b7 = 1 -> HI_LIMIT and HLM_SCAL invalid
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x01))
+	{
+		$gAtdfRD{'RES_SCAL'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x04))
+	{
+		$gAtdfRD{'LO_SPEC'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x08))
+	{
+		$gAtdfRD{'HI_SPEC'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x10))
+	{
+		$gAtdfRD{'LO_LIMIT'} = '';
+		$gAtdfRD{'LLM_SCAL'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x20))
+	{
+		$gAtdfRD{'HI_LIMIT'} = '';
+		$gAtdfRD{'HLM_SCAL'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x40))
+	{
+		$gAtdfRD{'LO_LIMIT'} = '';
+		$gAtdfRD{'LLM_SCAL'} = '';
+	};
+	if (bitand($gAtdfRD{'OPT_FLG'}, 0x70))
+	{
+		$gAtdfRD{'HI_LIMIT'} = '';
+		$gAtdfRD{'HLM_SCAL'} = '';
 	};
 };
 

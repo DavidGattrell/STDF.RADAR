@@ -3,6 +3,9 @@
 #
 # modified 2014 David Gattrell - add option to generate big-endian binary...
 #                              - shakedown stdf->atdf->stdf flow
+# modified 2017 Paul Robins    - Correction to GDR record handling to write 0 pad byte 
+#                                before the associated multibyte numeric data record.
+# modified 2017 David Gattrell - revisit PTR and FTR, stdf->atdf->stdf->atdf with a595.stdf
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of either the GNU General Public License or the Artistic
@@ -1051,7 +1054,7 @@ sub FTR
 	@array = split(',', $gAtdfRD{'Comparators'});
 	$gStdfRD{'SPIN_MAP'} = A2S_Dn(@array);
 
-	$gStdfRD{'TEST_FLG'} = 0x02;
+	$gStdfRD{'TEST_FLG'} = 0x00;
 	atdfToStdfPassFailFlag();
 	atdfToStdfFlagsStr(
 		'AlarmFlags',
@@ -1126,10 +1129,12 @@ sub GDR
 	my $dataType = undef;
 	my $bin = undef;
 	my $r = undef;
+	my $even_boundary = 1;	# the GDR is guaranteed to begin on an even byte boundary
 	for my $i (0 .. $#atdfGenData)
 	{
 		$atdfGenData[$i] =~ m/^(.)(.+)$/;
 		$fmt = $1;
+		$bin = undef;
 		dbugData([$fmt], ['*GDR::fmt']);
 		$txt = $2;
 		dbugData([$txt], ['*GDR::txt']);
@@ -1144,18 +1149,29 @@ sub GDR
 				$atdfGenData[$i]
 			);
 		};
-		$bin = A2S_U1($dataTypeToCode{$dataType});
 		if ($fmt =~ m/^[MBSLFD]$/)
 		{
-			$bin .= A2S_B0();
+			if ($even_boundary)
+			{
+				$bin = A2S_B0();
+				# once this field is done, we will still be on even boundary
+			}
+			else
+			{
+				# once this field is done, we will be on an even boundary
+				$even_boundary = 1;
+			}
 		}
 		elsif ($fmt =~ m/^[TXY]$/)
 		{
-			if (length($2) % 2)
+			if ( (length($2) % 2) == 0 )
 			{
-				$txt .= SPC;
+				# even + type code byte, so overall is odd, need to toggle boundary flag
+				$even_boundary = ! $even_boundary;
 			};
 		};
+		$bin .= A2S_U1($dataTypeToCode{$dataType});
+        
 		$r = \&{'A2S_'.$dataType};
 		$bin .= $r->($txt);
 		dbugDataBin('GDR::bin', $bin);
@@ -1317,18 +1333,18 @@ sub MPR
 	);
 
 	# STDF TEST_FLG Bit 1: Test result is unreliable
-	atdfToStdfFlagExpr(($gAtdfRD{'RESULT'} == 0), 'TEST_FLG', 0x02);
+	atdfToStdfFlagExpr(($gAtdfRD{'RESULT'} eq ''), 'TEST_FLG', 0x02);
 
 	# STDF OPT_FLAG Bit 0: Invalid result scale factor
-	atdfToStdfFlagExpr(($gAtdfRD{'RES_SCAL'} == 0), 'OPT_FLAG', 0x01);
+	atdfToStdfFlagExpr(($gAtdfRD{'RES_SCAL'} eq ''), 'OPT_FLAG', 0x01);
 	# STDF OPT_FLAG Bit 2: No low specification
-	atdfToStdfFlagExpr(($gAtdfRD{'LO_SPEC'} == 0), 'OPT_FLAG', 0x04);
+	atdfToStdfFlagExpr(($gAtdfRD{'LO_SPEC'} eq ''), 'OPT_FLAG', 0x04);
 	# STDF OPT_FLAG Bit 3: No high specification
-	atdfToStdfFlagExpr(($gAtdfRD{'HI_SPEC'} == 0), 'OPT_FLAG', 0x08);
+	atdfToStdfFlagExpr(($gAtdfRD{'HI_SPEC'} eq ''), 'OPT_FLAG', 0x08);
 	# STDF OPT_FLAG Bit 4: Invalid low limit
-	atdfToStdfFlagExpr(($gAtdfRD{'LO_LIMIT'} == 0), 'OPT_FLAG', 0x10);
+	atdfToStdfFlagExpr(($gAtdfRD{'LO_LIMIT'} eq ''), 'OPT_FLAG', 0x10);
 	# STDF OPT_FLAG Bit 5: Invalid high limit
-	atdfToStdfFlagExpr(($gAtdfRD{'HI_LIMIT'} == 0), 'OPT_FLAG', 0x20);
+	atdfToStdfFlagExpr(($gAtdfRD{'HI_LIMIT'} eq ''), 'OPT_FLAG', 0x20);
 
 	$gStdfRD{'TEST_FLG'} = A2S_B1($gStdfRD{'TEST_FLG'});
 	$gStdfRD{'PARM_FLG'} = A2S_B1($gStdfRD{'PARM_FLG'});
@@ -1616,20 +1632,20 @@ sub PTR
 	# STDF TEST_FLG Bit 1: Test result is unreliable
 	#.. no, if Alarm flag is U, ..
 	# like RES_SCAL, numeric, should be '', 0 is valid!  REVISIT
-	#atdfToStdfFlagExpr(($gAtdfRD{'RESULT'} == 0), 'TEST_FLG', 0x02);
+	atdfToStdfFlagExpr(($gAtdfRD{'RESULT'} eq ''), 'TEST_FLG', 0x02);
 
 	# STDF OPT_FLAG Bit 0: Invalid result scale factor
 	# dcg commented out below... 0 is valid, ie Volts have scale of 0
 	# ... REVISIT...
-	#atdfToStdfFlagExpr(($gAtdfRD{'RES_SCAL'} == 0), 'OPT_FLAG', 0x01);
+	atdfToStdfFlagExpr(($gAtdfRD{'RES_SCAL'} eq ''), 'OPT_FLAG', 0x01);
 	# STDF OPT_FLAG Bit 2: No low specification
-	atdfToStdfFlagExpr(($gAtdfRD{'LO_SPEC'} == 0), 'OPT_FLAG', 0x04);
+	atdfToStdfFlagExpr(($gAtdfRD{'LO_SPEC'} eq ''), 'OPT_FLAG', 0x04);
 	# STDF OPT_FLAG Bit 3: No high specification
-	atdfToStdfFlagExpr(($gAtdfRD{'HI_SPEC'} == 0), 'OPT_FLAG', 0x08);
+	atdfToStdfFlagExpr(($gAtdfRD{'HI_SPEC'} eq ''), 'OPT_FLAG', 0x08);
 	# STDF OPT_FLAG Bit 4: Invalid low limit
-	atdfToStdfFlagExpr(($gAtdfRD{'LO_LIMIT'} == 0), 'OPT_FLAG', 0x10);
+	atdfToStdfFlagExpr(($gAtdfRD{'LO_LIMIT'} eq ''), 'OPT_FLAG', 0x10);
 	# STDF OPT_FLAG Bit 5: Invalid high limit
-	atdfToStdfFlagExpr(($gAtdfRD{'HI_LIMIT'} == 0), 'OPT_FLAG', 0x20);
+	atdfToStdfFlagExpr(($gAtdfRD{'HI_LIMIT'} eq ''), 'OPT_FLAG', 0x20);
 
 	$gStdfRD{'TEST_FLG'} = A2S_B1($gStdfRD{'TEST_FLG'});
 	$gStdfRD{'PARM_FLG'} = A2S_B1($gStdfRD{'PARM_FLG'});

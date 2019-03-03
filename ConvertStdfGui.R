@@ -1,11 +1,12 @@
 # ConvertStdfGui.R
 #
-# $Id: ConvertStdfGui.R,v 1.22 2015/08/02 01:05:44 david Exp $
+# $Id: ConvertStdfGui.R,v 1.23 2019/01/28 00:25:26 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
 #
 # Copyright (C) 2008-2015 David Gattrell
+#               2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -43,6 +44,7 @@ use_MPR_invalid_pf_data <- tclVar(0)
 ltx_ignore_testname_objects <- tclVar(1)
 do_testflag_matrix <- tclVar(0)
 max_parts <- tclVar(-1)
+max_parts_shadow <- tclVar(-1)
 do_demangle <- tclVar(0)
 auto_flex <- tclVar(1)
 keep_alarmed_values <- tclVar(0)
@@ -248,6 +250,7 @@ ConvertStdfGui_defaults <- function() {
 	tclvalue(ltx_ignore_testname_objects) <- tclObj(default_ltx_ignore_testname_objects)
 	tclvalue(do_testflag_matrix) <- tclObj(default_do_testflag_matrix)
 	tclvalue(max_parts) <- -1
+	tclvalue(max_parts_shadow) <- -1
 	tclvalue(do_demangle) <- 0
 	tclvalue(auto_flex) <- 1
 	tclvalue(keep_alarmed_values) <- tclObj(default_keep_alarmed_values)
@@ -359,7 +362,7 @@ ConvertStdfGui <- function() {
 	maxparts_entry <- tkentry(maxparts_entry_frame,
 						width=30,
 						background="white",
-						textvariable=max_parts)
+						textvariable=max_parts_shadow)
 
 	bottom_row <- tkframe(convertstdf_win)
 	default_button <- tkbutton(bottom_row,
@@ -575,9 +578,10 @@ ConvertStdfGui <- function() {
 	# maxparts_entry defined prior to DEFAULTS button
 	tkpack(maxparts_entry,side="left",fill="x",expand=1)
 	tkbind(maxparts_entry,"<KeyRelease>",function() {
-					tmp <- as.integer(tclObj(max_parts))
+					tmp <- as.integer(tclObj(max_parts_shadow))
 					if( (length(tmp)>0) && is.finite(tmp)) {
 						tkconfigure(maxparts_entry,background="white")
+						tclvalue(max_parts) <- tmp
 					} else {
 						tkconfigure(maxparts_entry,background="yellow")
 					}

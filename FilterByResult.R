@@ -1,11 +1,12 @@
 # FilterByResult.R
 #
-# $Id: FilterByResult.R,v 1.3 2014/08/03 00:16:05 david Exp $
+# $Id: FilterByResult.R,v 1.4 2016/12/22 02:23:41 david Exp $
 #
 # script that filters rtdf file based on results of specified parameter
 #
 # Copyright (C) 2008-2010 David Gattrell
 #               2014 David Gattrell
+#               2016 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -48,7 +49,7 @@ FilterByResult <- function(in_file="",action="remove",
 		my_dir = getwd()
 		setwd(in_dir)
 	}
-    load(in_file)
+    my_objs = load(in_file)
 	if (in_dir != "")  setwd(my_dir)
 
     index = match(testname,ParametersFrame[["testname"]],nomatch=0)
@@ -128,13 +129,14 @@ FilterByResult <- function(in_file="",action="remove",
 				ResultsMatrix = ResultsMatrix[keepers,]
 			}
 
-			my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
-			if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
-			if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
-			if (exists("TSRFrame",inherits=FALSE))       my_list[length(my_list)+1] = "TSRFrame"
-			if (exists("WafersFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WafersFrame"
-			if (exists("WaferInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WaferInfoFrame"
-			save(list=my_list,file=out_file)
+#			my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
+#			if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
+#			if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
+#			if (exists("TSRFrame",inherits=FALSE))       my_list[length(my_list)+1] = "TSRFrame"
+#			if (exists("WafersFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WafersFrame"
+#			if (exists("WaferInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WaferInfoFrame"
+#			save(list=my_list,file=out_file)
+			save(list=my_objs,file=out_file)
 		}
     } else {
 		cat("No Devices match the criteria\n")

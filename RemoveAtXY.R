@@ -1,12 +1,13 @@
 #  RemoveAtXY.R
 #
-# $Id: RemoveAtXY.R,v 1.1 2011/03/09 02:31:52 David Exp $
+# $Id: RemoveAtXY.R,v 1.2 2019/02/01 01:54:24 david Exp $
 #
 # script that parses rtdf file and removes devices if they have both an X coord.
 #  of -1 and a Y coord. of -1.  another 93K'ism.  (Or you can enter your own
 #  X and Y coordinate pair)
 #
 # Copyright (C) 2011 David Gattrell
+#               2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -44,7 +45,7 @@ RemoveAtXY <- function(in_file="",out_file="",in_dir="",x_coord=-1,y_coord=-1) {
 		my_dir = getwd()
 		setwd(in_dir)
 	}
-    load(in_file)
+    my_objs = load(in_file)
 	if (in_dir != "")  setwd(my_dir)
 
 
@@ -60,18 +61,21 @@ RemoveAtXY <- function(in_file="",out_file="",in_dir="",x_coord=-1,y_coord=-1) {
 
     DevicesFrame = DevicesFrame[keepers==1,]
     ResultsMatrix = ResultsMatrix[keepers==1,]
-
+	if (is.finite(match("TestFlagMatrix",my_objs))) {
+    	TestFlagMatrix = TestFlagMatrix[keepers==1,]
+	}
 
     # save rtdf file
     #------------------
-    my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
-    if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
-    if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
-	if (exists("TSRFrame",inherits=FALSE))		 my_list[length(my_list)+1] = "TSRFrame"
-    if (exists("WafersFrame",inherits=FALSE))    my_list[length(my_list)+1] = "WafersFrame"
-    if (exists("WaferInfoFrame",inherits=FALSE)) my_list[length(my_list)+1] = "WaferInfoFrame"
-    
-    save(list=my_list, file=out_file)
+#    my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
+#    if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
+#    if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
+#	 if (exists("TSRFrame",inherits=FALSE))		 my_list[length(my_list)+1] = "TSRFrame"
+#    if (exists("WafersFrame",inherits=FALSE))    my_list[length(my_list)+1] = "WafersFrame"
+#    if (exists("WaferInfoFrame",inherits=FALSE)) my_list[length(my_list)+1] = "WaferInfoFrame"
+#    
+#    save(list=my_list, file=out_file)
+    save(list=my_objs, file=out_file)
     dims = dim(ResultsMatrix)
     cat(sprintf("Removed %d Devices, now %d Devices x %d Parameters \n",
 			(devs - dims[1]),dims[1],dims[2]))

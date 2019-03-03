@@ -1,10 +1,10 @@
 # AsciiWaferMap.R
 #
-# $Id: AsciiWaferMap.R,v 1.7 2015/04/17 01:24:38 david Exp $
+# $Id: AsciiWaferMap.R,v 1.8 2019/01/28 00:21:53 david Exp $
 #
 # reads in rtdf file(s) and generates ascii wafermap(s)
 #
-# Copyright (C) 2009-11,2015 David Gattrell
+# Copyright (C) 2009-11,2015,2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -32,7 +32,8 @@
 AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		    x_left=FALSE,y_down=FALSE,notch="S",pass_bins=-1,rtdf_dir="",
 			test_floor="",product_id="",lot_id="",wafer_id="",do_yield=TRUE,
-			multi_binning=FALSE, multi_bin_terse=FALSE,skip_die_minus=TRUE) {
+			multi_binning=FALSE, multi_bin_terse=FALSE,skip_die_minus=TRUE,
+			mirror_die="") {
     # rtdf_name -- name of the rtdf file to read
     # wmap_name -- name of the ascii file to generate  (xxx.wmap)
 	#			if "", then "LOTID_waferWAFERID.wmap" will be used
@@ -67,7 +68,28 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 	#			etc. based on number of pass bins, and fails are all "x"s
 	# skip_die_minus -- for die that are skipped and have surrounding tested die,
 	#           use a "-" instead of a "." to indicate these locations
+	# mirror_die -- if you want "M"s on the map to indicate mirror die,
+	#           then give string of X Y coordinates for location(s) of M's
+	#           (space separated)
 	#--------------------------------------------------------------------------
+
+
+	# process mirror_die if there are any
+	#------------------------------------
+	valid_m_die = FALSE
+	if(nchar(mirror_die)>0) {
+		coords = as.integer(strsplit(mirror_die," ")[[1]])
+		coords = coords[is.finite(coords)]		# remove NA's from multiple white space
+
+		if( (length(coords)>1) && ((length(coords) %% 2) ==0 )) {
+			valid_m_die = TRUE
+			mirror_xs = coords[c(TRUE,FALSE)]
+			mirror_ys = coords[c(FALSE,TRUE)]
+		} else {
+			# nasty message	
+			cat("ERROR: Odd number of Mirror die coordinates, input is ignored!")
+		}
+	}
 
 
 	# if filenames not defined, prompt for them
@@ -257,11 +279,19 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		else  digits=2
 		
 		if(multi_binning && !multi_bin_terse) {
-			if(digits>3)  die_str = ".... "
-			else if(digits>2)  die_str = "... "
-			else  die_str = ".. "
+			if(digits>3) {
+				die_str = ".... "
+				mirror_str = "MMMM "
+			} else if(digits>2) {
+				die_str = "... "
+				mirror_str = "MMM "
+			} else {
+				die_str = ".. "
+				mirror_str = "MM "
+			}
 		} else {
 			die_str = "."
+			mirror_str = "M"
 		}
 
 
@@ -312,6 +342,10 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 				my_b_xs = 3 + max_x - xs[bad_i_s] 
 				my_b_ys = 2 + ys[bad_i_s] - min_y
 			}
+			if (valid_m_die) {
+				my_m_xs = 3 + max_x - mirror_xs
+				my_m_ys = 2 + mirror_ys - min_y
+			}
 		} else if (notch=="W") {
 			my_map = array(die_str,dim=c(max_y-min_y+6,max_x-min_x+2))
 			map_xs = 3 + max_y - ys 
@@ -324,6 +358,10 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 				my_b_xs = 3 + max_y - ys[bad_i_s] 
 				my_b_ys = 2 + max_x - xs[bad_i_s] 
 			}
+			if (valid_m_die) {
+				my_m_xs = 3 + max_y - mirror_ys
+				my_m_ys = 2 + max_x - mirror_xs
+			}
 		} else if (notch=="E") {
 			my_map = array(die_str,dim=c(max_y-min_y+6,max_x-min_x+2))
 			map_xs = 3 + ys - min_y
@@ -335,6 +373,10 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 			if (length(bad_i_s)>0) {
 				my_b_xs = 3 + ys[bad_i_s] - min_y
 				my_b_ys = 2 + xs[bad_i_s] - min_x
+			}
+			if (valid_m_die) {
+				my_m_xs = 3 - min_y + mirror_ys
+				my_m_ys = 2 - min_x + mirror_xs
 			}
 		} else {
 			if (notch!="S") {
@@ -352,7 +394,10 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 				my_b_xs = 3 + xs[bad_i_s] - min_x
 				my_b_ys = 2 + max_y - ys[bad_i_s] 
 			}
-		
+			if (valid_m_die) {
+				my_m_xs = 3 - min_x + mirror_xs
+				my_m_ys = 2 - mirror_ys + max_y
+			}
 		}
 
 		#browser()
@@ -408,6 +453,13 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 					}
 				}	
 			}
+			if(valid_m_die) {
+				if(digits>3)  my_str = "MMMM "
+				else if(digits>2)  my_str = "MMM "
+				else my_str = "MM "
+				xys = array(c(my_m_xs,my_m_ys),dim=c(length(my_m_xs),2))
+				my_map[xys] = my_str
+			}
 		} else {
 			if (length(bad_i_s)>0) {
 				xys = array(c(my_b_xs,my_b_ys),dim=c(length(my_b_xs),2))
@@ -416,6 +468,10 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 			if (length(good_i_s)>0) {
 				xys = array(c(my_g_xs,my_g_ys),dim=c(length(my_g_xs),2))
 				my_map[xys] = "1"
+			}
+			if ((valid_m_die) && (length(mirror_xs)>0)) {
+				xys = array(c(my_m_xs,my_m_ys),dim=c(length(my_m_xs),2))
+				my_map[xys] = "M"
 			}
 		}
 

@@ -1,12 +1,13 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.47 2016/07/25 00:07:58 david Exp $
+# $Id: ConvertStdf.R,v 1.49 2018/12/22 17:20:42 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
 #
-# Copyright (C) 2006-2015 David Gattrell
+# Copyright (C) 2006-2016 David Gattrell
 #               2012 Chad Erven
+#               2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -132,6 +133,10 @@ assign("Do_DTRs",FALSE,envir=.ConvertStdf.env)		# flag to parse DTRs looking for
 assign("DTR_Names",NA,envir=.ConvertStdf.env) 		# vector of DTR strings that we triggered on
 assign("DTRsMatrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env) # DTR_Names_count x Devices_count
 assign("DTR_Names_count",0,envir=.ConvertStdf.env)	# number of different DevicesFrame fields to add from DTR info.
+assign("Parse_PRR_part_txt",FALSE,envir=.ConvertStdf.env)		# flag to parse PRR part_txt looking for name=value[,] 
+assign("PRRtxt_Names",NA,envir=.ConvertStdf.env) 		# vector of PRR part_txt strings that we triggered on
+assign("PRRtxt_Matrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env) # PRRtxt_Names_count x Devices_count
+assign("PRRtxt_Names_count",0,envir=.ConvertStdf.env)	# number of different DevicesFrame fields to add from PRR part_txt info.
 assign("PIR_count",0,envir=.ConvertStdf.env)		# number of different PIR records
 
 assign("Duplicate_testnames",FALSE,envir=.ConvertStdf.env) # if T testname = testtxt_tnum else testname = testtxt
@@ -295,7 +300,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 						use_MPR_invalid_pf_data=FALSE,ltx_ignore_testname_objects=TRUE,
 						do_testflag_matrix=FALSE,do_DTRs=FALSE,max_parts=-1,
 						auto_demangle=FALSE,auto_flex=TRUE,keep_alarmed_values=FALSE,
-						skip_TSRs=FALSE,raw_TSRs=FALSE) {
+						skip_TSRs=FALSE,raw_TSRs=FALSE,parse_PRR_part_txt=TRUE) {
     # stdf_name - name of stdf formatted file to convert to rtdf format
     # rtdf_name - name to give to rtdf formatted file
     # auto_93k  - if stdf is from HP/Agilent/Verigy 93K, try to auto fix
@@ -350,6 +355,8 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	# skip_TSRs - if true, skip the whole processing of TSR records (Test Synopsis Records)
 	# raw_TSRs - if true, then don't check that there are matching FTR/PTR/MPRs for TSRs, just
 	#        	  dump all the TSRs.  (faster than if checking)
+	# parse_PRR_part_txt - if true, will parse the part_txt field based on comma separated list of
+	#             name=value sets and create additional DeviceFrame fields for each name
     #---------------------------------------------
 	#attach(.ConvertStdf.env) #...environment() is better approach?
 
@@ -426,6 +433,11 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	PIR_count <<- 0
 	ConditionsMatrix <<- array(NaN, dim=c(0,0)) 
 	DTRsMatrix <<- array(NaN, dim=c(0,0))
+	
+	Parse_PRR_part_txt <<- parse_PRR_part_txt
+	PRRtxt_Names <<- NA
+	PRRtxt_Names_count <<- 0
+	PRRtxt_Matrix <<- array(NaN, dim=c(0,0))
 
 	Use_MPR_invalid_pf_data <<- use_MPR_invalid_pf_data
 	#Duplicate_testnames <<- duplicate_testnames || use_MPR_invalid_pf_data
@@ -688,7 +700,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 
 	dbg_1 = 2
 
-	if(Do_conditions || Do_DTRs) {
+	if(Do_conditions || Do_DTRs || Parse_PRR_part_txt) {
 		my_code =    "my_list = list(part_id=\"\", temp=NaN,"
 		my_code[2] = "x_coord=NaN, y_coord=NaN,"
 		my_code[3] = "wafer_index=NaN,"
@@ -713,7 +725,14 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 		} else {
 			j = 0
 		}
-		my_code[6+i+j] = ")"
+		if (PRRtxt_Names_count>0) {
+			for (k in 1:PRRtxt_Names_count) {
+				my_code[5+i+j+k] = sprintf(",%s=NaN",PRRtxt_Names[k])
+			}
+		} else {
+			k = 0
+		}
+		my_code[6+i+j+k] = ")"
 
 		eval(parse(text=my_code))
 	} else {
@@ -744,6 +763,12 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
     if(Do_DTRs && (DTR_Names_count>0)) {
 		for (i in 1:DTR_Names_count) {
 				DevicesFrame[1:Device_count,DTR_Names[i]] <- DTRsMatrix[1:Device_count,i]
+			}
+	}
+    if(Parse_PRR_part_txt && (PRRtxt_Names_count>0)) {
+		#browser()
+		for (i in 1:PRRtxt_Names_count) {
+				DevicesFrame[1:Device_count,PRRtxt_Names[i]] <- PRRtxt_Matrix[1:Device_count,i]
 			}
 	}
 
@@ -3104,6 +3129,7 @@ parse_PIR_record <- function(rec_len,endy) {
 				if(params<1) {
 					ResultsMatrix<<-array(NaN, dim=c(Device_count,0))
 					if(Do_testflag_matrix)  TestFlagMatrix<<-array(NaN, dim=c(Device_count,0))
+					
 				} else {
 					ResultsMatrix<<- rbind(ResultsMatrix,NaN)
 					if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,NaN)
@@ -3127,6 +3153,15 @@ parse_PIR_record <- function(rec_len,endy) {
 					DTRsMatrix <<- array(NaN,dim=c(Device_count,0))
 			} else {
 					DTRsMatrix <<- rbind(DTRsMatrix,NaN)
+			}
+		}
+		if (Parse_PRR_part_txt) {
+			if ( sum(dim(PRRtxt_Matrix))==0) {
+				PRRtxt_Matrix <<- array(NaN,dim=c(1,0))
+			} else if ((dim(PRRtxt_Matrix)[2])<1) {
+					PRRtxt_Matrix <<- array(NaN,dim=c(Device_count,0))
+			} else {
+					PRRtxt_Matrix <<- rbind(PRRtxt_Matrix,NaN)
 			}
 		}
    }
@@ -3243,6 +3278,47 @@ parse_PRR_record <- function(rec_len,endy) {
 
     #valid_record=FALSE # this fixes the slower and slower behaviour...
     if (valid_record) {
+
+		if(Parse_PRR_part_txt) {
+			# split based on ","
+			my_substrings = strsplit(part_txt,",")[[1]]	# returns list, want vector of strings
+			if(length(my_substrings)>0) {
+				for (j in 1:length(my_substrings)) {
+					#browser()
+					tokens = strsplit(my_substrings[j],"=")[[1]]
+					if(length(tokens)==2) {
+						name = tokens[1]
+						value = tokens[2]
+
+						# has this field already been created?
+						field_index = match(name,PRRtxt_Names,nomatch=0)
+						if (field_index<1) {
+							PRRtxt_Names_count <<- PRRtxt_Names_count + 1
+							field_index = PRRtxt_Names_count
+							PRRtxt_Names[field_index] <<- name
+
+							# we added a new PRRtxt field, so we need
+							# to add a column to PRRtxt_Matrix
+							if( sum(dim(PRRtxt_Matrix))==0) {
+								PRRtxt_Matrix <<- array(NaN,dim=c(0,1))
+							} else if ((dim(PRRtxt_Matrix)[1])<1) {
+								PRRtxt_Matrix <<- array(NaN,dim=c(0,field_index))
+							} else {
+								PRRtxt_Matrix <<- cbind(PRRtxt_Matrix,NaN)
+							}
+						}
+						# update PRRtxt_Matrix
+						#----------------------
+						device_count = Open_site[site_num+1]
+						PRRtxt_Matrix[device_count,field_index] <<- value
+					} else {
+						# nasty message
+					}
+				}
+			}
+		}
+
+
         #    the below syntax is faster than DevicesFrame[Device_count,"part_id"]<<-part_id
         #    but it still has the slower and slower behaviour...
         # DevicesFrame$part_id[[Device_count]]<<-part_id
@@ -4490,12 +4566,16 @@ parse_PTR_record <- function(rec_len,endy) {
 
 		
 		# is this a condition rather than a test?  (test_txt starts with CONDITION=
+		# .. or on 93k, will be CONDITION:
 		#-----------------------------------------
 		#if(Do_conditions && str_eq(substr(test_txt,1,10),"CONDITION=")) { 
-		if(Do_conditions && (substr(test_txt,1,10)=="CONDITION=")) { 
+		if(Do_conditions && ( 
+			(substr(test_txt,1,10)=="CONDITION=") || 
+			(substr(test_txt,1,10)=="CONDITION:") ) ) { 
 		#if(Do_conditions && (length(grep("^CONDITION=",test_txt))>0)) {
-			cond_name = sub("^CONDITION=","",test_txt)
-			cond_name = sub("/.*$","",cond_name)	# if stuff appended to name, cut
+			cond_name = sub("^CONDITION.","",test_txt)
+			cond_name = sub("/.*$","",cond_name)	# if stuff appended to name, cut (envision .../path)
+			cond_name = sub("[[].*$","",cond_name)	# if stuff appended to name, cut (93k ...[1])
 			
 			# has this condition already been created?
 			#-----------------------------------------
@@ -4579,6 +4659,8 @@ parse_PTR_record <- function(rec_len,endy) {
 
 				ResultsMatrix <<- rbind(ResultsMatrix,NaN)
 				if(Do_testflag_matrix)  TestFlagMatrix <<- rbind(TestFlagMatrix,NaN)
+				if(Do_DTRs)  DTRsMatrix <<- rbind(DTRsMatrix,NaN)
+
 				ConditionsMatrix <<- rbind(ConditionsMatrix,NaN)
 
 				ConditionsMatrix[Device_count,cond_index] <<- result
@@ -5072,9 +5154,13 @@ parse_MPR_record <- function(rec_len,endy) {
 		# is this a condition rather than a test?  (test_txt starts with CONDITION=
 		#-----------------------------------------
 		#if (Do_conditions && str_eq(substr(test_txt,1,10),"CONDITION=")) {  
-		if(Do_conditions && (substr(test_txt,1,10)=="CONDITION=")) { 
+		if(Do_conditions && ( 
+			(substr(test_txt,1,10)=="CONDITION=") || 
+			(substr(test_txt,1,10)=="CONDITION:") ) ) { 
 		#if(Do_conditions && (length(grep("^CONDITION=",test_txt))>0)) {
-			cond_name = sub("^CONDITION=","",test_txt)
+			cond_name = sub("^CONDITION.","",test_txt)
+			cond_name = sub("/.*$","",cond_name)	# if stuff appended to name, cut (envision .../path)
+			cond_name = sub("[[].*$","",cond_name)	# if stuff appended to name, cut (93k ...[1])
 
 			if (rslt_cnt>1) {
 				cat(sprintf("WARNING: MPR CONDITION=%s record has more than 1 result \n",
@@ -5162,6 +5248,7 @@ parse_MPR_record <- function(rec_len,endy) {
 
 				ResultsMatrix <<- rbind(ResultsMatrix,NaN)
 				if(Do_testflag_matrix)  TestFlagMatrix <<- rbind(TestFlagMatrix,NaN)
+				if(Do_DTRs)  DTRsMatrix <<- rbind(DTRsMatrix,NaN)
 				ConditionsMatrix <<- rbind(ConditionsMatrix,NaN)
 
 				ConditionsMatrix[Device_count,cond_index] <<- rtn_rslt[1]
@@ -5216,12 +5303,20 @@ parse_MPR_record <- function(rec_len,endy) {
 			for (j in 1:rslt_cnt) {
 				if (rtn_icnt>=1) {
 					if ((length(rtn_indx)<j) || (rtn_indx[j] <1)) {
-						txt_plus_pin = sprintf("%s/no_pin%d",test_txt,j)
+						if(rslt_cnt<2) {
+							txt_plus_pin = test_txt
+						} else {
+							txt_plus_pin = sprintf("%s/no_pin%d",test_txt,j)
+						}
 					} else {
 						txt_plus_pin = sprintf("%s/%s",test_txt,Pin_names[rtn_indx[j]])
 					}
 				} else {
-					txt_plus_pin = sprintf("%s/no_pin%d",test_txt,j)
+					if(rslt_cnt<2) {
+						txt_plus_pin = test_txt
+					} else {
+						txt_plus_pin = sprintf("%s/no_pin%d",test_txt,j)
+					}
 				}
 				
 				# has this test already been added to ParametersFrame?
@@ -5943,6 +6038,8 @@ parse_DTR_record <- function(rec_len,endy) {
 		device_count = Open_site[site_num+1]
 		#cat(sprintf("at device %d, dtr_index %d, adding %s...\n",
 		#		device_count,dtr_index,dtr_info))
+		#cat(sprintf("...DTRsMatrix size is %d by %d\n",
+		#		dim(DTRsMatrix)[1],dim(DTRsMatrix)[2] ))
 		DTRsMatrix[device_count,dtr_index] <<- dtr_info
 	}
 }

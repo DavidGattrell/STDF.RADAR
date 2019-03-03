@@ -1,11 +1,11 @@
-# WaferMapGui.R
+# StackedWaferMapGui.R
 #
-# $Id: WaferMapGui.R,v 1.11 2019/02/05 01:54:31 david Exp $
+# $Id$
 #
 # Tk/Tcl GUI wrapper for calling WaferMap.R
 # called by TkRadar.R
 #
-# Copyright (C) 2008-2015 David Gattrell
+# Copyright (C) 2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -26,42 +26,39 @@
 #  gmail.com
 #
 #----------------------------------------------------------
-# WaferMap gui specific variables
+# StackedWaferMap gui specific variables
 #--------------------------------
 if(!exists(".TkRadar.env")) .TkRadar.env <- new.env()
 
-wmap_type <- tclVar("sbin")
-wmap_parameter <- tclVar("")
-wmap_xleft <- tclVar(0)
-wmap_ydown <- tclVar(0)
-x_coord_alpha <- tclVar(0)
-panel <- tclVar(0)
-wmap_notch <- tclVar("x")
-wmap_autoopen <- tclVar(0)
+swmap_type <- tclVar("sbin")
+swmap_xleft <- tclVar(0)
+swmap_ydown <- tclVar(0)
+sx_coord_alpha <- tclVar(0)
+swmap_panel <- tclVar(0)
+swmap_notch <- tclVar("x")
+swmap_autoopen <- tclVar(0)
 
-wmap_rotate_ccw <- tclVar(0)
-wmap_x_rev_polarity <- tclVar(0)
-wmap_y_rev_polarity <- tclVar(0)
-wmap_x_shift <- tclVar(0)
-wmap_x_shift_shadow <- tclVar(0)
-wmap_y_shift <- tclVar(0)
-wmap_y_shift_shadow <- tclVar(0)
+swmap_rotate_ccw <- tclVar(0)
+swmap_x_rev_polarity <- tclVar(0)
+swmap_y_rev_polarity <- tclVar(0)
+swmap_x_shift <- tclVar(0)
+swmap_x_shift_shadow <- tclVar(0)
+swmap_y_shift <- tclVar(0)
+swmap_y_shift_shadow <- tclVar(0)
 
-wmap_param_col_start <- tclVar(0.03)
-wmap_param_col_start_shadow <- tclVar(0.03)
-wmap_param_col_end <- tclVar(0.24)
-wmap_param_col_end_shadow <- tclVar(0.24)
-wmap_param_col_rev <- tclVar(0)		# false
+swmap_param_col_start <- tclVar(0.03)
+swmap_param_col_start_shadow <- tclVar(0.03)
+swmap_param_col_end <- tclVar(0.24)
+swmap_param_col_end_shadow <- tclVar(0.24)
+swmap_param_col_rev <- tclVar(0)		# false
 
-wmap_bin_vs_col_name <- tclVar("")
-wmap_bin_vs_col_path <- tclVar("")
-wmap_gen_bins_csv <- tclVar(0)
+swmap_borders_off <- tclVar(7000)
+swmap_borders_off_shadow <- tclVar(7000)
 
-wmap_borders_off <- tclVar(7000)
-wmap_borders_off_shadow <- tclVar(7000)
+swmap_pdf_name <- tclVar("stacked_wafer_map.pdf")
+swmap_xform_pdf_name <- tclVar("xform_stacked_wafer_map.pdf")
 
-wmap_pdf_name <- tclVar("wafer_map.pdf")
-wmap_xform_pdf_name <- tclVar("xform_wafer_map.pdf")
+REVISIT: as far as here!!!!!
 
 # these defaults can be controlled in the .Rprofile file:
 default_wmap_xleft <- tclVar(0)		# per user customizing

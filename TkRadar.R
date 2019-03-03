@@ -1,11 +1,11 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.49 2016/07/25 00:20:43 david Exp $
+# $Id: TkRadar.R,v 1.52 2019/03/03 02:16:54 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
 #
-# Copyright (C) 2008-2016 David Gattrell
+# Copyright (C) 2008-2017 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -98,6 +98,7 @@ sys.source("SplitBySubstrGui.R",envir=.TkRadar.env)
 sys.source("SplitConditionsGui.R",envir=.TkRadar.env)
 sys.source("SplitSitesGui.R",envir=.TkRadar.env)
 sys.source("SplitWafersGui.R",envir=.TkRadar.env)
+sys.source("XYWid2PartidGui.R",envir=.TkRadar.env)
 
 sys.source("AsciiWaferMapGui.R",envir=.TkRadar.env)
 sys.source("ControlChartsGui.R",envir=.TkRadar.env)
@@ -750,7 +751,7 @@ param_browser <-function(tk_param,tk_file,tk_dir) {
 
 		tkpack(param_listbox,side="left",anchor="n",fill="both",expand=1)
 		tkpack(param_scroll,side="right",anchor="n",fill="y")
-		tkpack(listbox_frame,side="top",anchor="w",fill="both",expand=1)
+		# tkpack(listbox_frame ...  move to after tkpack(bottom row ...
 
 		# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -781,6 +782,8 @@ param_browser <-function(tk_param,tk_file,tk_dir) {
 		tkpack(apply_button,side="right")
 		tkpack(bottom_row,side="bottom",anchor="w")
 
+		# pack the listbox_frame last, so it is the one that gets squeezed when the overall window shrinks
+		tkpack(listbox_frame,side="top",anchor="w",fill="both",expand=1)
 	}
 }
 
@@ -828,36 +831,6 @@ XYparam_browser <-function(tk_Xparam,tk_Yparam,tk_file,tk_dir) {
 
 		# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-		# label saying how many parameters
-		my_text <- sprintf("There are %d parameters",param_count)
-		count_label <- tklabel(XYparam_win,
-						text=my_text)
-		tkpack(count_label,side="top",anchor="w")
-
-
-		#   35 row scrollable window for parameters
-		if(param_count<35)  my_height <- param_count
-		else  my_height <- 35
-
-		listbox_frame <- tkframe(XYparam_win)
-		param_listbox <- tklistbox(listbox_frame,
-							selectmode="single",
-							exportselection=FALSE,
-							width = max(sapply(my_list,nchar)),
-							height=my_height)
-		param_scroll <- tkscrollbar(listbox_frame,
-							orient="vertical",
-							command=function(...) tkyview(param_listbox,...))
-		tkconfigure(param_listbox,
-					yscrollcommand=function(...) tkset(param_scroll,...))
-		lapply(my_list,function(my_item) tkinsert(param_listbox,"end",my_item))
-
-		tkpack(param_listbox,side="left",anchor="n",fill="both",expand=1)
-		tkpack(param_scroll,side="right",anchor="n",fill="y")
-		tkpack(listbox_frame,side="top",anchor="w",fill="both",expand=1)
-
-		# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 		bottom_row <- tkframe(XYparam_win)
 		cancel_button <- tkbutton(bottom_row,
 						text="QUIT",
@@ -891,6 +864,38 @@ XYparam_browser <-function(tk_Xparam,tk_Yparam,tk_file,tk_dir) {
 						})
 		tkpack(Xapply_button,side="right")
 		tkpack(bottom_row,side="bottom",anchor="w")
+
+		# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+		# label saying how many parameters
+		my_text <- sprintf("There are %d parameters",param_count)
+		count_label <- tklabel(XYparam_win,
+						text=my_text)
+		tkpack(count_label,side="top",anchor="w")
+
+
+		#   35 row scrollable window for parameters
+		if(param_count<35)  my_height <- param_count
+		else  my_height <- 35
+
+		listbox_frame <- tkframe(XYparam_win)
+		param_listbox <- tklistbox(listbox_frame,
+							selectmode="single",
+							exportselection=FALSE,
+							width = max(sapply(my_list,nchar)),
+							height=my_height)
+		param_scroll <- tkscrollbar(listbox_frame,
+							orient="vertical",
+							command=function(...) tkyview(param_listbox,...))
+		tkconfigure(param_listbox,
+					yscrollcommand=function(...) tkset(param_scroll,...))
+		lapply(my_list,function(my_item) tkinsert(param_listbox,"end",my_item))
+
+		tkpack(param_listbox,side="left",anchor="n",fill="both",expand=1)
+		tkpack(param_scroll,side="right",anchor="n",fill="y")
+
+		# pack the listbox_frame last, so it is the one that shrinks if the overall window shrinks
+		tkpack(listbox_frame,side="top",anchor="w",fill="both",expand=1)
 
 	}
 }
@@ -940,7 +945,7 @@ TkRadar <- function() {
 
 
 	my_main_win <- tktoplevel()
-	tkwm.title(my_main_win, "RADAR 0v6p9dev GUI 24jul2016")
+	tkwm.title(my_main_win, "RADAR 0v6p9dev GUI 27jan2019")
 
 	# if user has been stuck with Vista or Windows7 (aka Vista with lipstick),
 	# set flag for alternate behaviour...
@@ -1486,6 +1491,20 @@ TkRadar <- function() {
 					splitwafers_win <- get("splitwafers_win",envir=.TkRadar.wins)
 				}
 				tkfocus(splitwafers_win)
+			}
+		)
+	tkadd(manip_menu,"command",label="XYWid2Partid",
+			command=function() {
+				if (exists("xyw2partid_win",envir=.TkRadar.wins,inherits=FALSE)) {
+					xyw2partid_win <- get("xyw2partid_win",envir=.TkRadar.wins)
+				}
+				if (exists("xyw2partid_win") && 
+					as.logical(tkwinfo("exists",xyw2partid_win)))  tkraise(xyw2partid_win)
+				else {
+					XYWid2PartidGui()
+					xyw2partid_win <- get("xyw2partid_win",envir=.TkRadar.wins)
+				}
+				tkfocus(xyw2partid_win)
 			}
 		)
 

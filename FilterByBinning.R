@@ -1,6 +1,6 @@
 # FilterByBinning.R
 #
-# $Id: FilterByBinning.R,v 1.2 2010/01/17 22:32:20 David Exp $
+# $Id: FilterByBinning.R,v 1.4 2017/08/11 00:55:53 david Exp $
 #
 # script that reads in an rtdf file and generates a new rtdf
 # file that only includes devices that match the specified
@@ -51,7 +51,7 @@ FilterByBinning <- function(in_file="",action="keep",bin_type="hbin",
 		my_dir = getwd()
 		setwd(in_dir)
 	}
-    load(in_file)
+    my_objs = load(in_file)
 	if (in_dir != "")  setwd(my_dir)
 
 	if (bin_type == "hbin") {
@@ -69,12 +69,15 @@ FilterByBinning <- function(in_file="",action="keep",bin_type="hbin",
 		if(action=="keep") {
 			DevicesFrame = DevicesFrame[indices,]
 			ResultsMatrix = ResultsMatrix[indices,]
+			if (exists("TestFlagMatrix",inherits=FALSE))  TestFlagMatrix = TestFlagMatrix[indices,]
 			do_write = TRUE
 		} else if (action=="remove") {
 			keepers = rep(TRUE,length(binning))
 			keepers[indices] = FALSE
 			DevicesFrame = DevicesFrame[keepers,]
 			ResultsMatrix = ResultsMatrix[keepers,]
+			if (exists("TestFlagMatrix",inherits=FALSE))  TestFlagMatrix = TestFlagMatrix[keepers,]
+			do_write = TRUE
 			do_write = TRUE
 		} else {
 			device_names = DevicesFrame[indices,"part_id"]
@@ -86,13 +89,14 @@ FilterByBinning <- function(in_file="",action="keep",bin_type="hbin",
 		}
 
 		if (do_write) {
-			my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
-			if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
-			if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
-			if (exists("TSRFrame",inherits=FALSE))  my_list[length(my_list)+1] = "TSRFrame"
-			if (exists("WafersFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WafersFrame"
-			if (exists("WaferInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WaferInfoFrame"
-			save(list=my_list,file=out_file)
+			# my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
+			# if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
+			# if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
+			# if (exists("TSRFrame",inherits=FALSE))  my_list[length(my_list)+1] = "TSRFrame"
+			# if (exists("WafersFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WafersFrame"
+			# if (exists("WaferInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WaferInfoFrame"
+			# save(list=my_list,file=out_file)
+			save(list=my_objs,file=out_file)
 		}
     } else {
 		cat("No Devices match the binning criteria\n")

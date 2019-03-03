@@ -1,26 +1,78 @@
 ===================================================================
-Version 0v6p9 -- 24jul2016
+Version 0v6p9 -- 2mar2019
 ===================================================================
+
+to do...
+
+	finish integrating python xlsx script
+	- converts .csv to .xlsx with color formatting for failed results
+    that is dynamically determined by limits columns.
+
+	finish PlotRtdf_v2
+
+    FilterByResults
+    - started adding code to expand filtering, but not done!
+      + remove result and all subsequent results
+      + remove result and following number of results (ie next 9 tests)
+
+	SplitConditions
+    - it uses all 'extra' fields in DevicesFrame.
+      maybe have it extract list and let you chose all or just some?
+
+	StackedWaferMap
+	- created script, but no GUI yet... had little script that called it.
+    - also need to add to documentation!
+
+    PlotRtdfGui
+	- make file list section Yscrollbar for laptops and many files
+	  .. a lot harder than you would expect this to be!
+	  (not 100% sure it is possible yet)
+
 
 New Scripts:
 =============
+- PlotRtdf_2
+	A more complicated, but more flexible version of PlotRtdf
+	(not done yet, but basically working for one use case of multiple histograms)
+
 - ProbeVsReprobe
 	For wafer probe files that contain die that have been reprobed, it will
 	generate a CSV file with first probe bin counts and overall bin counts 
 	for all sites and then for each site separately
 
-** need to add to documentation!
-** need to add to DefaultsGui
+- XYWid2Partid
+    overwrite DevicesFrame part_id with either DevicesFrame: Xcoord,Ycoord,
+	Wafer_id, or pull from ParametersFrame/ResultsMatrix for testnames (substr) specified
+	
+- XformWaferMapGui
+	Enhance the WaferMap script to also support coordinate translation.  At the GUI level,
+   	hide these added options in WaferMap, and include them in XformWaferMap.  both
+	GUi scripts call the same underlying RADAR script.
+
+- StackedWaferMap
+	(but only started the StackedWaferMapGui.R, didn't finish it)
+    (need to add to documentation also!)
 
 Improvements and Fixes:
 =======================
-- MergeRtdf
-	* fix bug when merging multiple wafers
-	* fix bug when first rtdf doesn't have a TestFlagMatrix object
-	
+- AsciiWaferMap
+	* now handles files from IFlex that have some missing SbinInfoFrame entries
+	* 4 digit sbin number maps are no longer ugly
+	* add support for adding mirror or marker die to the maps.
+
 - ControlCharts
 	* now gracefully handles tests with no valid data
 	* now properly handles test numbers > int32 (ie  uint32)
+
+- ConvertCsv
+	* remove double quotes (ie ") from condition values, so that values containing 
+          comma's can be double-quoted in generated csv file
+
+- ConvertCsv , ConvertParameters , PlotRtdf , PlotVsRun
+	* now properly handles test numbers > int32 (ie  uint32)
+
+- ConvertCsvGui
+	* add intelligence to the default rtdf->csv file name
 
 - ConvertStdf
 	* for functional tests (from FTR's in stdf), where it extracts the number of
@@ -31,8 +83,15 @@ Improvements and Fixes:
 	  a serious speed impact for files with 20000+ unique tests with testnames
 	  non-unique in first 60 characters.
 	* add support for SDR records, extracting handler id
+	* for 93k, support CONDITION: as well as CONDITION=
+	* only add "no_pin" when absolutely necessary
+	* fix some bugs that would show up if processing DTR records
 
-	!! need to update pdf documentation for above!
+- ConvertStdfGui, FingerprintGui
+    * add real-time checking for integer entry box
+
+- FilterByBinning
+	* supports TestFlagMatrix object
 
 - FilterByIndices
 	* fix tcl bug that didn't flag unsupported syntax from RemoveDevicesAtIndices
@@ -40,26 +99,51 @@ Improvements and Fixes:
 	* report is now a checkbox, not a member of the keep and remove action radio
           button list
 	* supports TestFlagMatrix object
-	!! need to update pdf documentation for above!
 
-- ConvertCsv
-	* remove double quotes (ie ") from condition values, so that values containing 
-          comma's can be double-quoted in generated csv file
+- FilterByResults
+	* supports TestFlagMatrix object
 
-- ConvertCsv , ConvertParameters , PlotRtdf , PlotVsRun
-	* now properly handles test numbers > int32 (ie  uint32)
+- MergeRtdf
+	* fix bug when merging multiple wafers
+	* fix bug when first rtdf doesn't have a TestFlagMatrix object
+	
+- PlotRtdf
+    * change warning decision from >2000 plots to a passed-in variable.  
+      allows non-interactive scripting for datasets with >2K tests
+
+- PlotRtdfGui
+	* add intelligence to the default pdf file name
+	* break selection buttons into 3 columns from 2, window was 
+	  getting too tall
+
+- PlotVsRun
+    * fix bug that broke failed part detection if using hard bins
+
+- RemoveAtXY
+    * add support for TestFlagMatrix object
+
+- RtdfTransform
+    * add support for TestFlagMatrix object
+
+- ShrinkRetests
+    * add support for TestFlagMatrix object
+
+- SplitBySubstr
+    * add support for TestFlagMatrix object
+
+- SplitSites
+    * add support for TestFlagMatrix object
 
 - WaferMap
 	* fix bug where script would sometimes misbehave if data was merged from 2+
  	  partial wafer probe sessions (due to duplicate entries in WaferInfoFrame)
 	  now uses unique wafer indices in DevicesFrame to determine # of wafers
 	  in file.
-        * if die per wafer is >=7000, suppress default black border around each die
+    * if die per wafer is >=7000, suppress default black border around each die
 	  in the wafermap
-
-- AsciiWaferMap
-	* now handles files from IFlex that have some missing SbinInfoFrame entries
-	* 4 digit sbin number maps are no longer ugly
+	* properly displays bin info when >8 pass bins
+    * can now assign specific colors for sbins to maintain consistent color
+      scheme across wafers
 
 
 ===================================================================
@@ -103,10 +187,7 @@ Improvements and Fixes:
   * for parametric maps, now gracefully handles if WaferMapGui tclvalue()
     stripped off trailing whitespace from the testname
   * fix bug where hbin pass/fail flag wasn't pulling info from HbinInfoFrame
-  *... maybe... not done yet...
-    save/reuse sbin/hbin color assignments so consistent between wafers
-    for the same product
-    
+   
 - PlotTestvsTest
   * now gracefully handles if PlotTestvsTestGui tclvalue()
     stripped off trailing whitespace from the testnames

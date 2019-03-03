@@ -8,6 +8,8 @@
 #                                DTR with \n now has space as first char of next line
 # modified 2014 David Gattrell - support setting endianness for ATDF->STDF...
 #                                tweak to improve stdf->atdf->stdf file integrity
+# modified 2017 David Gattrell - revisit PTR and FTR, stdf->atdf->stdf->atdf with a595.stdf
+# modified 2018 Haino Hiroyuki - A2S_Nn,S2A_Nn nibble order swapped, and S2A_Bn handles size 0
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of either the GNU General Public License or the Artistic
@@ -2216,13 +2218,13 @@ sub A2S_Bn
 	};
 	my $i = undef;
 	my $binary = undef;
-	for ($i = 0; $i <= $n; $i += 2)
+	for ($i = 0; $i < $n; $i += 2)
 	{
 		$binary .= pack('H2', substr($hexnum, $i, 2));
 	};
 	if (defined($n)) 
 	{
-		return(pack('C', $n).$binary);
+		return(pack('C', $n/2).$binary);
 	}
 	else 
 	{
@@ -2330,7 +2332,7 @@ sub A2S_Cn0
 Converts a list of ATDF positive non-zero integer numbers to an STDF D*n
 binary bit field.  The bit field is organized as:
 
-	Byte:	0       1        2         ...
+	Byte:		0       1        2         ...
 	Bit:		7 ... 0 15 ... 8 23 ... 9  ...
 	Integer:	8 ... 1 16 ... 9 24 ... 17 ...
 
@@ -2358,7 +2360,7 @@ sub A2S_Dn
 		);
 
 	};
-	my %bitfld = (
+	my %bitlut = (
 		0 => 0x01,
 		1 => 0x02,
 		2 => 0x04,
@@ -2385,12 +2387,19 @@ sub A2S_Dn
 			#print "\$A2S_Dn::bytndx \= \'".$bytndx."\'\n";
 			my $bitndx = ($bitnum % 8);
 			#print "\$A2S_Dn::bitndx \= \'".$bitndx."\'\n";
-			my $bitfld = $bitfld{$bitndx};
+			my $bitval = $bitlut{$bitndx};
 			#print "\$A2S_Dn::bitfld \= \'".$bitfld."\'\n";
-			$bitfld[$bytndx] |= $bitfld;
+			$bitfld[$bytndx] |= $bitval;
 		};
 	};
-	return(pack('v', $bitcnt).pack('C'.scalar(@bitfld), @bitfld));
+	if (isStdfEndianBig())
+	{
+		return(pack('n', $bitcnt).pack('C'.scalar(@bitfld), @bitfld));
+	}
+	else
+	{
+		return(pack('v', $bitcnt).pack('C'.scalar(@bitfld), @bitfld));
+	}
 };
 
 =pod
@@ -2528,7 +2537,8 @@ sub A2S_Nn
 	{
 		$hexnum = '0'.$hexnum;
 	};
-	return(pack('H*', $hexnum));
+#	return(pack('H*', $hexnum));
+	return(pack('h*', $hexnum));
 };
 
 # $binary = A2S_real($packTemplate, $real)
@@ -2850,11 +2860,18 @@ Converts an STDF B*n binary value to an ATDF bit number string value.
 
 sub S2A_Bn
 {
-	return;
-
 	my $binary = shift();
-	my $n = S2A_unpack('C', substr($binary, 0, 1));
-	return(uc(S2A_unpack('H'.$n, substr($binary, 1))));
+	my $n = 2 * S2A_unpack('C', substr($binary, 0, 1));	# byte = 2 char! 00 to FF
+	my $ascii;
+
+#	return(uc(S2A_unpack('H'.$n, substr($binary, 1))));
+	if ($n > 0)
+	{
+		$ascii = uc(S2A_unpack('H'.$n, substr($binary, 1)));
+	} else {
+		$ascii = "";
+	};
+	return($ascii);
 };
 
 =pod
@@ -3017,7 +3034,8 @@ sub S2A_N1
 sub S2A_Nn
 {
 	my $hexbin = shift();
-	my $hexnum = unpack('H*', $hexbin);
+#	my $hexnum = unpack('H*', $hexbin);
+	my $hexnum = unpack('h*', $hexbin);
 #	if (substr($hexnum, 0, 1) eq '0')
 #	{
 #		$hexnum = substr($hexnum, 1);

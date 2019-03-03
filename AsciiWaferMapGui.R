@@ -1,11 +1,12 @@
 # AsciiWaferMapGui.R
 #
-# $Id: AsciiWaferMapGui.R,v 1.3 2010/12/17 01:41:48 David Exp $
+# $Id: AsciiWaferMapGui.R,v 1.4 2019/01/28 00:22:25 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling AsciiWaferMap.R
 # called by TkRadar.R
 #
 # Copyright (C) 2009-2010 David Gattrell
+#				2018  David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -44,6 +45,7 @@ assign("ascwmap_yield",tclVar(1),envir=.TkRadar.env)
 assign("ascwmap_multi_bin",tclVar(0),envir=.TkRadar.env)
 assign("ascwmap_multi_terse",tclVar(0),envir=.TkRadar.env)
 assign("ascwmap_skip_die_minus",tclVar(1),envir=.TkRadar.env)
+assign("ascwmap_mirror_die",tclVar(""),envir=.TkRadar.env)
 
 # these defaults can be controlled in the .Rprofile file:
 default_ascwmap_type <- tclVar("sbin")		# per user customizing
@@ -57,6 +59,7 @@ default_ascwmap_yield <- tclVar(1)			# per user customizing
 default_ascwmap_multi_bin <- tclVar(0)		# per user customizing
 default_ascwmap_multi_terse <- tclVar(0)	# per user customizing
 default_ascwmap_skip_die_minus <- tclVar(1)	# per user customizing
+default_ascwmap_mirror_die <- tclVar("")	# per user customizing
 
 #----------------------------------------------------
 AsciiWaferMapGui_defaults <- function(...) {
@@ -74,6 +77,7 @@ AsciiWaferMapGui_defaults <- function(...) {
 	tclvalue(ascwmap_multi_bin) <- tclObj(default_ascwmap_multi_bin)
 	tclvalue(ascwmap_multi_terse) <- tclObj(default_ascwmap_multi_terse)
 	tclvalue(ascwmap_skip_die_minus) <- tclObj(default_ascwmap_skip_die_minus)
+	tclvalue(ascwmap_mirror_die) <- tclObj(default_ascwmap_mirror_die)
 }
 
 
@@ -94,6 +98,7 @@ run_AsciiWaferMap <-function(done=FALSE,...) {
 	multi_bin <- as.logical(tclObj(ascwmap_multi_bin))
 	multi_terse <- as.logical(tclObj(ascwmap_multi_terse))
 	skip_die_minus_ <- as.logical(tclObj(ascwmap_skip_die_minus))
+	mirror_die_ <- paste(tclObj(ascwmap_mirror_die),sep="",collapse=" ")
 
 
 	rtdf_dir_ <- paste(tclObj(Rtdf_dir),sep="",collapse=" ")
@@ -108,7 +113,8 @@ run_AsciiWaferMap <-function(done=FALSE,...) {
 					test_floor=floor,product_id=product,lot_id=lot,
 					wafer_id=wafer,do_yield=yield,
 					multi_binning=multi_bin,multi_bin_terse=multi_terse,
-					skip_die_minus=skip_die_minus_)
+					skip_die_minus=skip_die_minus_,
+					mirror_die=mirror_die_)
 	)
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 	tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -367,6 +373,18 @@ AsciiWaferMapGui <-function(...) {
 						text="skip_die_minus",
 						variable=ascwmap_skip_die_minus)
 	tkpack(wmap_skip_die_minus_button,side="top",anchor="w")
+
+
+	mirror_frame <- tkframe(asciiwafermap_win)
+	mirror_label <- tklabel(mirror_frame,
+						width=10,
+						text="mirror_die")
+	tkpack(mirror_label,side="left")
+	mirror_entry <- tkentry(mirror_frame,
+						width=20,
+						textvariable=ascwmap_mirror_die)
+	tkpack(mirror_entry,side="left",fill="x",expand=1)
+	tkpack(mirror_frame,side="top",anchor="w",fill="x")
 }
 
 

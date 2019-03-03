@@ -1,11 +1,12 @@
 # SplitWafers.R
 #
-# $Id: SplitWafers.R,v 1.6 2014/03/03 03:11:21 david Exp $
+# $Id: SplitWafers.R,v 1.7 2019/02/05 01:47:14 david Exp $
 #
 # script that reads in an rtdf file and generates new rtdf
 # files, one per wafer
 #
 # Copyright (C) 2006-2010 David Gattrell
+#               2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -53,11 +54,14 @@ SplitWafers <- function(in_file="",out_file="",in_dir="") {
 		my_dir = getwd()
 		setwd(in_dir)
 	}
-    load(in_file)
+    my_objs = load(in_file)
 	if (in_dir != "")  setwd(my_dir)
 
     AllDevicesFrame = DevicesFrame
     AllResultsMatrix = ResultsMatrix
+	if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+    	AllTestFlagMatrix = TestFlagMatrix
+	}
     AllWafersFrame = WafersFrame
 
     wafer_count = dim(WafersFrame)[1]
@@ -68,6 +72,9 @@ SplitWafers <- function(in_file="",out_file="",in_dir="") {
 
 		DevicesFrame = AllDevicesFrame[wafers==j,]
 		ResultsMatrix = AllResultsMatrix[wafers==j,]
+		if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+			TestFlagMatrix = AllTestFlagMatrix[wafers==j,]
+		}
 		WafersFrame = AllWafersFrame[j,]
 		DevicesFrame["wafer_index"] = 1
 
@@ -85,14 +92,15 @@ SplitWafers <- function(in_file="",out_file="",in_dir="") {
 		# need to build wafer_file from out_file + wafer_id + ".rtdf"
 		wafer_file = paste(out_file,"_wafer",wafer_id,".rtdf",sep="")
 
-		my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix",
-			    "WafersFrame")
-        if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
-        if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
-        if (exists("TSRFrame",inherits=FALSE))  my_list[length(my_list)+1] = "TSRFrame"
-		if (exists("WafersFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WafersFrame"
-        if (exists("WaferInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WaferInfoFrame"
-        save(list=my_list,file=wafer_file)
+#		my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix",
+#			    "WafersFrame")
+#        if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
+#        if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
+#        if (exists("TSRFrame",inherits=FALSE))  my_list[length(my_list)+1] = "TSRFrame"
+#		if (exists("WafersFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WafersFrame"
+#        if (exists("WaferInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WaferInfoFrame"
+#        save(list=my_list,file=wafer_file)
+        save(list=my_objs,file=wafer_file)
     }
 
 }

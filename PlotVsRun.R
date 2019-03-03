@@ -1,6 +1,6 @@
 #  PlotVsRun.R
 #
-# $Id: PlotVsRun.R,v 1.2 2015/04/18 01:57:54 david Exp $
+# $Id: PlotVsRun.R,v 1.3 2019/02/01 01:45:35 david Exp $
 #
 # script used plot data with x-axis being device run from Rtdf files
 #
@@ -194,7 +194,7 @@ PlotVsRun <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 		}
 		valid_hbin_types = FALSE
 		if(is.finite(match("HbinInfoFrame",my_objs))) {
-			hbin_types = as.character(SbinInfoFrame[["hbin_pf"]])
+			hbin_types = as.character(HbinInfoFrame[["hbin_pf"]])
 			if(is.finite(match("P",hbin_types)) ||
 					is.finite(match("F",hbin_types))) {
 				valid_hbin_types = TRUE

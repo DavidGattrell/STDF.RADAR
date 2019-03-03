@@ -1,12 +1,14 @@
 # PlotRtdfGui.R
 #
-# $Id: PlotRtdfGui.R,v 1.13 2012/09/20 01:30:36 david Exp $
+# $Id: PlotRtdfGui.R,v 1.14 2019/03/03 02:08:44 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling PlotRtdf.R
 # called by TkRadar.R
 #
-# Copyright (C) 2008-2012 David Gattrell
+# Copyright (C) 2008-2016 David Gattrell
 #               2010 Vincent Horng
+#				2016 Cristian Miortescu
+#				2019 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -55,6 +57,8 @@ superimpose_hist <- tclVar(0)
 just_superimposed_histo <- tclVar(0)
 do_norm_prob_plots <- tclVar(0)
 plotrtdf_to_png <- tclVar(0)
+plot_max_tests <- tclVar(2000)
+plot_max_tests_shadow <- tclVar(2000)
 
 dataset_frames <- list()	# populated when window packed...
 rtdf_names <- list()
@@ -82,12 +86,13 @@ default_superimpose_hist <- tclVar(0)		# per user customizing
 default_just_superimposed_histo <- tclVar(0)	# per user customizing
 default_do_norm_prob_plots <- tclVar(0)
 default_plotrtdf_to_png <- tclVar(0)
+default_plot_max_tests <- tclVar(2000)
 
 rm(j)
 
 #-----------------------------------------------------
 PlotRtdfGui_defaults <- function(...) {
-	tclvalue(plotrtdf_pdf_name) <- "my_histograms.pdf"
+#	tclvalue(plotrtdf_pdf_name) <- "my_histograms.pdf"
 	tclvalue(param_name) <- ""
 	tclvalue(do_xy_plots) <- 0
 	tclvalue(do_hist_and_xy) <- 0
@@ -110,6 +115,8 @@ PlotRtdfGui_defaults <- function(...) {
 	tclvalue(just_superimposed_histo) <- tclObj(default_just_superimposed_histo)
 	tclvalue(do_norm_prob_plots) <- tclObj(default_do_norm_prob_plots)
 	tclvalue(plotrtdf_to_png) <- tclObj(default_plotrtdf_to_png)
+	tclvalue(plot_max_tests) <- tclObj(default_plot_max_tests)
+	tclvalue(plot_max_tests_shadow) <- tclObj(default_plot_max_tests)
 
 
 
@@ -138,6 +145,12 @@ PlotRtdfGui_defaults <- function(...) {
 	}
 	tclvalue(datasets) <- 1
 
+	if( rtdf_name=="") {
+		tclvalue(plotrtdf_pdf_name) <- "my_histograms.pdf"
+	} else {
+		tclvalue(plotrtdf_pdf_name) <- sub(".rtdf?$",".pdf",rtdf_name)
+	}
+
 }
 
 #-----------------------------------------------------
@@ -157,6 +170,8 @@ inc_datasets <- function() {
 		tkpack(dataset_frames[[my_value]],side="top",anchor="w",fill="x")
 	}
 	tclvalue(datasets) <- my_value
+
+		tclvalue(plotrtdf_pdf_name) <- "my_multiple_files_histograms.pdf"
 }
 
 #-----------------------------------------------------
@@ -166,6 +181,14 @@ dec_datasets <- function() {
 	if (my_value>1) {
 		tkpack.forget(dataset_frames[[my_value]])
 		my_value <- my_value - 1
+	}
+	if (my_value==1) {
+		rtdf_name <- paste(tclObj(Rtdf_name),sep="",collapse=" ")
+		if( rtdf_name=="") {
+			tclvalue(plotrtdf_pdf_name) <- "my_histograms.pdf"
+		} else {
+			tclvalue(plotrtdf_pdf_name) <- sub(".rtdf?$",".pdf",rtdf_name)
+		}
 	}
 	tclvalue(datasets) <- my_value
 }
@@ -216,6 +239,7 @@ run_PlotRtdf <-function(done=FALSE,...) {
 	just_superimposed_histo_ <- as.logical(tclObj(just_superimposed_histo))
 	do_norm_prob_plots_ <- as.logical(tclObj(do_norm_prob_plots))
 	to_png_ <- as.logical(tclObj(plotrtdf_to_png))
+	max_tests_ <- as.integer(tclObj(plot_max_tests))
 
 	min_plots_per_page_ <- as.integer(tclObj(min_plots_per_page))
 	
@@ -259,7 +283,7 @@ run_PlotRtdf <-function(done=FALSE,...) {
 					superimpose_hist=superimpose_hist_,
 					just_superimposed_histo=just_superimposed_histo_,
 					do_norm_prob_plots=do_norm_prob_plots_,
-					to_png=to_png_)
+					to_png=to_png_,max_tests=max_tests_)
 	)
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 	tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -315,6 +339,14 @@ PlotRtdfGui <-function() {
 	plotrtdf_win <- tktoplevel()
 	assign("plotrtdf_win",plotrtdf_win,envir=.TkRadar.wins)
 	tkwm.title(plotrtdf_win, "PlotRtdf")
+
+	# these get reset by Default button, so need to be defined first...
+	max_tests_frame <- tkframe(plotrtdf_win)
+	max_tests_entry <- tkentry(max_tests_frame,
+						width=10,
+						background="white",
+						textvariable=plot_max_tests_shadow)
+
 
 	bottom_row <- tkframe(plotrtdf_win)
 	default_button <- tkbutton(bottom_row,
@@ -428,51 +460,113 @@ PlotRtdfGui <-function() {
 
 	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+	# defined earlier: max_tests_frame <- tkframe(plotrtdf_win)
+	max_tests_label <- tklabel(max_tests_frame,
+						text="max_tests")
+	tkpack(max_tests_label,side="left")
+	tkpack(max_tests_entry,side="left")
+	tkbind(max_tests_entry,"<KeyRelease>",function() {
+					tmp <- as.integer(tclObj(plot_max_tests_shadow))
+					if( (length(tmp)>0) && is.finite(tmp)) {
+						tkconfigure(max_tests_entry,background="white")
+						tclvalue(plot_max_tests) <- tmp
+					} else {
+						tkconfigure(max_tests_entry,background="yellow")
+					}
+				})
+	tkpack(max_tests_frame,side="bottom",anchor="w")
+
+	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 	checkboxes_frame <- tkframe(plotrtdf_win)
 
 	left_frame <- tkframe(checkboxes_frame)
+	middle_frame <- tkframe(checkboxes_frame)
 	right_frame <- tkframe(checkboxes_frame)
 
+	donormplot_button <- tkcheckbutton(left_frame,
+						text="do_norm_prob_plots          ",
+						variable=do_norm_prob_plots)
+	tkpack(donormplot_button,side="top",anchor="w")
 
-	to_png_button <- tkcheckbutton(right_frame,
-						text="to_png  (disables pdf output!)",
-						variable=plotrtdf_to_png)
-	tkpack(to_png_button,side="bottom",anchor="w")
+	do_autoscale_button <- tkcheckbutton(left_frame,
+						text="auto_scale",
+						variable=auto_scale)
+	tkpack(do_autoscale_button,side="top",anchor="w")
 
-	autoopen_button <- tkcheckbutton(right_frame,
-						text="auto_open_pdf",
-						variable=plotrtdf_autoopen)
-	tkpack(autoopen_button,side="bottom",anchor="w")
+	do_csv_button <- tkcheckbutton(left_frame,
+						text="do_csv",
+						variable=do_csv)
+	tkpack(do_csv_button,side="top",anchor="w")
 
-	just_super_button <- tkcheckbutton(right_frame,
-						text="just_superimposed_histo",
-						variable=just_superimposed_histo)
-	tkpack(just_super_button,side="bottom",anchor="w")
+	normal_button <- tkcheckbutton(left_frame,
+						text="add_normal_curve",
+						variable=add_normal_curve)
+	tkpack(normal_button,side="top",anchor="w")
 
-	super_button <- tkcheckbutton(right_frame,
-						text="superimpose_hist",
-						variable=superimpose_hist)
-	tkpack(super_button,side="bottom",anchor="w")
-
-	mprs_button <- tkcheckbutton(right_frame,
+	mprs_button <- tkcheckbutton(left_frame,
 						text="collapse_MPRs",
 						variable=collapse_MPRs)
-	tkpack(mprs_button,side="bottom",anchor="w")
+	tkpack(mprs_button,side="top",anchor="w")
+
+	autoopen_button <- tkcheckbutton(left_frame,
+						text="auto_open_pdf",
+						variable=plotrtdf_autoopen)
+	tkpack(autoopen_button,side="top",anchor="w")
+
+
+
+	doxy_button <- tkcheckbutton(middle_frame,
+						text="do_xy_plots",
+						variable=do_xy_plots)
+	tkpack(doxy_button,side="top",anchor="w")
+
+	testlimit_button <- tkcheckbutton(middle_frame,
+						text="plot_using_test_limits",
+						variable=plot_using_test_limits)
+	tkpack(testlimit_button,side="top",anchor="w")
+
+	do_csvform_button <- tkcheckbutton(middle_frame,
+						text="use_csv_formulas",
+						variable=use_csv_formulas)
+	tkpack(do_csvform_button,side="top",anchor="w")
+
+	super_button <- tkcheckbutton(middle_frame,
+						text="superimpose_hist",
+						variable=superimpose_hist)
+	tkpack(super_button,side="top",anchor="w")
+
+	guardbands_button <- tkcheckbutton(middle_frame,
+						text="do_guardbands",
+						variable=do_guardbands)
+	tkpack(guardbands_button,side="top",anchor="w")
+
+	to_png_button <- tkcheckbutton(middle_frame,
+						text="to_png  (disables pdf output!)",
+						variable=plotrtdf_to_png)
+	tkpack(to_png_button,side="top",anchor="w")
+
+
+	dohistxy_button <- tkcheckbutton(right_frame,
+						text="do_hist_and_xy",
+						variable=do_hist_and_xy)
+	tkpack(dohistxy_button,side="top",anchor="w")
 
 	testlimit2_button <- tkcheckbutton(right_frame,
 						text="plot_widest_limits_or_values",
 						variable=plot_widest_limits_or_values)
-	tkpack(testlimit2_button,side="bottom",anchor="w")
+	tkpack(testlimit2_button,side="top",anchor="w")
 
-	testlimit_button <- tkcheckbutton(right_frame,
-						text="plot_using_test_limits",
-						variable=plot_using_test_limits)
-	tkpack(testlimit_button,side="bottom",anchor="w")
+	OOCalc_csv_button <- tkcheckbutton(right_frame,
+						text="use_OOCalc_csv",
+						variable=use_OOCalc_csv)
+	tkpack(OOCalc_csv_button,side="top",anchor="w")
 
-	guardbands_button <- tkcheckbutton(right_frame,
-						text="do_guardbands",
-						variable=do_guardbands)
-	tkpack(guardbands_button,side="bottom",anchor="w")
+	just_super_button <- tkcheckbutton(right_frame,
+						text="just_superimposed_histo",
+						variable=just_superimposed_histo)
+	tkpack(just_super_button,side="top",anchor="w")
+
 
 	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -498,53 +592,8 @@ PlotRtdfGui <-function() {
 
 	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	normal_button <- tkcheckbutton(left_frame,
-						text="add_normal_curve",
-						variable=add_normal_curve)
-	tkpack(normal_button,side="bottom",anchor="w")
-
-	# moved to radio button, add 3rd option
-	#robust_button <- tkcheckbutton(left_frame,
-	#					text="do_robust_stats",
-	#					variable=do_robust_stats)
-	#tkpack(robust_button,side="bottom",anchor="w")
-
-	OOCalc_csv_button <- tkcheckbutton(left_frame,
-						text="use_OOCalc_csv",
-						variable=use_OOCalc_csv)
-	tkpack(OOCalc_csv_button,side="bottom",anchor="w")
-
-	do_csvform_button <- tkcheckbutton(left_frame,
-						text="use_csv_formulas",
-						variable=use_csv_formulas)
-	tkpack(do_csvform_button,side="bottom",anchor="w")
-
-	do_csv_button <- tkcheckbutton(left_frame,
-						text="do_csv",
-						variable=do_csv)
-	tkpack(do_csv_button,side="bottom",anchor="w")
-
-	do_autoscale_button <- tkcheckbutton(left_frame,
-						text="auto_scale",
-						variable=auto_scale)
-	tkpack(do_autoscale_button,side="bottom",anchor="w")
-
-	dohistxy_button <- tkcheckbutton(left_frame,
-						text="do_hist_and_xy",
-						variable=do_hist_and_xy)
-	tkpack(dohistxy_button,side="bottom",anchor="w")
-
-	doxy_button <- tkcheckbutton(left_frame,
-						text="do_xy_plots",
-						variable=do_xy_plots)
-	tkpack(doxy_button,side="bottom",anchor="w")
-
-	donormplot_button <- tkcheckbutton(left_frame,
-						text="do_norm_prob_plots          ",
-						variable=do_norm_prob_plots)
-	tkpack(donormplot_button,side="bottom",anchor="w")
-
 	tkpack(left_frame,side="left",anchor="n")
+	tkpack(middle_frame,side="left",anchor="n")
 	tkpack(right_frame,side="left",anchor="n")
 	tkpack(checkboxes_frame,side="bottom",anchor="w")
 

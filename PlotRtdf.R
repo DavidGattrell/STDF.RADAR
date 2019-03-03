@@ -1,6 +1,6 @@
 #  PlotRtdf.R
 #
-# $Id: PlotRtdf.R,v 1.26 2015/04/18 01:56:41 david Exp $
+# $Id: PlotRtdf.R,v 1.27 2019/02/01 01:20:33 david Exp $
 #
 # script used to generate statistics, histograms, and xy plots from Rtdf files
 #
@@ -41,7 +41,7 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
             collapse_MPRs=FALSE,rtdf_dirs="",param_dir="",alt_lim_dir="",
 			plot_widest_limits_or_values=FALSE,superimpose_hist=FALSE,
 			just_superimposed_histo=FALSE,do_norm_prob_plots=FALSE,
-			to_png=FALSE) {
+			to_png=FALSE,max_tests=2000) {
 
     # rtdf_name -- vector of strings for the filenames containing
     #              rtdf formatted data (.Rdata files)
@@ -134,6 +134,8 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 	# do_norm_prob_plots -- instead of histograms, do normal probability plots
 	# to_png -- dump plots to individual .png files rather than to a single
 	#				.pdf file
+	# max_tests -- safety check.. did you really want to plot more than this #
+	#                of tests?   negative number skips this check
 	#
 	# -----------------------------------------------------------------------
 
@@ -423,6 +425,9 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
     } else {
         params_per_page = 1
         plots_per_page = plots_per_param
+		if(to_png) {
+			png_page_length = 1.0/params_per_page
+		}
     }
     
     if (to_pdf) {
@@ -473,7 +478,8 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 
 	# do a sanity check on the number of parameters...
 	#--------------------------------------------------
-	if((collapse_MPRs) || (max_params>2000)) {
+	#if((collapse_MPRs) || (max_params>2000)) {
+	if( (collapse_MPRs) || ( (max_tests>0) && (max_params>max_tests) ) ) {
 		cat("...checking for MPR parameters...\n")
 		OrigPlotParametersFrame = PlotParametersFrame
 		i2 = 1	# index for condensed/collapsed ParametersFrame
@@ -567,7 +573,8 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 		}
 
 		# if param count is >2K, ask if should continue or quit?
-		if(i2>2000) {
+		#if(i2>2000) {
+		if( (max_tests>0) && (i2>max_tests) ) {
 			# even collapsed there will be a largish number of
 			# histograms (and huge .pdf file!)
 			cat(sprintf("WARNING: there are %d parameters!\n",max_params))

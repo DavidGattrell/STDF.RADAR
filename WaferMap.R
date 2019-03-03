@@ -1,10 +1,10 @@
 # WaferMap.R
 #
-# $Id: WaferMap.R,v 1.21 2016/07/24 23:54:27 david Exp $
+# $Id: WaferMap.R,v 1.23 2019/02/05 01:51:23 david Exp $
 #
 # reads in rtdf file(s) and generates wafermap(s)
 #
-# Copyright (C) 2006-2015 David Gattrell
+# Copyright (C) 2006-2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -40,7 +40,8 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 			rotate_ccw=0,x_reverse_polarity=0,y_reverse_polarity=0,
 			x_shift=0,y_shift=0,
 			param_col_start=0.03,param_col_end=0.24,param_col_rev_flag=FALSE,
-			bin_vs_colors="",borders_off=7000) {
+			bin_vs_colors="",bin_vs_colors_path="",generate_bins_file=0,
+			borders_off=7000) {
     # rtdf_name -- name of the rtdf file to read
     # pdf_name -- name of the pdf file to generate
     # type = "sbin"  or "hbin" or "parameter" 
@@ -83,11 +84,13 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 	#              to true reverses the color gradient.
 	#              The above 3 inputs are applied to the R rainbow() function.
 	#----------------------------------
-	# bin_vs_colors -- if this is empty, when doing sbin or hbin wafermaps,
-	#              a file will be generated (xxxx.sbins or xxxx.hbins) that
-	#              will contain a cross reference of bins and colors used.
-	#              On future wafermaps, you can input this file so that the
-	#              bin to color mapping is consistent across wafermaps
+	# bin_vs_colors -- if this file is specified, it will be read in and used to
+	#              assign the bin vs color mapping.  This would give you
+	#              consistent color assignments across wafermaps
+	# bin_vs_colors_path -- if non-empty, this is the path to the bin_vs_colors file
+	# generate_bins_file -- if true, will create a csv file of the format used
+	#              by bin_vs_colors with the bin/color mapping used for this wafermap
+	#              (pdfname with either _hbins.csv or _sbins,csv extension vs .pdf)
 	# borders_off -- If die count is >= borders_off, then turn off border
 	#            that is drawn around each die in the wafer map
 	#            if -1, always do border
@@ -121,11 +124,38 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 	#------------------------------------------------------
 	if (bin_vs_colors != "" && ((type=="sbin")||(type=="hbin"))  ) {
 		# only bother parsing if map type is sbin or hbin
-		# REVISIT.. as far as here coding...
+
+		if (bin_vs_colors_path != "") {
+			my_dir = getwd()
+			setwd(bin_vs_colors_path)
+		}
 		# need to load csv file... bin#,pass/fail,color,binname
-		# - unassigned colours will have empty bin# and binname columns
 		# - first line will be header line   "bin_num,pass_fail,color,bin_name"
-		# forced_bins , forced_types, forced_colors, forced_binnames
+		CSV <- gzfile(bin_vs_colors,"r")
+		row1 <- scan(file=CSV,what=character(0),sep=",",strip.white=TRUE,
+				multi.line=FALSE,fill=TRUE,nlines=1,quiet=TRUE,na.strings="NaN")
+		cols = length(row1)
+		# read in the rest of the lines...
+		my_list <- scan(file=CSV,what=as.list(character(cols)),sep=",",
+				strip.white=TRUE,multi.line=FALSE,fill=TRUE,na.strings="NaN")
+		close(CSV)
+		if (bin_vs_colors_path != "") {
+			setwd(my_dir)
+		}
+
+		cells = unlist(my_list)
+		cell_count = length(cells)
+		rows = cell_count/cols
+
+		bins_csv = matrix(cells,nrow=rows,ncol=cols,byrow=FALSE)
+
+		predef_bins = as.integer(bins_csv[,1])
+		predef_colors = as.character(bins_csv[,3])
+		# lazy.. could sanity check sbin name and P/F flag.. or just ignore for now
+
+		avail_pass_colors = pass_colors[which(!pass_colors %in% predef_colors)]
+		avail_fail_colors = fail_colors[which(!fail_colors %in% predef_colors)]
+
 	}
 
 
@@ -233,6 +263,7 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 		#wafers_count = dim(WafersFrame)
 		#wafers_count = wafers_count[1]
 		all_wi = as.integer(DevicesFrame[,"wafer_index"])
+		all_wi = all_wi[is.finite(all_wi)]
 		unique_wis = unique(all_wi)
 		wafers_count = length(unique_wis)
     } else {
@@ -502,6 +533,13 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 			else  my_cex = 1.0
 			text(0,9.5/10,text_line,pos=4,cex=my_cex)
 			
+			if (generate_bins_file) {
+				# if multiple wafers, clear vector at start of each wafer,
+				# you will just get the bins assignment for the last wafer,
+				# rather than mess of conflicting assignments
+				bins_csv_lines <- vector()
+			}
+
 			if (type=="sbin") {
 				if  (length(good_sbins)>1) {
 					if ( (length(good_sbins) + length(sbins)) >7) shrink=TRUE
@@ -514,7 +552,7 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 				col=0
 				if (shrink) {
 					wid = 0.02
-					font = 0.8
+					font = 0.7
 				} else {
 					wid = 0.04
 					font = 1.0
@@ -525,19 +563,35 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 				}
 				if(length(good_sbins)>9)  max_i=9  else  max_i=length(good_sbins)
 				if(max_i>0) {
+					i_ap = 0;	# index to avail_pass_colors vector
+					ran_out_of_colors = FALSE
+
 					for (i in 1:max_i) {
 						bin = good_sbins[i]
-						# REVISIT.. as far as here with bin_vs_colors ...
-						# if bin is not in pass_color_bins, add to pass_color_bins
-						# in first empty slot, use that color
-						# IF pass_color_bins is full... other.... mmmh...
-						rect(col,(row-0.9)/10,col+wid,(row-0.1)/10,col=pass_colors[i])
-						if ((i==9) && (length(good_sbins)>9)) {
+						if(bin_vs_colors != "") {
+							idx = which(predef_bins == bin)
+							if(length(idx) > 0) {
+								my_color = bins_csv[idx[1],3]
+							} else {
+								# move to next unassigned pass bin color
+								i_ap = i_ap + 1
+								if(i_ap>=length(avail_pass_colors)) {
+									i_ap = length(avail_pass_colors)
+									ran_out_of_colors = true;
+								}
+								my_color = avail_pass_colors[i_ap]
+							}
+						} else {
+							my_color = pass_colors[i]
+						}
+						rect(col,(row-0.9)/10,col+wid,(row-0.1)/10,col=my_color)
+						if ( ran_out_of_colors || 
+							 ( (i==9) && (length(good_sbins)>9) ) ) {
 							sbin_nam = "the rest"
 							goods_left = sum(good_counts[-(1:8)])
 							# REVISIT strwidth() to get length of string in plot units,
 							# may adjust cex for really long names, or truncate? or both??
-							text(col+wid+0.01,(row-0.5)/10,sprintf("sbin xxx: %4d (%5.1f%%) %s",
+							text(col+wid+0.01,(row-0.5)/10,sprintf("sbin xxxx: %4d (%5.1f%%) %s",
 									goods_left,
 									100.0*goods_left/total_die,
 									sbin_nam),pos=4,cex=font)
@@ -549,11 +603,15 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 							} else {
 								sbin_nam = "PASSES"
 							}
-							text(col+wid+0.01,(row-0.5)/10,sprintf("sbin %3d: %4d (%5.1f%%) %s",
+							text(col+wid+0.01,(row-0.5)/10,sprintf("sbin %4d: %4d (%5.1f%%) %s",
 									bin,
 									good_counts[i],
 									100.0*good_counts[i]/total_die,
 									sbin_nam),pos=4,cex=font)
+							if(generate_bins_file) {
+								my_str = sprintf("%d,P,%s,%s",bin,my_color,sbin_nam)
+								bins_csv_lines = c(bins_csv_lines,my_str)
+							}
 						}
 						row = row - 1
 						if (row<1) {
@@ -571,14 +629,56 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					}
 				}
 				remaining_die = total_die - good_die
-				if(length(xrefs)>9)  max_i=9  else  max_i=length(xrefs)
+
+				# determine how many unique fail bins we can print in remaining text header
+				# max size of 2col x 9row
+				#   minus pass bin(s)
+				#   if >1 pass bin, minus 2 for pass/fail bin headers
+				if(shrink) {
+					slots_left = 18		# smaller font, 2 columns
+				} else {
+					slots_left = 9		
+				}
+				if(length(good_sbins)>1) {
+					slots_left = slots_left - 2		# pass/fail bin header lines
+					if (length(good_sbins)>9) {
+						slots_left = slots_left - 9
+					} else {
+						slots_left = slots_left - length(good_sbins)
+					}
+				}
+
+				#if(length(xrefs)>9)  max_i=9  else  max_i=length(xrefs)
+				if(length(xrefs)>slots_left)  max_i=slots_left  else  max_i=length(xrefs)
+				if(max_i>9)  max_i=9
 				if(max_i>0) {
+					i_af = 0;	# index to avail_fail_colors vector
+					ran_out_of_colors = FALSE
+
 					for (i in 1:max_i) {
 						bin = sbins[xrefs[i]]
-						rect(col,(row-0.9)/10,col+wid,(row-0.1)/10,col=fail_colors[i])
-						if ((i==9) && (length(xrefs)>9)) {
+						if(bin_vs_colors != "") {
+							idx = which(predef_bins == bin)
+							if(length(idx) > 0) {
+								my_color = bins_csv[idx[1],3]
+							} else {
+								# move to next unassigned fail bin color
+								i_af = i_af + 1
+								if(i_af>=length(avail_fail_colors)) {
+									i_af = length(avail_fail_colors)
+									ran_out_of_colors = true;
+								}
+								my_color = avail_fail_colors[i_af]
+							}
+						} else {
+							my_color = fail_colors[i]
+						}
+						rect(col,(row-0.9)/10,col+wid,(row-0.1)/10,col=my_color)
+						#if ((i==9) && (length(xrefs)>9)) {
+						if ( ran_out_of_colors ||
+							 ( (i==max_i) && (length(xrefs)>max_i) ) ) {
 							sbin_nam = "the rest"
-							text(col+wid+0.01,(row-0.5)/10,sprintf("sbin xxx: %4d (%5.1f%%) %s",
+							text(col+wid+0.01,(row-0.5)/10,sprintf("sbin xxxx: %4d (%5.1f%%) %s",
 									remaining_die,
 									100.0*remaining_die/total_die,
 									sbin_nam),pos=4,cex=font)
@@ -590,11 +690,15 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 							} else {
 								sbin_nam = ""
 							}
-							text(col+wid+0.01,(row-0.5)/10,sprintf("sbin %3d: %4d (%5.1f%%) %s",
+							text(col+wid+0.01,(row-0.5)/10,sprintf("sbin %4d: %4d (%5.1f%%) %s",
 									bin,
 									counts[xrefs[i]],
 									100.0*counts[xrefs[i]]/total_die,
 									sbin_nam),pos=4,cex=font)
+							if(generate_bins_file) {
+								my_str = sprintf("%d,F,%s,%s",bin,my_color,sbin_nam)
+								bins_csv_lines = c(bins_csv_lines,my_str)
+							}
 							remaining_die = remaining_die - counts[xrefs[i]]
 						}
 						row = row - 1
@@ -622,18 +726,38 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					font = 1.0
 				}
 				if  (length(good_hbins)>1) {
-					text(col+wid+0.02,(row-0.5)/10,sprintf("PASS Hardbins"),pos=4,cex=font)
+					text(col+wid+0.01,(row-0.5)/10,sprintf("PASS Hardbins"),pos=4,cex=font)
 					row = row - 1
 				}
 				if(length(good_hbins)>9)  max_i=9  else  max_i=length(good_hbins)
 				if(max_i>0) {
+					i_ap = 0;	# index to avail_pass_colors vector
+					ran_out_of_colors = FALSE
+					
 					for (i in 1:max_i) {
 						bin = good_hbins[i]
-						rect(col,(row-0.9)/10,col+wid,(row-0.1)/10,col=pass_colors[i])
-						if ((i==9) && (length(good_hbins)>9)) {
+						if(bin_vs_colors != "") {
+							idx = which(predef_bins == bin)
+							if(length(idx) > 0) {
+								my_color = bins_csv[idx[1],3]
+							} else {
+								# move to next unassigned pass bin color
+								i_ap = i_ap + 1
+								if(i_ap>=length(avail_pass_colors)) {
+									i_ap = length(avail_pass_colors)
+									ran_out_of_colors = true;
+								}
+								my_color = avail_pass_colors[i_ap]
+							}
+						} else {
+							my_color = pass_colors[i]
+						}
+						rect(col,(row-0.9)/10,col+wid,(row-0.1)/10,col=my_color)
+						if ( ran_out_of_colors || 
+							 ( (i==9) && (length(good_hbins)>9) ) ) {
 							hbin_nam = "the rest"
 							goods_left = sum(good_counts[-(1:8)])
-							text(col+wid+0.02,(row-0.5)/10,sprintf("hbin xx: %4d (%5.1f%%) %s",
+							text(col+wid+0.01,(row-0.5)/10,sprintf("hbin xx: %4d (%5.1f%%) %s",
 									goods_left,
 									100.0*goods_left/total_die,
 									hbin_nam),pos=4,cex=font)
@@ -645,11 +769,15 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 							} else {
 								hbin_nam = "PASSES"
 							}
-							text(col+wid+0.02,(row-0.5)/10,sprintf("hbin %2d: %4d (%5.1f%%) %s",
+							text(col+wid+0.01,(row-0.5)/10,sprintf("hbin %2d: %4d (%5.1f%%) %s",
 									bin,
 									good_counts[i],
 									100.0*good_counts[i]/total_die,
 									hbin_nam),pos=4,cex=font)
+							if(generate_bins_file) {
+								my_str = sprintf("%d,P,%s,%s",bin,my_color,hbin_nam)
+								bins_csv_lines = c(bins_csv_lines,my_str)
+							}
 						}
 						row = row - 1
 						if (row<1) {
@@ -661,12 +789,32 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 				remaining_die = total_die - good_die
 				if(length(xrefs)>9)  max_i=9  else  max_i=length(xrefs)
 				if(max_i>0) {
+					i_af = 0;	# index to avail_fail_colors vector
+					ran_out_of_colors = FALSE
+
 					for (i in 1:max_i) {
 						bin = hbins[xrefs[i]]
-						rect(col,(row-0.9)/10,col+wid,(row-0.1)/10,col=fail_colors[i])
-						if ((i==9) && (length(xrefs)>9)) {
+						if(bin_vs_colors != "") {
+							idx = which(predef_bins == bin)
+							if(length(idx) > 0) {
+								my_color = bins_csv[idx[1],3]
+							} else {
+								# move to next unassigned fail bin color
+								i_af = i_af + 1
+								if(i_af>=length(avail_fail_colors)) {
+									i_af = length(avail_fail_colors)
+									ran_out_of_colors = true;
+								}
+								my_color = avail_fail_colors[i_af]
+							}
+						} else {
+							my_color = fail_colors[i]
+						}
+						rect(col,(row-0.9)/10,col+wid,(row-0.1)/10,col=my_color)
+						if ( ran_out_of_colors ||
+						     ( (i==9) && (length(xrefs)>9) ) ) {
 							hbin_nam = "the rest"
-							text(col+wid+0.02,(row-0.5)/10,sprintf("hbin xx: %4d (%5.1f%%) %s",
+							text(col+wid+0.01,(row-0.5)/10,sprintf("hbin xx: %4d (%5.1f%%) %s",
 									remaining_die,
 									100.0*remaining_die/total_die,
 									hbin_nam),pos=4,cex=font)
@@ -678,11 +826,15 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 							} else {
 								hbin_nam = ""
 							}
-							text(col+wid+0.02,(row-0.5)/10,sprintf("hbin %2d: %4d (%5.1f%%) %s",
+							text(col+wid+0.01,(row-0.5)/10,sprintf("hbin %2d: %4d (%5.1f%%) %s",
 									bin,
 									counts[xrefs[i]],
 									100.0*counts[xrefs[i]]/total_die,
 									hbin_nam),pos=4,cex=font)
+							if(generate_bins_file) {
+								my_str = sprintf("%d,F,%s,%s",bin,my_color,hbin_nam)
+								bins_csv_lines = c(bins_csv_lines,my_str)
+							}
 							remaining_die = remaining_die - counts[xrefs[i]]
 						}
 						row = row - 1
@@ -903,12 +1055,29 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 			grid()
 		
 			if (type=="sbin") {
+				i_ap = 0
+				i_af = 0
+
 				for( i in 1:length(good_sbins)) {
 					bin1s=which(my_map==good_sbins[i])
 					x= min_x + ((bin1s-1) %% xdim)
 					y= min_y + floor((bin1s-1)/xdim)
-					if (i>8)  my_col = pass_colors[9]
-					else  my_col = pass_colors[i]
+					if(bin_vs_colors != "") {
+						idx = which(predef_bins == good_sbins[i])
+						if(length(idx) > 0) {
+							my_col = bins_csv[idx[1],3]
+						} else {
+							# move to next unassigned pass bin color
+							i_ap = i_ap + 1
+							if(i_ap>=length(avail_pass_colors)) {
+								i_ap = length(avail_pass_colors)
+							}
+							my_col = avail_pass_colors[i_ap]
+						}
+					} else {
+						if (i>8)  my_col = pass_colors[9]
+						else  my_col = pass_colors[i]
+					}
 					if (do_borders)  my_border = NULL
 					else  my_border = my_col
 					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
@@ -917,19 +1086,50 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					fbins=which(my_map==sbins[xrefs[i]])
 					x= min_x + ((fbins-1) %% xdim)
 					y= min_y + floor((fbins-1)/xdim)
-					if (i>8)  my_col = fail_colors[9]
-					else  my_col = fail_colors[i]
+					if(bin_vs_colors != "") {
+						idx = which(predef_bins == sbins[xrefs[i]])
+						if(length(idx) > 0) {
+							my_col = bins_csv[idx[1],3]
+						} else {
+							# move to next unassigned fail bin color
+							i_af = i_af + 1
+							if(i_af>=length(avail_fail_colors)) {
+								i_af = length(avail_fail_colors)
+							}
+							my_col = avail_fail_colors[i_af]
+						}
+					} else {
+						if (i>8)  my_col = fail_colors[9]
+						else  my_col = fail_colors[i]
+					}
 					if (do_borders)  my_border = NULL
 					else  my_border = my_col
 					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
 				}
 			} else if (type=="hbin") {
+				i_ap = 0
+				i_af = 0
+
 				for( i in 1:length(good_hbins)) {
 					bin1s=which(my_hbin_map==good_hbins[i])
 					x= min_x + ((bin1s-1) %% xdim)
 					y= min_y + floor((bin1s-1)/xdim)
-					if (i>8)  my_col = pass_colors[9]
-					else  my_col = pass_colors[i]
+					if(bin_vs_colors != "") {
+						idx = which(predef_bins == good_hbins[i])
+						if(length(idx) > 0) {
+							my_col = bins_csv[idx[1],3]
+						} else {
+							# move to next unassigned pass bin color
+							i_ap = i_ap + 1
+							if(i_ap>=length(avail_pass_colors)) {
+								i_ap = length(avail_pass_colors)
+							}
+							my_col = avail_pass_colors[i_ap]
+						}
+					} else {
+						if (i>8)  my_col = pass_colors[9]
+						else  my_col = pass_colors[i]
+					}
 					if (do_borders)  my_border = NULL
 					else  my_border = my_col
 					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
@@ -938,8 +1138,22 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					fbins=which(my_hbin_map==hbins[xrefs[i]])
 					x= min_x + ((fbins-1) %% xdim)
 					y= min_y + floor((fbins-1)/xdim)
-					if (i>8)  my_col = fail_colors[9]
-					else  my_col = fail_colors[i]
+					if(bin_vs_colors != "") {
+						idx = which(predef_bins == hbins[xrefs[i]])
+						if(length(idx) > 0) {
+							my_col = bins_csv[idx[1],3]
+						} else {
+							# move to next unassigned fail bin color
+							i_af = i_af + 1
+							if(i_af>=length(avail_fail_colors)) {
+								i_af = length(avail_fail_colors)
+							}
+							my_col = avail_fail_colors[i_af]
+						}
+					} else {
+						if (i>8)  my_col = fail_colors[9]
+						else  my_col = fail_colors[i]
+					}
 					if (do_borders)  my_border = NULL
 					else  my_border = my_col
 					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
@@ -966,7 +1180,24 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 		}	# end of for wafers loop
 	}	# end of for parameters loop
 	
-
+	if(generate_bins_file && ((type=="sbin")||(type=="hbin")) ) {
+		# REVISIT... dump csv file with header line
+		# buid name of csv file
+		if(type=="sbin") {
+			csv_name = paste(as.character(strsplit(pdf_name,"[.]pdf$")),"_sbins.csv",sep="")
+		} else {
+			csv_name = paste(as.character(strsplit(pdf_name,"[.]pdf$")),"_hbins.csv",sep="")
+		}
+		csv_conn = file(csv_name,"w")
+		# add header
+		cat("bin_num,pass_fail,color,binname",file=csv_conn)
+		# print vector of strings bins_csv_lines
+		for(j in 1:length(bins_csv_lines)) {
+			the_string = sprintf("\n%s",bins_csv_lines[j])
+			cat(the_string,file=csv_conn)
+		}
+		close(csv_conn)
+	}
 
     if (to_pdf) {
 		close.screen(all=TRUE)
