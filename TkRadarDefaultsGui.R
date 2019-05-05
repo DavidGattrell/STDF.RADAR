@@ -1,6 +1,6 @@
 # TkRadarDefaultsGui.R
 #
-# $Id: TkRadarDefaultsGui.R,v 1.22 2019/03/03 02:11:58 david Exp $
+# $Id: TkRadarDefaultsGui.R,v 1.23 2019/05/05 21:53:01 david Exp $
 #
 # Tk/Tcl GUI wrapper for loading and saving .TkRadar files which
 # define default directories and settings for TkRadar sessions
@@ -47,6 +47,9 @@ defaults_set_default_ascwmap_multi_bin <- tclVar(0)
 defaults_set_default_ascwmap_multi_terse <- tclVar(0)			
 defaults_set_default_ascwmap_skip_die_minus <- tclVar(0)			
 defaults_set_default_ascwmap_mirror_die <- tclVar(0)			
+defaults_set_default_ascwmap_sinf_fmt <- tclVar(0)			
+defaults_set_default_ascwmap_x_step <- tclVar(0)			
+defaults_set_default_ascwmap_y_step <- tclVar(0)			
 # ControlCharts
 defaults_set_default_do_western_electric <- tclVar(0)
 defaults_set_default_control_start_n <- tclVar(0)
@@ -198,6 +201,9 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_ascwmap_multi_terse) <- 0
 	tclvalue(defaults_set_default_ascwmap_skip_die_minus) <- 0
 	tclvalue(defaults_set_default_ascwmap_mirror_die) <- 0
+	tclvalue(defaults_set_default_ascwmap_sinf_fmt) <- 0
+	tclvalue(defaults_set_default_ascwmap_x_step) <- 0
+	tclvalue(defaults_set_default_ascwmap_y_step) <- 0
 
 	tclvalue(defaults_set_default_do_western_electric) <- 0
 	tclvalue(defaults_set_default_control_start_n) <- 0
@@ -461,6 +467,27 @@ save_default_settings_file <- function() {
 		cat(the_string,file=out_conn)
 		my_value <- paste(tclObj(default_ascwmap_mirror_die),sep="",collapse=" ")
 		the_string = sprintf("tclvalue(default_ascwmap_mirror_die) <- \"%s\" \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_ascwmap_sinf_fmt))) {
+		the_string = "tclvalue(defaults_set_default_ascwmap_sinf_fmt) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_ascwmap_sinf_fmt))
+		the_string = sprintf("tclvalue(default_ascwmap_sinf_fmt) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_ascwmap_x_step))) {
+		the_string = "tclvalue(defaults_set_default_ascwmap_x_step) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- paste(tclObj(default_ascwmap_x_step),sep="",collapse=" ")
+		the_string = sprintf("tclvalue(default_ascwmap_x_step) <- \"%s\" \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_ascwmap_y_step))) {
+		the_string = "tclvalue(defaults_set_default_ascwmap_y_step) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- paste(tclObj(default_ascwmap_y_step),sep="",collapse=" ")
+		the_string = sprintf("tclvalue(default_ascwmap_y_step) <- \"%s\" \n",my_value)
 		cat(the_string,file=out_conn)
 	}
 	
@@ -2086,6 +2113,18 @@ TkRadarDefaultsGui <- function() {
 	tkpack(union_frame,side="top",anchor="w",fill="x")
 
 	# === AsciiWaferMap tab ===
+	awmap_sinf_frame <- tkframe(tab8)
+	set_awmap_sinf_button <- tkcheckbutton(awmap_sinf_frame,
+						text="Set",
+						variable=defaults_set_default_ascwmap_sinf_fmt 
+						)
+	tkpack(set_awmap_sinf_button,side="left",anchor="n")
+	awmap_sinf_button <- tkcheckbutton(awmap_sinf_frame,
+						text="default sinf_fmt",
+						variable=default_ascwmap_sinf_fmt)
+	tkpack(awmap_sinf_button,side="left",anchor="n")
+	tkpack(awmap_sinf_frame,side="top",anchor="w",fill="x")
+
 	awmap_type_frame <- tkframe(tab8)
 	set_awmap_type_button <- tkcheckbutton(awmap_type_frame,
 						text="Set",
@@ -2264,8 +2303,39 @@ TkRadarDefaultsGui <- function() {
 	mirror_entry <- tkentry(mirror_frame,
 						width=20,
 						textvariable=default_ascwmap_mirror_die)
-	tkpack(mirror_entry,side="left")
+	tkpack(mirror_entry,side="left",fill="x",expand=1)
 	tkpack(mirror_frame,side="top",anchor="w",fill="x")
+
+	xstep_frame <- tkframe(tab8)
+	set_xstep_button <- tkcheckbutton(xstep_frame,
+						text="Set",
+						variable=defaults_set_default_ascwmap_x_step)
+	tkpack(set_xstep_button,side="left",anchor="n")
+	xstep_label <- tklabel(xstep_frame,
+						width=18,
+						text="default x_step")
+	tkpack(xstep_label,side="left")
+	xstep_entry <- tkentry(xstep_frame,
+						width=40,
+						textvariable=default_ascwmap_x_step)
+	tkpack(xstep_entry,side="left")
+	tkpack(xstep_frame,side="top",anchor="w",fill="x")
+
+	ystep_frame <- tkframe(tab8)
+	set_ystep_button <- tkcheckbutton(ystep_frame,
+						text="Set",
+						variable=defaults_set_default_ascwmap_y_step)
+	tkpack(set_ystep_button,side="left",anchor="n")
+	ystep_label <- tklabel(ystep_frame,
+						width=18,
+						text="default y_step")
+	tkpack(ystep_label,side="left")
+	ystep_entry <- tkentry(ystep_frame,
+						width=40,
+						textvariable=default_ascwmap_y_step)
+	tkpack(ystep_entry,side="left")
+	tkpack(ystep_frame,side="top",anchor="w",fill="x")
+
 
 	# === ShrinkRetests tab ===
 	use_xy_coords_frame <- tkframe(tab9)

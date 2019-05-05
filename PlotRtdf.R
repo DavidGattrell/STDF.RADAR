@@ -1,11 +1,12 @@
 #  PlotRtdf.R
 #
-# $Id: PlotRtdf.R,v 1.27 2019/02/01 01:20:33 david Exp $
+# $Id: PlotRtdf.R,v 1.28 2019/05/05 21:54:13 david Exp $
 #
 # script used to generate statistics, histograms, and xy plots from Rtdf files
 #
 # Copyright (C) 2006-2014 David Gattrell
 #               2010 Vincent Horng
+#               2019 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -41,7 +42,8 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
             collapse_MPRs=FALSE,rtdf_dirs="",param_dir="",alt_lim_dir="",
 			plot_widest_limits_or_values=FALSE,superimpose_hist=FALSE,
 			just_superimposed_histo=FALSE,do_norm_prob_plots=FALSE,
-			to_png=FALSE,max_tests=2000) {
+			to_png=FALSE,max_tests=2000,plot_limits_plus_10pct=FALSE,
+			outside_limits_count=FALSE) {
 
     # rtdf_name -- vector of strings for the filenames containing
     #              rtdf formatted data (.Rdata files)
@@ -136,7 +138,10 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 	#				.pdf file
 	# max_tests -- safety check.. did you really want to plot more than this #
 	#                of tests?   negative number skips this check
-	#
+	# plot_limits_plus_10pct -- overrides "plot_using_test_limits flag,
+	#                makes plots wider by 10%
+	# outside_limits_count -- replace "Off the plot" statistic on left side with
+	#                "Outside limits" statistic.
 	# -----------------------------------------------------------------------
 
 
@@ -173,7 +178,10 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
     # sort parameters alphabetically or numerically
 
 	if(just_superimposed_histo) superimpose_hist = TRUE
-	
+
+	# after setting limits, expand by 10%, so make sure limits flag is on.
+	if(plot_limits_plus_10pct)  plot_using_test_limits = TRUE
+
 	if(plot_widest_limits_or_values)  plot_using_test_limits = FALSE
 
     if(do_hist_and_xy)  do_xy_plots = TRUE
@@ -820,6 +828,12 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
         
 
         if(is.finite(my_ll) && is.finite(my_ul)) {
+			if(plot_limits_plus_10pct) {
+				# ok, move plot limits wider 10%
+				middle = (my_ll + my_ul)/2.0
+				my_ll = middle - 1.1*(middle-my_ll)
+				my_ul = middle + 1.1*(my_ul-middle)
+			}
             xlim = c(my_ll,my_ul)
             # now scale things...
             if (auto_scale) {
@@ -1016,12 +1030,34 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 						text(0.0,0.56,sprintf("SDev = %.3f",my_sdev),pos=4,cex=0.6*scex)
 					}
 					text(0.0,0.42-sh,sprintf("Count = %d",my_count),pos=4,cex=0.6*scex)
-					if (omitted>0) {
-						text(0.0,0.28-sh,sprintf("Off the plot = %d",omitted),
-							pos=4,cex=0.6*scex,col="red")
+					if (outside_limits_count) {
+						if(valid_alt_limits && use_alt_lims[j]) {
+							llim = alt_ll
+							ulim = alt_ul
+						} else {
+							llim = ll
+							ulim = ul
+						}
+						if(is.finite(llim))  ll_fails = length(results[(results<llim)])
+						else  ll_fails = 0
+						if(is.finite(ulim))  ul_fails = length(results[(results>ulim)])
+						else  ul_fails = 0
+						fails = ll_fails + ul_fails
+						if (fails>0) {
+							text(0.0,0.28-sh,sprintf("Outside limits = %d",fails),
+								pos=4,cex=0.6*scex,col="red")
+						} else {
+							text(0.0,0.28-sh,sprintf("Outside limits = %d",fails),
+								pos=4,cex=0.6*scex)
+						}
 					} else {
-						text(0.0,0.28-sh,sprintf("Off the plot = %d",omitted),
-							pos=4,cex=0.6*scex)
+						if (omitted>0) {
+							text(0.0,0.28-sh,sprintf("Off the plot = %d",omitted),
+								pos=4,cex=0.6*scex,col="red")
+						} else {
+							text(0.0,0.28-sh,sprintf("Off the plot = %d",omitted),
+								pos=4,cex=0.6*scex)
+						}
 					}
 					if (is.na(cpklo) || (cpklo<1.33)) {
 						text(0.33,0.70,sprintf("Cpklo = %.2f",cpklo),

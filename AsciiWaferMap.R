@@ -1,10 +1,10 @@
 # AsciiWaferMap.R
 #
-# $Id: AsciiWaferMap.R,v 1.8 2019/01/28 00:21:53 david Exp $
+# $Id: AsciiWaferMap.R,v 1.9 2019/05/05 21:52:12 david Exp $
 #
 # reads in rtdf file(s) and generates ascii wafermap(s)
 #
-# Copyright (C) 2009-11,2015,2018 David Gattrell
+# Copyright (C) 2009-11,2015,2018,2019 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		    x_left=FALSE,y_down=FALSE,notch="S",pass_bins=-1,rtdf_dir="",
 			test_floor="",product_id="",lot_id="",wafer_id="",do_yield=TRUE,
 			multi_binning=FALSE, multi_bin_terse=FALSE,skip_die_minus=TRUE,
-			mirror_die="") {
+			mirror_die="",sinf_fmt=FALSE,x_step="",y_step="") {
     # rtdf_name -- name of the rtdf file to read
     # wmap_name -- name of the ascii file to generate  (xxx.wmap)
 	#			if "", then "LOTID_waferWAFERID.wmap" will be used
@@ -56,7 +56,7 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 	#			LotInfoFrame!
 	# product_id -- overrides what is in rtdf... 
 	#			... note: rtdf does not currently have this field in the
-	#			LotInfoFrame!
+	#			LotInfoFrame!  use "part_typ" 
 	# lot_id -- overrides what is in the rtdf if not ""
 	# wafer_id -- overrides what is in the rtdf if not ""
 	# do_yield -- append yield line to end of wmap file
@@ -71,7 +71,34 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 	# mirror_die -- if you want "M"s on the map to indicate mirror die,
 	#           then give string of X Y coordinates for location(s) of M's
 	#           (space separated)
+	# sinf_fmt -- instead of .wmap format, output in a sinf version
+	#           sinf header fields
+	#           DEVICE: - fetch from LotInfoFrame[["part_typ"]]
+	#           LOT:    - fetch from LotInfoFrame[["lotid"]]
+	#           WAFER:  - fetch from WafersFrame[["wafer_id"]], if doesn't exist then... ?
+	#           FNLOC:  - fetch from above input 'notch'
+	#           ROWCT:  - calculated from DevicesFrame x_coord, y_coord
+	#           COLCT:  - calculated from DevicesFrame x_coord, y_coord
+	#           BCEQU:  - fetch from SbinInfoFrame
+	#           REFPX:  - leave blank, with comment
+	#           REFPY:  - leave blank, with comment
+	#           DUTMS:  - hardcode as mm .. or check WaferInfoFrame? die_ht, die_wid, wf_units
+	#           XDIES:  - variable below or if empty, pull from WaferInfoFrame?
+	#           YDIES:  - similar to XDIESa
+	#           also forces multi_binning to TRUE, multi_bin_terse to FALSE
+	# x_step -- override for die X size, 
+	#           if .wmap add field "Die X size",
+	#           if .sinf override WaferInfoFrame value.. (as DUTMS, haven't coded WaferInfoFrame support!)
+	# y_step -- similar to x_step
 	#--------------------------------------------------------------------------
+
+
+
+	# force specific map format if sinf_fmt
+	if(sinf_fmt) {
+		multi_binning = TRUE
+		multi_bin_terse = FALSE
+	}
 
 
 	# process mirror_die if there are any
@@ -131,8 +158,10 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
     # single or multiple wafer plots?
     #---------------------------------
     if (is.finite(match("WafersFrame",my_objs))) {
-		wafers_count = dim(WafersFrame)[1]
+		#wafers_count = dim(WafersFrame)[1]
 		all_wi = as.integer(DevicesFrame[,"wafer_index"])
+		unique_wafer_ids = unique(all_wi)
+		wafers_count = length(unique_wafer_ids)
     } else {
 		wafers_count = 1
     }
@@ -179,12 +208,15 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 	override_wafer_id = wafer_id
 
     for (wafer in 1:wafers_count) {
+		
+
 
 		# set lot_id and wafer_id
 		#---------------------------
 		lot_id = as.character(LotInfoFrame[[1,"lotid"]])
 		sublot_id = as.character(LotInfoFrame[[1,"sublotid"]])
 		if(is.finite(match("WafersFrame",my_objs))) {
+			wafer = unique_wafer_ids[wafer]
 			wafer_id = as.character(WafersFrame[[wafer,"wafer_id"]])
 			if(nchar(sublot_id)>0)  lot_id = paste(lot_id,":",sublot_id,sep="")
 		} else {
@@ -204,14 +236,23 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		if(nchar(wmap_name)>0) {
 			wafer_file = wmap_name
 			if (wafers_count>1) {
-				txt_name = as.character(strsplit(wmap_name,"[.]wmap$"))
-				wafer_file = paste(txt_name,"_wafer",wafer_id,".wmap",sep="")
+				if(sinf_fmt) {
+					txt_name = as.character(strsplit(wmap_name,"[.]sinf$"))
+					wafer_file = paste(txt_name,"_wafer",wafer_id,".sinf",sep="")
+				} else {
+					txt_name = as.character(strsplit(wmap_name,"[.]wmap$"))
+					wafer_file = paste(txt_name,"_wafer",wafer_id,".wmap",sep="")
+				}
 			}
 		} else {
 			wafer_file = paste(lot_id,"_wafer",wafer_id,sep="")
 			# need to replace any ":" or "-" etc...
 			wafer_file = gsub("[^0-9A-Za-z]","_",wafer_file)
-			wafer_file = paste(wafer_file,".wmap",sep="")
+			if(sinf_fmt) {
+				wafer_file = paste(wafer_file,".sinf",sep="")
+			} else {
+				wafer_file = paste(wafer_file,".wmap",sep="")
+			}
 		}
 		out_conn = file(wafer_file,"w")
 
@@ -280,56 +321,28 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		
 		if(multi_binning && !multi_bin_terse) {
 			if(digits>3) {
-				die_str = ".... "
+				if(sinf_fmt)  die_str = "____ "
+				else          die_str = ".... "
 				mirror_str = "MMMM "
 			} else if(digits>2) {
-				die_str = "... "
+				if(sinf_fmt)  die_str = "___ "
+				else          die_str = "... "
 				mirror_str = "MMM "
 			} else {
-				die_str = ".. "
+				if(sinf_fmt)  die_str = "__ "
+				else          die_str = ".. "
 				mirror_str = "MM "
 			}
 		} else {
+			if(sinf_fmt)  die_str = "_"
+			else          die_str = "."
 			die_str = "."
 			mirror_str = "M"
 		}
 
 
-		# do text stuff in top portion
-		#------------------------------
-		the_string = sprintf("Test Floor:  %s\n",test_floor)
-		cat(the_string,file=out_conn)
-
-		the_string = sprintf("Product Id:  %s\n",product_id)
-		cat(the_string,file=out_conn)
-
-		the_string = sprintf("Lot Id:      %s\n",lot_id)
-		cat(the_string,file=out_conn)
-
-		if(nchar(wafer_id)<1)  cat("ERROR: wafer_id missing!\n")
-		the_string = sprintf("Wafer Id:    %s\n",wafer_id)
-		cat(the_string,file=out_conn)
-
-		finish_t = ISOdatetime(1970,1,1,0,0,0) + as.numeric(LotInfoFrame[["finish_t"]])
-		my_tz = ""
-		if(length(finish_t)<1)  finish_t = "na"
-		else {
-			my_t = as.POSIXlt(finish_t)
-			my_tzs = attr(my_t,"tzone")
-			if (length(my_tzs)==3) {
-				my_tz = as.character(my_tzs[2+(my_t$isdst)])
-			} else {
-				my_tz = as.character(my_tzs)
-			}
-        }
-        the_string = sprintf("Finish Time: %s %s\n",finish_t,my_tz)	# REVISIT
-		cat(the_string,file=out_conn)
-
-		
-		# do wafer map in bottom portion
-		#--------------------------------
-		cat("<Bin_Map>\n",file=out_conn)
-		# rotating and generating ascii map
+		# rotating map so that notch is at the bottom
+		#--------------------------------------------
 		if(notch=="N") {
 			my_map = array(die_str,dim=c(max_x-min_x+6,max_y-min_y+2))
 			map_xs = 3 + max_x - xs
@@ -401,6 +414,104 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		}
 
 		#browser()
+		# do text stuff in top portion
+		#------------------------------
+		if(product_id=="") {
+			product_id = as.character(LotInfoFrame[["part_typ"]])[1]
+		}
+		if(sinf_fmt) {
+			the_string = sprintf("DEVICE:%s\n",product_id)
+			cat(the_string,file=out_conn)
+
+			the_string = sprintf("LOT:%s\n",lot_id)
+			cat(the_string,file=out_conn)
+
+			the_string = sprintf("WAFER:%s\n",wafer_id)
+			cat(the_string,file=out_conn)
+
+			the_string = "FNLOC:0;   wafer notch position (0=BOTTOM, 90=RIGHT, 180=TOP, 270=LEFT)\n"
+			cat(the_string,file=out_conn)
+
+			if( (notch=="W") | (notch=="E") ) {
+				row_count = max_x - min_y + 1
+				col_count = max_y - min_y + 1
+			} else {
+				row_count = max_y - min_y + 1
+				col_count = max_x - min_x + 1
+			}
+			the_string = sprintf("ROWCT:%d;  number of rows\n",row_count)
+			cat(the_string,file=out_conn)
+
+			the_string = sprintf("COLCT:%d;  number of columns\n",col_count)
+			cat(the_string,file=out_conn)
+
+			my_str = "BCEQU:"
+			for (i in 1:length(my_pass_bins)) {
+				if (i>1)  my_str = sprintf("%s,",my_str)	# add comma between bin #'s
+				if (digits>3)       my_bin_str = sprintf("%04d",my_pass_bins[i])
+				else if (digits>2)  my_bin_str = sprintf("%03d",my_pass_bins[i])
+				else                my_bin_str = sprintf("%02d",my_pass_bins[i])
+				my_str = sprintf("%s%s",my_str,my_bin_str)
+			}
+			the_string = sprintf("%s;   list of bin codes that are good\n",my_str)
+			cat(the_string,file=out_conn)
+
+			the_string = "REFPX:;   x-coord of reference die (optional)\n"
+			cat(the_string,file=out_conn)
+
+			the_string = "REFPY:;   y-coord of reference die (optional)\n"
+			cat(the_string,file=out_conn)
+
+			the_string = "DUTMS:mm;   die units of measure (mm or mil)\n"
+			cat(the_string,file=out_conn)
+
+			the_string = sprintf("XDIES:%s\n",x_step)
+			cat(the_string,file=out_conn)
+
+			the_string = sprintf("YDIES:%s\n",y_step)
+			cat(the_string,file=out_conn)
+		} else {
+			the_string = sprintf("Test Floor:  %s\n",test_floor)
+			cat(the_string,file=out_conn)
+
+			the_string = sprintf("Product Id:  %s\n",product_id)
+			cat(the_string,file=out_conn)
+
+			the_string = sprintf("Lot Id:      %s\n",lot_id)
+			cat(the_string,file=out_conn)
+
+			if(nchar(wafer_id)<1)  cat("ERROR: wafer_id missing!\n")
+			the_string = sprintf("Wafer Id:    %s\n",wafer_id)
+			cat(the_string,file=out_conn)
+
+			finish_t = ISOdatetime(1970,1,1,0,0,0) + as.numeric(LotInfoFrame[["finish_t"]])
+			my_tz = ""
+			if(length(finish_t)<1)  finish_t = "na"
+			else {
+				my_t = as.POSIXlt(finish_t)
+				my_tzs = attr(my_t,"tzone")
+				if (length(my_tzs)==3) {
+					my_tz = as.character(my_tzs[2+(my_t$isdst)])
+				} else {
+					my_tz = as.character(my_tzs)
+				}
+			}
+			the_string = sprintf("Finish Time: %s %s\n",finish_t,my_tz)	# REVISIT
+			cat(the_string,file=out_conn)
+
+			if ( (x_step != "") | (y_step!= "") ) {
+				the_string = sprintf("X step size: %s\n",x_step)
+				cat(the_string,file=out_conn)
+
+				the_string = sprintf("X step size: %s\n",x_step)
+				cat(the_string,file=out_conn)
+			}	
+		}
+
+		
+		# do wafer map in bottom portion
+		#--------------------------------
+		if(!sinf_fmt)  cat("<Bin_Map>\n",file=out_conn)
 		terse_bin_count=0
 		if(multi_binning) {
 			# for each bin, update map with "01 " or whatever the bin # is...
@@ -532,9 +643,26 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 
 
 		# dumping ascii map to file
+		# (there is some undocumented superstition here)
+		#  .wmap format has
+		#			2 padded columns to the left of wafer 
+		#			3 padded columns to the right of wafer
+		#        	1 padded row above wafer
+		#			0 padded rows below wafer
+		#  .sinf format has 
+		#			0 padded columns to the left of wafer 
+		#			0 padded columns to the right of wafer
+		#        	1 padded row above wafer
+		#			0 padded rows below wafer
 		for(i in 1:a_max_y) {
-			the_string = paste(my_map[,i],sep="",collapse="")	
-			the_string = paste(the_string,"\n",sep="")	
+			if(sinf_fmt) {
+				cols = dim(my_map)[1]
+				the_string = paste(my_map[3:(cols-3),i],sep="",collapse="")	
+				the_string = paste("RowData:",the_string,"\n",sep="")	
+			} else {
+				the_string = paste(my_map[,i],sep="",collapse="")	
+				the_string = paste(the_string,"\n",sep="")	
+			}
 			cat(the_string,file=out_conn)
 		}
 		spaces = as.integer((a_max_x - 10)/2)
@@ -542,7 +670,8 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 		else  space_str = paste(rep(" ",times=spaces),sep="",collapse="")
 		the_string = paste(space_str,"Notch Down \n",sep="")
 		cat(the_string,file=out_conn)
-		cat("<\\Bin_Map>\n",file=out_conn)
+		if(sinf_fmt)  cat("\n",file=out_conn)
+		else          cat("<\\Bin_Map>\n",file=out_conn)
 
 		# now add summary information
 		if(multi_binning && !multi_bin_terse) {

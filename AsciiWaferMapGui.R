@@ -1,12 +1,13 @@
 # AsciiWaferMapGui.R
 #
-# $Id: AsciiWaferMapGui.R,v 1.4 2019/01/28 00:22:25 david Exp $
+# $Id: AsciiWaferMapGui.R,v 1.5 2019/05/05 21:51:05 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling AsciiWaferMap.R
 # called by TkRadar.R
 #
 # Copyright (C) 2009-2010 David Gattrell
 #				2018  David Gattrell
+#				2019  David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -46,6 +47,9 @@ assign("ascwmap_multi_bin",tclVar(0),envir=.TkRadar.env)
 assign("ascwmap_multi_terse",tclVar(0),envir=.TkRadar.env)
 assign("ascwmap_skip_die_minus",tclVar(1),envir=.TkRadar.env)
 assign("ascwmap_mirror_die",tclVar(""),envir=.TkRadar.env)
+assign("ascwmap_sinf_fmt",tclVar(0),envir=.TkRadar.env)
+assign("ascwmap_x_step",tclVar(""),envir=.TkRadar.env)
+assign("ascwmap_y_step",tclVar(""),envir=.TkRadar.env)
 
 # these defaults can be controlled in the .Rprofile file:
 default_ascwmap_type <- tclVar("sbin")		# per user customizing
@@ -60,6 +64,9 @@ default_ascwmap_multi_bin <- tclVar(0)		# per user customizing
 default_ascwmap_multi_terse <- tclVar(0)	# per user customizing
 default_ascwmap_skip_die_minus <- tclVar(1)	# per user customizing
 default_ascwmap_mirror_die <- tclVar("")	# per user customizing
+default_ascwmap_sinf_fmt <- tclVar(0)
+default_ascwmap_x_step <- tclVar("")
+default_ascwmap_y_step <- tclVar("")
 
 #----------------------------------------------------
 AsciiWaferMapGui_defaults <- function(...) {
@@ -78,6 +85,9 @@ AsciiWaferMapGui_defaults <- function(...) {
 	tclvalue(ascwmap_multi_terse) <- tclObj(default_ascwmap_multi_terse)
 	tclvalue(ascwmap_skip_die_minus) <- tclObj(default_ascwmap_skip_die_minus)
 	tclvalue(ascwmap_mirror_die) <- tclObj(default_ascwmap_mirror_die)
+	tclvalue(ascwmap_sinf_fmt) <- tclObj(default_ascwmap_sinf_fmt)
+	tclvalue(ascwmap_x_step) <- tclObj(default_ascwmap_x_step)
+	tclvalue(ascwmap_y_step) <- tclObj(default_ascwmap_y_step)
 }
 
 
@@ -99,6 +109,9 @@ run_AsciiWaferMap <-function(done=FALSE,...) {
 	multi_terse <- as.logical(tclObj(ascwmap_multi_terse))
 	skip_die_minus_ <- as.logical(tclObj(ascwmap_skip_die_minus))
 	mirror_die_ <- paste(tclObj(ascwmap_mirror_die),sep="",collapse=" ")
+	sinf_fmt_ <- as.logical(tclObj(ascwmap_sinf_fmt))
+	x_step_ <- paste(tclObj(ascwmap_x_step),sep="",collapse=" ")
+	y_step_ <- paste(tclObj(ascwmap_y_step),sep="",collapse=" ")
 
 
 	rtdf_dir_ <- paste(tclObj(Rtdf_dir),sep="",collapse=" ")
@@ -114,7 +127,8 @@ run_AsciiWaferMap <-function(done=FALSE,...) {
 					wafer_id=wafer,do_yield=yield,
 					multi_binning=multi_bin,multi_bin_terse=multi_terse,
 					skip_die_minus=skip_die_minus_,
-					mirror_die=mirror_die_)
+					mirror_die=mirror_die_,sinf_fmt=sinf_fmt_,
+					x_step=x_step_,y_step=y_step_)
 	)
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 	tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -235,6 +249,11 @@ AsciiWaferMapGui <-function(...) {
 						command=function() wmap_browser(ascwmap_name))
 	tkpack(wmap_browse,side="right")
 	tkpack(wmap_entry_frame,side="top",anchor="w",fill="x")
+
+	sinf_button <- tkcheckbutton(asciiwafermap_win,
+						text="sinf_fmt",
+						variable=ascwmap_sinf_fmt)
+	tkpack(sinf_button,side="top",anchor="w")
 
 	type_frame <- tkframe(asciiwafermap_win)
 	type_label <- tklabel(type_frame, text="type")
@@ -385,6 +404,30 @@ AsciiWaferMapGui <-function(...) {
 						textvariable=ascwmap_mirror_die)
 	tkpack(mirror_entry,side="left",fill="x",expand=1)
 	tkpack(mirror_frame,side="top",anchor="w",fill="x")
+
+
+	xstep_frame <- tkframe(asciiwafermap_win)
+	xstep_label <- tklabel(xstep_frame,
+						width=10,
+						text="x_step")
+	tkpack(xstep_label,side="left")
+	xstep_entry <- tkentry(xstep_frame,
+						width=20,
+						textvariable=ascwmap_x_step)
+	tkpack(xstep_entry,side="left",fill="x",expand=1)
+	tkpack(xstep_frame,side="top",anchor="w",fill="x")
+
+
+	ystep_frame <- tkframe(asciiwafermap_win)
+	ystep_label <- tklabel(ystep_frame,
+						width=10,
+						text="y_step")
+	tkpack(ystep_label,side="left")
+	ystep_entry <- tkentry(ystep_frame,
+						width=20,
+						textvariable=ascwmap_y_step)
+	tkpack(ystep_entry,side="left",fill="x",expand=1)
+	tkpack(ystep_frame,side="top",anchor="w",fill="x")
 }
 
 

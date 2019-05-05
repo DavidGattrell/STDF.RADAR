@@ -1,6 +1,6 @@
 # PlotRtdfGui.R
 #
-# $Id: PlotRtdfGui.R,v 1.14 2019/03/03 02:08:44 david Exp $
+# $Id: PlotRtdfGui.R,v 1.15 2019/05/05 22:04:15 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling PlotRtdf.R
 # called by TkRadar.R
@@ -59,6 +59,8 @@ do_norm_prob_plots <- tclVar(0)
 plotrtdf_to_png <- tclVar(0)
 plot_max_tests <- tclVar(2000)
 plot_max_tests_shadow <- tclVar(2000)
+plot_limits_plus_10pct <- tclVar(0)
+outside_limits_count <- tclVar(0)
 
 dataset_frames <- list()	# populated when window packed...
 rtdf_names <- list()
@@ -87,6 +89,8 @@ default_just_superimposed_histo <- tclVar(0)	# per user customizing
 default_do_norm_prob_plots <- tclVar(0)
 default_plotrtdf_to_png <- tclVar(0)
 default_plot_max_tests <- tclVar(2000)
+default_plot_limits_plus_10pct <- tclVar(0)
+default_outside_limits_count <- tclVar(0)
 
 rm(j)
 
@@ -116,7 +120,8 @@ PlotRtdfGui_defaults <- function(...) {
 	tclvalue(do_norm_prob_plots) <- tclObj(default_do_norm_prob_plots)
 	tclvalue(plotrtdf_to_png) <- tclObj(default_plotrtdf_to_png)
 	tclvalue(plot_max_tests) <- tclObj(default_plot_max_tests)
-	tclvalue(plot_max_tests_shadow) <- tclObj(default_plot_max_tests)
+	tclvalue(plot_limits_plus_10pct) <- tclObj(default_plot_limits_plus_10pct)
+	tclvalue(outside_limits_count) <- tclObj(default_outside_limits_count)
 
 
 
@@ -240,6 +245,8 @@ run_PlotRtdf <-function(done=FALSE,...) {
 	do_norm_prob_plots_ <- as.logical(tclObj(do_norm_prob_plots))
 	to_png_ <- as.logical(tclObj(plotrtdf_to_png))
 	max_tests_ <- as.integer(tclObj(plot_max_tests))
+	plot_limits_plus_10pct_ <- as.logical(tclObj(plot_limits_plus_10pct))
+	outside_limits_count_ <- as.logical(tclObj(outside_limits_count))
 
 	min_plots_per_page_ <- as.integer(tclObj(min_plots_per_page))
 	
@@ -283,7 +290,9 @@ run_PlotRtdf <-function(done=FALSE,...) {
 					superimpose_hist=superimpose_hist_,
 					just_superimposed_histo=just_superimposed_histo_,
 					do_norm_prob_plots=do_norm_prob_plots_,
-					to_png=to_png_,max_tests=max_tests_)
+					to_png=to_png_,max_tests=max_tests_,
+					plot_limits_plus_10pct=plot_limits_plus_10pct_,
+					outside_limits_count=outside_limits_count_)
 	)
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 	tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -489,10 +498,10 @@ PlotRtdfGui <-function() {
 						variable=do_norm_prob_plots)
 	tkpack(donormplot_button,side="top",anchor="w")
 
-	do_autoscale_button <- tkcheckbutton(left_frame,
-						text="auto_scale",
-						variable=auto_scale)
-	tkpack(do_autoscale_button,side="top",anchor="w")
+	do_limits_10pct_button <- tkcheckbutton(left_frame,
+						text="plot_limits_plus_10pct",
+						variable=plot_limits_plus_10pct)
+	tkpack(do_limits_10pct_button,side="top",anchor="w")
 
 	do_csv_button <- tkcheckbutton(left_frame,
 						text="do_csv",
@@ -566,6 +575,16 @@ PlotRtdfGui <-function() {
 						text="just_superimposed_histo",
 						variable=just_superimposed_histo)
 	tkpack(just_super_button,side="top",anchor="w")
+
+	do_fails_cnt_button <- tkcheckbutton(right_frame,
+						text="outside_limits_count",
+						variable=outside_limits_count)
+	tkpack(do_fails_cnt_button,side="top",anchor="w")
+
+	do_autoscale_button <- tkcheckbutton(right_frame,
+						text="auto_scale",
+						variable=auto_scale)
+	tkpack(do_autoscale_button,side="top",anchor="w")
 
 
 	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
