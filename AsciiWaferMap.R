@@ -1,6 +1,6 @@
 # AsciiWaferMap.R
 #
-# $Id: AsciiWaferMap.R,v 1.9 2019/05/05 21:52:12 david Exp $
+# $Id: AsciiWaferMap.R,v 1.10 2019/05/29 00:48:18 david Exp $
 #
 # reads in rtdf file(s) and generates ascii wafermap(s)
 #
@@ -429,7 +429,7 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 			the_string = sprintf("WAFER:%s\n",wafer_id)
 			cat(the_string,file=out_conn)
 
-			the_string = "FNLOC:0;   wafer notch position (0=BOTTOM, 90=RIGHT, 180=TOP, 270=LEFT)\n"
+			the_string = "FNLOC:180;   wafer notch position (0=TOP, 90=RIGHT, 180=BOTTOM, 270=LEFT)\n"
 			cat(the_string,file=out_conn)
 
 			if( (notch=="W") | (notch=="E") ) {
@@ -503,7 +503,7 @@ AsciiWaferMap <- function(rtdf_name="",wmap_name="wafer_map.wmap",type="sbin",
 				the_string = sprintf("X step size: %s\n",x_step)
 				cat(the_string,file=out_conn)
 
-				the_string = sprintf("X step size: %s\n",x_step)
+				the_string = sprintf("Y step size: %s\n",y_step)
 				cat(the_string,file=out_conn)
 			}	
 		}
