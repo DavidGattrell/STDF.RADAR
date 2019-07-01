@@ -1,6 +1,6 @@
 #  ConvertCsv.R
 #
-# $Id: ConvertCsv.R,v 1.15 2015/04/18 01:36:23 david Exp $
+# $Id: ConvertCsv.R,v 1.17 2019/07/01 20:10:39 david Exp $
 #
 #  R script that reads either csv or rtdf files and generates
 #  the equivalent rtdf or csv version.  
@@ -125,6 +125,24 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			#	substr(my_tz,2,2) <- "S"
 			#}
 			ascii_t = paste(tokens[1],tokens[2])
+			if( length(grep("/",ascii_t))>0 ) {
+				# if  in format "%m/%d/%Y %H:%M", need to 
+				# reformat to "%Y-%m-%d %H:%M:%S"
+				#
+				# below didn't work:
+				#unix_t = as.numeric(as.POSIXct(ascii_t,"%m/%d/%Y %H:%M"))
+
+				items = strsplit(tokens[1],"/")[[1]]
+				t_items = strsplit(tokens[2],":")[[1]]
+				if(length(t_items)<3) {
+					cat("WARNING: seconds subfield missing from start_t field, setting to 00\n")
+					cat(" .. Did csv file come from LibreOffice?\n")
+					t_items[3] = "00"	# add seconds if missing
+				}
+				ascii_t = sprintf("%s-%s-%s %s:%s:%s",items[3],items[1],items[2],
+										t_items[1],t_items[2],t_items[3])
+			} 
+
 			# NOTE: if it doesn't recognize the tz string, it just ignores it
 			# The tz string created by POSIXlt is not necessarily guaranteed
 			# to be recognized by POSIXct, EDT is a prime example!
@@ -133,7 +151,7 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			# timezone and adjust by the difference.  But typically they are
 			# the same so this bold presumption should go unnoticed :)
 			unix_t = as.numeric(as.POSIXct(ascii_t,"%Y-%m-%d %H:%M:%S"))
-
+			
 			# correct for daylight savings... needed?
 			my_time = as.POSIXlt(unix_t,origin=ISOdatetime(1970,1,1,0,0,0))
 			if(my_time[["isdst"]]) {
@@ -145,6 +163,17 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			tokens = strsplit(my_csv[9,3]," ")[[1]]
 			#my_tz = tokens[3]
 			ascii_t = paste(tokens[1],tokens[2])
+			if( length(grep("/",ascii_t))>0 ) {
+				items = strsplit(tokens[1],"/")[[1]]
+				t_items = strsplit(tokens[2],":")[[1]]
+				if(length(t_items)<3) {
+					cat("WARNING: seconds subfield missing from finish_t field, setting to 00\n")
+					cat(" .. Did csv file come from LibreOffice?\n")
+					t_items[3] = "00"	# add seconds if missing
+				}
+				ascii_t = sprintf("%s-%s-%s %s:%s:%s",items[3],items[1],items[2],
+										t_items[1],t_items[2],t_items[3])
+			} 
 			unix_t = as.numeric(as.POSIXct(ascii_t,"%Y-%m-%d %H:%M:%S"))
 
 			# correct for daylight savings... needed?

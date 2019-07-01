@@ -1,12 +1,15 @@
 ===================================================================
-Version 0v6p9 -- 2mar2019
+Version 0v6p9 -- 1july2019
 ===================================================================
 
 to do...
 
+	YieldAdjust
+	- start on conceptualizing this..  adjust limits and re-generate binning results
+
 	finish integrating python xlsx script
 	- converts .csv to .xlsx with color formatting for failed results
-    that is dynamically determined by limits columns.
+    that are dynamically determined by limits columns.
 
 	finish PlotRtdf_v2
 
@@ -27,6 +30,7 @@ to do...
 	- make file list section Yscrollbar for laptops and many files
 	  .. a lot harder than you would expect this to be!
 	  (not 100% sure it is possible yet)
+	- need to update PDF to include limits+10%, alt2_lim, count=fails
 
 
 New Scripts:
@@ -53,12 +57,15 @@ New Scripts:
 	(but only started the StackedWaferMapGui.R, didn't finish it)
     (need to add to documentation also!)
 
+
 Improvements and Fixes:
 =======================
 - AsciiWaferMap
 	* now handles files from IFlex that have some missing SbinInfoFrame entries
 	* 4 digit sbin number maps are no longer ugly
 	* add support for adding mirror or marker die to the maps.
+	* properly handles merged partial wafer files that have duplicate rows in WafersFrame
+    * add support for sinf output format
 
 - ControlCharts
 	* now gracefully handles tests with no valid data
@@ -66,7 +73,8 @@ Improvements and Fixes:
 
 - ConvertCsv
 	* remove double quotes (ie ") from condition values, so that values containing 
-          comma's can be double-quoted in generated csv file
+          comma's can be double-quoted in generated csv filea
+    * now gracefully handles LibreOffice 5.0 default format for time when csv->rtdf
 
 - ConvertCsv , ConvertParameters , PlotRtdf , PlotVsRun
 	* now properly handles test numbers > int32 (ie  uint32)
@@ -100,7 +108,7 @@ Improvements and Fixes:
           button list
 	* supports TestFlagMatrix object
 
-- FilterByResults
+- FilterByResult
 	* supports TestFlagMatrix object
 
 - MergeRtdf
@@ -110,11 +118,16 @@ Improvements and Fixes:
 - PlotRtdf
     * change warning decision from >2000 plots to a passed-in variable.  
       allows non-interactive scripting for datasets with >2K tests
+	* add plot option to plot to limits +10%
+	* add option to display count outside limits vs. off the plot
+    * add support for 2nd set of alternate limits, so you can now have
+      ws/ft/qc limits
 
 - PlotRtdfGui
 	* add intelligence to the default pdf file name
 	* break selection buttons into 3 columns from 2, window was 
-	  getting too tall
+	  getting too talla
+    * add support for 2nd set of alternate limits 
 
 - PlotVsRun
     * fix bug that broke failed part detection if using hard bins

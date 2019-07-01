@@ -1,6 +1,6 @@
 # TkRadarDefaultsGui.R
 #
-# $Id: TkRadarDefaultsGui.R,v 1.23 2019/05/05 21:53:01 david Exp $
+# $Id: TkRadarDefaultsGui.R,v 1.24 2019/07/01 20:21:05 david Exp $
 #
 # Tk/Tcl GUI wrapper for loading and saving .TkRadar files which
 # define default directories and settings for TkRadar sessions
@@ -84,6 +84,7 @@ defaults_set_default_do_raw_tsrs <- tclVar(0)
 
 # MergeRtdf
 defaults_set_default_merge_union_of_tests <- tclVar(0)
+
 # PlotRtdf
 defaults_set_default_min_plots_per_page <- tclVar(0)
 defaults_set_default_use_csv_formulas <- tclVar(0)
@@ -94,11 +95,16 @@ defaults_set_default_plotrtdf_autoopen <- tclVar(0)
 defaults_set_default_superimpose_hist <- tclVar(0)
 defaults_set_default_plot_max_tests <- tclVar(0)
 default_max_tests_shadow <- tclVar(0)
+defaults_set_default_plot_limits_plus_10pct <- tclVar(0)
+defaults_set_default_outside_limits_count <- tclVar(0)
+
 # ProbeVsReprobe
 defaults_set_default_pvsrp_site_pct <- tclVar(0)
 defaults_set_default_pvsrp_type <- tclVar(0)
+
 # ShrinkRetests
 defaults_set_default_use_xy_coords <- tclVar(0)
+
 # WaferMap
 defaults_set_default_wmap_xleft <- tclVar(0)
 defaults_set_default_wmap_ydown <- tclVar(0)
@@ -241,6 +247,8 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_plotrtdf_autoopen) <- 0
 	tclvalue(defaults_set_default_superimpose_hist) <- 0
 	tclvalue(defaults_set_default_plot_max_tests) <- 0
+	tclvalue(defaults_set_default_plot_limits_plus_10pct) <- 0
+	tclvalue(defaults_set_default_outside_limits_count) <- 0
 
 	tclvalue(defaults_set_default_pvsrp_site_pct) <- 0
 	tclvalue(defaults_set_default_pvsrp_type) <- 0
@@ -721,6 +729,20 @@ save_default_settings_file <- function() {
 		cat(the_string,file=out_conn)
 		my_value <- as.integer(tclObj(default_plot_max_tests))
 		the_string = sprintf("tclvalue(default_plot_max_tests) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_plot_limits_plus_10pct))) {
+		the_string = "tclvalue(defaults_set_default_plot_limits_plus_10pct) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_plot_limits_plus_10pct))
+		the_string = sprintf("tclvalue(default_plot_limits_plus_10pct) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	if (as.logical(tclObj(defaults_set_default_outside_limits_count))) {
+		the_string = "tclvalue(defaults_set_default_outside_limits_count) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_outside_limits_count))
+		the_string = sprintf("tclvalue(default_outside_limits_count) <- %d \n",my_value)
 		cat(the_string,file=out_conn)
 	}
 
@@ -1755,6 +1777,26 @@ TkRadarDefaultsGui <- function() {
 					}
 				})
 	tkpack(max_tests_frame,side="top",anchor="w",fill="x")
+	limit_plus_10pct_frame <- tkframe(tab5)
+	set_limit_plus_10pct_button <- tkcheckbutton(limit_plus_10pct_frame,
+						text="Set",
+						variable=defaults_set_default_plot_limits_plus_10pct)
+	tkpack(set_limit_plus_10pct_button,side="left",anchor="n")
+	limit_plus_10pct_button <- tkcheckbutton(limit_plus_10pct_frame,
+						text="default plot_limits_plus_10pct",
+						variable=default_plot_limits_plus_10pct)
+	tkpack(limit_plus_10pct_button,side="left",anchor="n")
+	tkpack(limit_plus_10pct_frame,side="top",anchor="w",fill="x")
+	outside_limits_frame <- tkframe(tab5)
+	set_outside_limits_button <- tkcheckbutton(outside_limits_frame,
+						text="Set",
+						variable=defaults_set_default_outside_limits_count)
+	tkpack(set_outside_limits_button,side="left",anchor="n")
+	outside_limits_button <- tkcheckbutton(outside_limits_frame,
+						text="default outside_limits_count",
+						variable=default_outside_limits_count)
+	tkpack(outside_limits_button,side="left",anchor="n")
+	tkpack(outside_limits_frame,side="top",anchor="w",fill="x")
 
 	# === WaferMap tab ===
 	wmap_xleft_frame <- tkframe(tab6)

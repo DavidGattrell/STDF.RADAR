@@ -1,6 +1,6 @@
 # PlotRtdfGui.R
 #
-# $Id: PlotRtdfGui.R,v 1.15 2019/05/05 22:04:15 david Exp $
+# $Id: PlotRtdfGui.R,v 1.16 2019/07/01 20:17:19 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling PlotRtdf.R
 # called by TkRadar.R
@@ -43,6 +43,7 @@ save_workspace_to <- tclVar("")
 do_csv <- tclVar(1)
 do_robust_stats <- tclVar(0)
 alt_limits <- tclVar("")
+alt2_limits <- tclVar("")
 min_plots_per_page <- tclVar(6)
 do_guardbands <- tclVar(0)
 use_csv_formulas <- tclVar(1)
@@ -106,6 +107,7 @@ PlotRtdfGui_defaults <- function(...) {
 	tclvalue(do_csv) <- 1
 	tclvalue(do_robust_stats) <- tclObj(default_do_robust_stats)
 	tclvalue(alt_limits) <- ""
+	tclvalue(alt2_limits) <- ""
 	tclvalue(min_plots_per_page) <- tclObj(default_min_plots_per_page)
 	tclvalue(do_guardbands) <- 0
 	tclvalue(use_csv_formulas) <- tclObj(default_use_csv_formulas)
@@ -222,6 +224,10 @@ run_PlotRtdf <-function(done=FALSE,...) {
 	pdf_name_ <- paste(tclObj(plotrtdf_pdf_name),sep="",collapse=" ")
 	param_name_ <- paste(tclObj(param_name),sep="",collapse=" ")
 	alt_limits_ <- paste(tclObj(alt_limits),sep="",collapse=" ")
+	alt2_limits_ <- paste(tclObj(alt2_limits),sep="",collapse=" ")
+	if( (alt_limits_ != "") && (alt2_limits_ != "") ) {
+		alt_limits_[2] = alt2_limits_
+	}
 	plotrtdf_title_ <- paste(tclObj(plotrtdf_title),sep="",collapse=" ")
 	save_workspace_to_ <- paste(tclObj(save_workspace_to),sep="",collapse=" ")
 	param_name_dir_ <- paste(tclObj(param_name_dir),sep="",collapse=" ")
@@ -261,7 +267,7 @@ run_PlotRtdf <-function(done=FALSE,...) {
 		rtdf_names_[j] <- paste(tclObj(rtdf_names[[j]]),sep="",collapse=" ")
 		rtdf_dirs_[j] <- paste(tclObj(rtdf_dirs[[j]]),sep="",collapse=" ")
 		dataset_names_[j] <- paste(tclObj(dataset_names[[j]]),sep="",collapse=" ")
-		use_alt_limits_[j] <- as.logical(tclObj(use_alt_limits[[j]]))
+		use_alt_limits_[j] <- as.integer(tclObj(use_alt_limits[[j]]))
 	}
 
 	output_dir <- paste(tclObj(Output_dir),sep="",collapse=" ")
@@ -644,6 +650,21 @@ PlotRtdfGui <-function() {
 	tkpack(title_entry,side="left",fill="x",expand=1)
 	tkpack(title_frame,side="bottom",anchor="w",fill="x")
 
+	alt2_limit_frame <- tkframe(plotrtdf_win)
+	alt2_limit_label <- tklabel(alt2_limit_frame,
+						width=10,
+						text="alt2_limits")
+	tkpack(alt2_limit_label,side="left")
+	alt2_limit_entry <- tkentry(alt2_limit_frame,
+						width=20,
+						textvariable=alt2_limits)
+	tkpack(alt2_limit_entry,side="left",fill="x",expand=1)
+	alt2_limit_browse <- tkbutton(alt2_limit_frame,
+						text="Browse",
+						command=function() rtdf_browser(alt2_limits,alt_limits_dir))
+	tkpack(alt2_limit_browse,side="right")
+	tkpack(alt2_limit_frame,side="bottom",anchor="w",fill="x")
+
 	alt_limit_frame <- tkframe(plotrtdf_win)
 	alt_limit_label <- tklabel(alt_limit_frame,
 						width=10,
@@ -789,10 +810,28 @@ PlotRtdfGui <-function() {
 						textvariable=dataset_names[[j]])
 		tkpack(name_entry,side="left")
 
-		altlim_ckbox <- tkcheckbutton(dataset_frame,
-						text="use_alt_lim",
+		lim_radio <- tkradiobutton(dataset_frame,
+						text="lim",
+						value=0,
 						variable=use_alt_limits[[j]])
-		tkpack(altlim_ckbox,side="left")
+		tkpack(lim_radio,side="left")
+
+		alt_lim_radio <- tkradiobutton(dataset_frame,
+						text="alt_lim",
+						value=1,
+						variable=use_alt_limits[[j]])
+		tkpack(alt_lim_radio,side="left")
+
+		alt2_lim_radio <- tkradiobutton(dataset_frame,
+						text="alt2_lim",
+						value=2,
+						variable=use_alt_limits[[j]])
+		tkpack(alt2_lim_radio,side="left")
+
+#		altlim_ckbox <- tkcheckbutton(dataset_frame,
+#						text="use_alt_lim",
+#						variable=use_alt_limits[[j]])
+#		tkpack(altlim_ckbox,side="left")
 
 		dataset_frames[[j]] <<- dataset_frame
 	}

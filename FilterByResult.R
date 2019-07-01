@@ -1,12 +1,13 @@
 # FilterByResult.R
 #
-# $Id: FilterByResult.R,v 1.4 2016/12/22 02:23:41 david Exp $
+# $Id: FilterByResult.R,v 1.5 2019/05/05 22:05:19 david Exp $
 #
 # script that filters rtdf file based on results of specified parameter
 #
 # Copyright (C) 2008-2010 David Gattrell
 #               2014 David Gattrell
 #               2016 David Gattrell
+#               2018 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -33,9 +34,12 @@ FilterByResult <- function(in_file="",action="remove",
     
     # in_file   - RTDF file to look in
 	# action    - one of "remove", "keep", or "report"
-	# filter    - one of "result" or "device" - ie. remove only
-	#             the results for that one parameter that meet the
-	#             criteria, or remove the entire device
+	# filter    - defines scope of the action, one of:
+	#             "result" - action is performed just for that parameter
+	#             "device" - action is performed for entire device
+	#             "remainder" - action is perfomred for that and following parameters
+	#             "n" - where n is a number - action is done for n parameters
+	#             starting at current parameter
     # testname  - parameter testname to search
     # condition - one of ">",">=","<","<=", search criteria
     # value     - value to use for search threshold
@@ -124,18 +128,29 @@ FilterByResult <- function(in_file="",action="remove",
 			if(filter=="result") {
 				ResultsMatrix[!keepers,index] = NaN
 			}
+			else if(filter=="remainder") {
+				ResultsMatrix[!keepers,(index:dim(ResultsMatrix)[2])] = NaN
+			}
 			else if(filter=="device") {
 				DevicesFrame = DevicesFrame[keepers,]
 				ResultsMatrix = ResultsMatrix[keepers,]
+				if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+					TestFlagMatrix = TestFlagMatrix[keepers,]
+				}
+			}
+			else {	
+				count = as.integer(sub('[^0-9]*([0-9]*).*','\\1',filter))
+				if(is.finite(count)) {
+					max_index = dim(ResultsMatrix)[2]
+					index2 = index + count - 1
+					if(index2>max_index) index2=max_index
+					ResultsMatrix[!keepers,(index:index2)] = NaN
+				} else {
+					cat(sprintf("Unsure about filter <%s>\n",filter))
+					ResultsMatrix[!keepers,index] = NaN
+				}
 			}
 
-#			my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
-#			if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
-#			if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
-#			if (exists("TSRFrame",inherits=FALSE))       my_list[length(my_list)+1] = "TSRFrame"
-#			if (exists("WafersFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WafersFrame"
-#			if (exists("WaferInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "WaferInfoFrame"
-#			save(list=my_list,file=out_file)
 			save(list=my_objs,file=out_file)
 		}
     } else {

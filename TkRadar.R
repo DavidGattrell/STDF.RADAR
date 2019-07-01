@@ -1,6 +1,6 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.52 2019/03/03 02:16:54 david Exp $
+# $Id: TkRadar.R,v 1.53 2019/07/01 20:19:29 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
@@ -267,6 +267,8 @@ indices_entry <-function(my_var) {
 
 	indx_entry_win <- tktoplevel()
 	tkwm.title(indx_entry_win, "Indices Entry")
+	#current_geometry = tkwm.geometry(indx_entry_win)
+	#tkwm.geometry(indx_entry_win, "300x200-5+40")	# width.height+/-x+/-y
 
 	num_entry <- tkentry(indx_entry_win,
 						width=30,

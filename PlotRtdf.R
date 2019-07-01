@@ -1,6 +1,6 @@
 #  PlotRtdf.R
 #
-# $Id: PlotRtdf.R,v 1.28 2019/05/05 21:54:13 david Exp $
+# $Id: PlotRtdf.R,v 1.29 2019/07/01 20:12:40 david Exp $
 #
 # script used to generate statistics, histograms, and xy plots from Rtdf files
 #
@@ -36,7 +36,7 @@ if(exists(".PlotRtdf.env")) rm(.PlotRtdf.env)
 PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
             do_xy_plots=FALSE,do_hist_and_xy=FALSE,title="PlotRtdf output",
             auto_scale=TRUE, save_workspace_to="",do_csv=TRUE,
-            do_robust_stats=0,alt_limits="",use_alt_lims=FALSE,
+            do_robust_stats=0,alt_limits="",use_alt_lims=0,
             min_plots_per_page=4,do_guardbands=FALSE,use_csv_formulas=TRUE,
             use_OOCalc_csv=TRUE,add_normal_curve=FALSE,plot_using_test_limits=TRUE,
             collapse_MPRs=FALSE,rtdf_dirs="",param_dir="",alt_lim_dir="",
@@ -75,13 +75,13 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
     #           2 -> use 2 sided robust sdev, robust mean on plots
     #                   robust ll_sdev = 2*(Quartile 0.50 - Quartile 0.25)/1.34898
     #                   robust ul_sdev = 2*(Quartile 0.75 - Quartile 0.50)/1.34898
-    # alt_limits -- a string containing the filename of an rtdf format
+    # alt_limits -- a vector of strings containing the filename of an rtdf format
     #               file containing at least the ParametersFrame.  The
     #               file will be used for alternate limits rather than
     #               what is found in param_name, if the use_alt_lims
-    #               flag is set to TRUE for that dataset.
-    # use_alt_lims -- a vector of boolean the same length as the rtdf_name
-    #                 vector.  If TRUE, for these data sets use the alternate
+    #               value is non-zero for that dataset, it is the index of this vector
+    # use_alt_lims -- a vector of integer the same length as the rtdf_name
+    #                 vector.  If >0, for these data sets use the alternate
     #                 set of limits rather than those in the param_name file
     # min_plots_per_page -- program tends to put one parameter per page.
     #                if there is only one dataset, you get one plot per
@@ -373,13 +373,14 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 
 
     # if alternate limits, add them to PlotParametersFrame
-    #-------------------------------------------------------
-    if(alt_limits != "") {
+	# ... kluge.. add support for 2 sets of alt, but not more
+    #--------------------------------------------------------
+    if(alt_limits[1] != "") {
 		if (alt_lim_dir != "") {
 			my_dir = getwd()
 			setwd(alt_lim_dir)
 		}
-        load(alt_limits)
+        load(alt_limits[1])
 		if (alt_lim_dir != "")  setwd(my_dir)
 
         for (i in 1:max_params) {
@@ -395,8 +396,28 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
         }
         valid_alt_limits = TRUE
         len = length(use_alt_lims)
-        if(len<datasets)  use_alt_lims[(len+1):datasets]=FALSE
+        if(len<datasets)  use_alt_lims[(len+1):datasets]=0
             
+		if((length(alt_limits)>1)&&(alt_limits[2] != "")) {
+			if (alt_lim_dir != "") {
+				my_dir = getwd()
+				setwd(alt_lim_dir)
+			}
+			load(alt_limits[2])
+			if (alt_lim_dir != "")  setwd(my_dir)
+			for (i in 1:max_params) {
+				test_name = PlotParametersFrame[i,"testname"]
+				index = match(test_name,ParametersFrame[["testname"]],nomatch=NaN)
+				if (is.finite(index)) {
+					PlotParametersFrame[i,"alt2_ll"] = ParametersFrame[[index,"ll"]]
+					PlotParametersFrame[i,"alt2_ul"] = ParametersFrame[[index,"ul"]]
+				} else {
+					PlotParametersFrame[i,"alt2_ll"] = NaN
+					PlotParametersFrame[i,"alt2_ul"] = NaN
+				}
+			}
+        	valid_alt2_limits = TRUE
+		}
     } else if(do_guardbands) {
         PlotParametersFrame["alt_ll"]=as.numeric(PlotParametersFrame[["ll"]])
         PlotParametersFrame["alt_ul"]=as.numeric(PlotParametersFrame[["ul"]])
@@ -506,6 +527,10 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 					Parameters_alt_ll = OrigPlotParametersFrame[[i,"alt_ll"]]
 					Parameters_alt_ul = OrigPlotParametersFrame[[i,"alt_ul"]]
 				}
+				if (valid_alt2_limits) {				
+					Parameters_alt2_ll = OrigPlotParametersFrame[[i,"alt2_ll"]]
+					Parameters_alt2_ul = OrigPlotParametersFrame[[i,"alt2_ul"]]
+				}
 				Parameters_start_index = i
 				Parameters_index_count = 1
 			} else {
@@ -544,6 +569,17 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 					if(xor(is.finite(this),is.finite(that)))  diff=TRUE
 					else if(is.finite(this) && (this != that)) diff=TRUE
 				}
+				if(!diff && valid_alt2_limits) {
+					this = PlotParametersFrame[[i,"alt2_ll"]]
+					that = Parameters_alt2_ll[i2]
+					if(xor(is.finite(this),is.finite(that)))  diff=TRUE
+					else if(is.finite(this) && (this != that)) diff=TRUE
+
+					this = PlotParametersFrame[[i,"alt2_ul"]]
+					that = Parameters_alt2_ul[i2]
+					if(xor(is.finite(this),is.finite(that)))  diff=TRUE
+					else if(is.finite(this) && (this != that)) diff=TRUE
+				}
 				if(!diff) {
 					# check if testname is same upto last "/"  ie before pinname
 					testname = sub("/[^/]*$","/",PlotParametersFrame[[i,"testname"]])
@@ -573,6 +609,10 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 					if (valid_alt_limits) {				
 						Parameters_alt_ll[i2] = OrigPlotParametersFrame[[i,"alt_ll"]]
 						Parameters_alt_ul[i2] = OrigPlotParametersFrame[[i,"alt_ul"]]
+					}
+					if (valid_alt2_limits) {				
+						Parameters_alt2_ll[i2] = OrigPlotParametersFrame[[i,"alt2_ll"]]
+						Parameters_alt2_ul[i2] = OrigPlotParametersFrame[[i,"alt2_ul"]]
 					}
 					Parameters_start_index[i2] = i
 					Parameters_index_count[i2] = 1
@@ -610,7 +650,15 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 			rm(PlotParametersFrame)
 
 			# build PlotParametersFrame
-			if (valid_alt_limits) {
+			if (valid_alt2_limits) {
+				my_list = list( testnum=NaN, testname="",
+								scaler=NaN, units="",
+								ll=NaN, ul=NaN,
+								plot_ll=NaN, plot_ul=NaN,
+								alt_ll=NaN, alt_ul=NaN,
+								alt2_ll=NaN, alt2_ul=NaN,
+								start_index=NaN, index_count=1)
+			} else if (valid_alt_limits) {
 				my_list = list( testnum=NaN, testname="",
 								scaler=NaN, units="",
 								ll=NaN, ul=NaN,
@@ -636,6 +684,10 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 			if (valid_alt_limits) {
 				PlotParametersFrame[1:max_params,"alt_ll"] <- Parameters_alt_ll[1:max_params]
 				PlotParametersFrame[1:max_params,"alt_ul"] <- Parameters_alt_ul[1:max_params]
+			}
+			if (valid_alt2_limits) {
+				PlotParametersFrame[1:max_params,"alt2_ll"] <- Parameters_alt2_ll[1:max_params]
+				PlotParametersFrame[1:max_params,"alt2_ul"] <- Parameters_alt2_ul[1:max_params]
 			}
 			PlotParametersFrame[1:max_params,"start_index"] <- Parameters_start_index[1:max_params]
 			PlotParametersFrame[1:max_params,"index_count"] <- Parameters_index_count[1:max_params]
@@ -717,29 +769,58 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
         plot_ul = PlotParametersFrame[[i,"plot_ul"]]
         ll = PlotParametersFrame[[i,"ll"]]
         ul = PlotParametersFrame[[i,"ul"]]
-        if (valid_alt_limits) {
+        if (valid_alt2_limits) {
+            alt2_ll = PlotParametersFrame[[i,"alt2_ll"]]
+            alt2_ul = PlotParametersFrame[[i,"alt2_ul"]]
+            alt_ll = PlotParametersFrame[[i,"alt_ll"]]
+            alt_ul = PlotParametersFrame[[i,"alt_ul"]]
+        } else if (valid_alt_limits) {
+            alt2_ll = NaN
+            alt2_ul = NaN
             alt_ll = PlotParametersFrame[[i,"alt_ll"]]
             alt_ul = PlotParametersFrame[[i,"alt_ul"]]
         } else {
+            alt2_ll = NaN
+            alt2_ul = NaN
             alt_ll = NaN
             alt_ul = NaN
         }
-        if(is.finite(ll) && is.finite(alt_ll)) {
-            if(ll<alt_ll)  llim=ll
-            else  llim=alt_ll
-        } else if(is.finite(ll)) {
-            llim = ll
-        } else {
-            llim = alt_ll
-        }
-        if(is.finite(ul) && is.finite(alt_ul)) {
-            if(ul>alt_ul)  ulim=ul
-            else  ulim=alt_ul
-        } else if(is.finite(ul)) {
-            ulim = ul
-        } else {
-            ulim = alt_ul
-        }
+		llim = NaN
+		if(is.finite(alt2_ll)) {
+			llim = alt2_ll
+		}
+		if(is.finite(alt_ll)) {
+			if(is.finite(llim) && (alt_ll<llim)) {
+				llim = alt_ll
+			} else if(!is.finite(llim)) {
+				llim = alt_ll
+			}
+		}
+		if(is.finite(ll)) {
+			if(is.finite(llim) && (ll<llim)) {
+				llim = ll
+			} else if(!is.finite(llim)) {
+				llim = ll
+			}
+		}
+		ulim = NaN
+		if(is.finite(alt2_ul)) {
+			ulim = alt2_ul
+		}
+		if(is.finite(alt_ul)) {
+			if(is.finite(ulim) && (alt_ul>ulim)) {
+				ulim = alt_ul
+			} else if(!is.finite(ulim)) {
+				ulim = alt_ul
+			}
+		}
+		if(is.finite(ul)) {
+			if(is.finite(ulim) && (ul>ulim)) {
+				ulim = ul
+			} else if(!is.finite(ulim)) {
+				ulim = ul
+			}
+		}
 
         # extract all the parameter result vectors from the dataset matrices
         #-------------------------------------------------------------------
@@ -873,13 +954,28 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 			# changed test_num from %d to %.0f for very large tnums
             my_title = sprintf("%.0f  %s",test_num,test_nam)
 			title_width = strwidth(my_title,cex=1.0*scex)
-            if (valid_alt_limits) {
+			if (valid_alt_limits) {
+				if (valid_alt2_limits) {
+					if(is.finite(alt2_ll))  alt2_ll=alt2_ll*scale
+					if(is.finite(alt2_ul))  alt2_ul=alt2_ul*scale
+				}
                 if(is.finite(alt_ll))  alt_ll=alt_ll*scale
                 if(is.finite(alt_ul))  alt_ul=alt_ul*scale
-                my_limits1 = sprintf(" LL=%.2f  UL=%.2f ",ll,ul)
-                my_limits2 = sprintf(" LL2=%.2f  UL2=%.2f ",alt_ll,alt_ul)
-                my_limits3 = sprintf(" %s",my_units)
-                my_limits = paste(my_limits1,my_limits2,my_limits3)
+				if (valid_alt2_limits) {
+					my_limits1 = sprintf(" LL=%.2f ",ll)
+					my_limits2 = sprintf("/ %.2f ",alt_ll)
+					my_limits3 = sprintf("/ %.2f ",alt2_ll)
+					my_limits4 = sprintf(" UL=%.2f ",ul)
+					my_limits5 = sprintf("/ %.2f ",alt_ul)
+					my_limits6 = sprintf("/ %.2f ",alt2_ul)
+					my_limits7 = sprintf(" %s",my_units)
+					my_limits = paste(my_limits1,my_limits2,my_limits3,my_limits4,my_limits5,my_limits6,my_limits7)
+				} else {
+					my_limits1 = sprintf(" LL=%.2f  UL=%.2f ",ll,ul)
+					my_limits2 = sprintf(" LL2=%.2f  UL2=%.2f ",alt_ll,alt_ul)
+					my_limits3 = sprintf(" %s",my_units)
+					my_limits = paste(my_limits1,my_limits2,my_limits3)
+				}
 				# determine font size if testname+limits is too big for page width
 				limits_width = strwidth(my_limits,cex=0.8*scex)
 				title_cex=1.0*scex
@@ -892,14 +988,41 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 				text(0.0,0.3,sprintf("%s",my_title),pos=4,cex=title_cex)
                 # shrink the font a little, since string is longer
                 text(1.0,0.3,sprintf("%s",my_limits),pos=2, cex=limits_cex)
-                # now underline with blue and green dashed lines
-                widths=strwidth(c(my_limits1,my_limits2,my_limits3),cex=limits_cex)
-                x0 = 0.98 - widths[3] - widths[2] - widths[1] + 0.01
-                x1 = 0.98 - widths[3] - widths[2] - 0.01
-                x2 = 0.98 - widths[3] - widths[2] + 0.01
-                x3 = 0.98 - widths[3] - 0.01
-                lines(c(x0,x1),c(0.1,0.1),lty="dashed",lwd=2,col="blue")
-                lines(c(x2,x3),c(0.1,0.1),lty="dotdash",lwd=2,col="green")
+                # now underline with blue and green dashed lines, (and orange if 3 sets of limits)
+				if (valid_alt2_limits) {
+					widths=strwidth(c(my_limits1,my_limits2,my_limits3,my_limits4,my_limits5,my_limits6,my_limits7),
+							cex=limits_cex)
+					xll0a = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] - 
+							widths[2] - widths[1] + 0.01
+					xll0b = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] - 
+							widths[2] - 0.01
+					xll1a = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] - 
+							widths[2] + 0.01
+					xll1b = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] - 0.01
+					xll2a = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] + 0.01
+					xll2b = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - 0.01
+					xul0a = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] + 0.01
+					xul0b = 0.98 - widths[7] - widths[6] - widths[5] - 0.01
+					xul1a = 0.98 - widths[7] - widths[6] - widths[5] + 0.01
+					xul1b = 0.98 - widths[7] - widths[6] - 0.01
+					xul2a = 0.98 - widths[7] - widths[6] + 0.01
+					xul2b = 0.98 - widths[7] - 0.01
+					lines(c(xll0a,xll0b),c(0.1,0.1),lty="dashed",lwd=2,col="blue")
+					lines(c(xll1a,xll1b),c(0.1,0.1),lty="dotdash",lwd=2,col="green")
+					lines(c(xll2a,xll2b),c(0.1,0.1),lty="dashed",lwd=2,col="orange")
+					lines(c(xul0a,xul0b),c(0.1,0.1),lty="dashed",lwd=2,col="blue")
+					lines(c(xul1a,xul1b),c(0.1,0.1),lty="dotdash",lwd=2,col="green")
+					lines(c(xul2a,xul2b),c(0.1,0.1),lty="dashed",lwd=2,col="orange")
+
+				} else {
+					widths=strwidth(c(my_limits1,my_limits2,my_limits3),cex=limits_cex)
+					x0 = 0.98 - widths[3] - widths[2] - widths[1] + 0.01
+					x1 = 0.98 - widths[3] - widths[2] - 0.01
+					x2 = 0.98 - widths[3] - widths[2] + 0.01
+					x3 = 0.98 - widths[3] - 0.01
+					lines(c(x0,x1),c(0.1,0.1),lty="dashed",lwd=2,col="blue")
+					lines(c(x2,x3),c(0.1,0.1),lty="dotdash",lwd=2,col="green")
+				}
             } else {
                 my_limits = sprintf("LL=%.2f  UL=%.2f  %s",ll,ul,my_units)
 				# determine font size if testname+limits is too big for page width
@@ -980,31 +1103,23 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 				lo6sd = my_mean - (6*ll_sdev)
 				hi4sd = my_mean + (4*ul_sdev)
 				hi6sd = my_mean + (6*ul_sdev)
-				if(valid_alt_limits) {
-					if(use_alt_lims[j]) {
-						if(is.finite(alt_ll))  cpklo = (my_mean - alt_ll)/(3.0*ll_sdev)
-						else  cpklo = 99.99
-					} else {
-						if(is.finite(ll))  cpklo = (my_mean - ll)/(3.0*ll_sdev)
-						else  cpklo = 99.99
-					}
+				if(valid_alt2_limits && (use_alt_lims[j]==2)) {
+					if(is.finite(alt2_ll))  cpklo = (my_mean - alt2_ll)/(3.0*ll_sdev)
+					else  cpklo = 99.99
+					if(is.finite(alt2_ul))  cpkhi = (alt2_ul - my_mean)/(3.0*ul_sdev)
+					else  cpkhi = 99.99
+				} else if(valid_alt_limits && (use_alt_lims[j]==1)) {
+					if(is.finite(alt_ll))  cpklo = (my_mean - alt_ll)/(3.0*ll_sdev)
+					else  cpklo = 99.99
+					if(is.finite(alt_ul))  cpkhi = (alt_ul - my_mean)/(3.0*ul_sdev)
+					else  cpkhi = 99.99
 				} else {
 					if(is.finite(ll))  cpklo = (my_mean - ll)/(3.0*ll_sdev)
 					else  cpklo = 99.99
-				}
-				if(is.finite(cpklo) && (cpklo>99.99))  cpklo = 99.99
-				if(valid_alt_limits) {
-					if(use_alt_lims[j]) {
-						if(is.finite(alt_ul))  cpkhi = (alt_ul - my_mean)/(3.0*ul_sdev)
-						else  cpkhi = 99.99
-					} else {
-						if(is.finite(ul))  cpkhi = (ul - my_mean)/(3.0*ul_sdev)
-						else  cpkhi = 99.99
-					}
-				} else {
 					if(is.finite(ul))  cpkhi = (ul - my_mean)/(3.0*ul_sdev)
 					else  cpkhi = 99.99
 				}
+				if(is.finite(cpklo) && (cpklo>99.99))  cpklo = 99.99
 				if(is.finite(cpkhi) && (cpkhi>99.99))  cpkhi = 99.99
 				cpk = min(c(cpklo,cpkhi))
 
@@ -1031,7 +1146,10 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 					}
 					text(0.0,0.42-sh,sprintf("Count = %d",my_count),pos=4,cex=0.6*scex)
 					if (outside_limits_count) {
-						if(valid_alt_limits && use_alt_lims[j]) {
+						if(valid_alt2_limits && (use_alt_lims[j]==2)) {
+							llim = alt2_ll
+							ulim = alt2_ul
+						} else if(valid_alt_limits && (use_alt_lims[j]==1)) {
 							llim = alt_ll
 							ulim = alt_ul
 						} else {
@@ -1100,14 +1218,12 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 						csv_header = FALSE
 					}
 					csv_row = csv_row + 1
-					if(valid_alt_limits) {
-						if(use_alt_lims[j]) {
-							llim = alt_ll
-							ulim = alt_ul
-						} else {
-							llim = ll
-							ulim = ul
-						}
+					if(valid_alt2_limits && (use_alt_lims[j]==2)) {
+						llim = alt2_ll
+						ulim = alt2_ul
+					} else if(valid_alt_limits && (use_alt_lims[j]==1)) {
+						llim = alt_ll
+						ulim = alt_ul
 					} else {
 						llim = ll
 						ulim = ul
@@ -1305,18 +1421,12 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 								#        bty="o",cex.axis=0.8)
 							}
 
-							if (valid_alt_limits) {
-								if(use_alt_lims[j]) {
-									if (is.finite(alt_ll))  abline(v=alt_ll,lty="dotdash",
-																lwd=2,col="green") 
-									if (is.finite(alt_ul))  abline(v=alt_ul,lty="dotdash",
-																lwd=2,col="green")
-							   } else {
-									if (is.finite(ll))  abline(v=ll,lty="dashed",
-																lwd=2,col="blue") 
-									if (is.finite(ul))  abline(v=ul,lty="dashed",
-																lwd=2,col="blue")
-								}
+							if (valid_alt2_limits && (use_alt_lims[j]==2)) {
+								if (is.finite(alt2_ll))  abline(v=alt2_ll,lty="dashed", lwd=2,col="orange") 
+								if (is.finite(alt2_ul))  abline(v=alt2_ul,lty="dashed", lwd=2,col="orange")
+							} else if (valid_alt_limits && (use_alt_lims[j]==1)) {
+								if (is.finite(alt_ll))  abline(v=alt_ll,lty="dotdash", lwd=2,col="green") 
+								if (is.finite(alt_ul))  abline(v=alt_ul,lty="dotdash", lwd=2,col="green")
 							} else {
 								if (is.finite(ll))  abline(v=ll,lty="dashed",lwd=2,col="blue") 
 								if (is.finite(ul))  abline(v=ul,lty="dashed",lwd=2,col="blue")
@@ -1804,12 +1914,27 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
             my_title = sprintf("%.0f  %s",test_num,test_nam)
 			title_width = strwidth(my_title,cex=1.0*scex)
             if (valid_alt_limits) {
+				if (valid_alt2_limits) {
+					if(is.finite(alt2_ll))  alt2_ll=alt2_ll*scale
+					if(is.finite(alt2_ul))  alt2_ul=alt2_ul*scale
+				}
                 if(is.finite(alt_ll))  alt_ll=alt_ll*scale
                 if(is.finite(alt_ul))  alt_ul=alt_ul*scale
-                my_limits1 = sprintf(" LL=%.2f  UL=%.2f ",ll,ul)
-                my_limits2 = sprintf(" LL2=%.2f  UL2=%.2f ",alt_ll,alt_ul)
-                my_limits3 = sprintf(" %s",my_units)
-                my_limits = paste(my_limits1,my_limits2,my_limits3)
+				if (valid_alt2_limits) {
+					my_limits1 = sprintf(" LL=%.2f ",ll)
+					my_limits2 = sprintf("/ %.2f ",alt_ll)
+					my_limits3 = sprintf("/ %.2f ",alt2_ll)
+					my_limits4 = sprintf(" UL=%.2f ",ul)
+					my_limits5 = sprintf("/ %.2f ",alt_ul)
+					my_limits6 = sprintf("/ %.2f ",alt2_ul)
+					my_limits7 = sprintf(" %s",my_units)
+					my_limits = paste(my_limits1,my_limits2,my_limits3,my_limits4,my_limits5,my_limits6,my_limits7)
+				} else {
+					my_limits1 = sprintf(" LL=%.2f  UL=%.2f ",ll,ul)
+					my_limits2 = sprintf(" LL2=%.2f  UL2=%.2f ",alt_ll,alt_ul)
+					my_limits3 = sprintf(" %s",my_units)
+					my_limits = paste(my_limits1,my_limits2,my_limits3)
+				}
 				# determine font size if testname+limits is too big for page width
 				limits_width = strwidth(my_limits,cex=0.8*scex)
 				title_cex=1.0*scex
@@ -1822,14 +1947,41 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 	            text(0.0,0.3,sprintf("%s",my_title),pos=4,cex=title_cex)
                 # shrink the font a little, since string is longer
                 text(1.0,0.3,sprintf("%s",my_limits),pos=2, cex=limits_cex)
-                # now underline with blue and green dashed lines
-                widths=strwidth(c(my_limits1,my_limits2,my_limits3),cex=limits_cex)
-                x0 = 0.98 - widths[3] - widths[2] - widths[1] + 0.01
-                x1 = 0.98 - widths[3] - widths[2] - 0.01
-                x2 = 0.98 - widths[3] - widths[2] + 0.01
-                x3 = 0.98 - widths[3] - 0.01
-                lines(c(x0,x1),c(0.1,0.1),lty="dashed",lwd=2,col="blue")
-                lines(c(x2,x3),c(0.1,0.1),lty="dotdash",lwd=2,col="green")
+                # now underline with blue and green dashed lines, (and orange if 3 sets of limits)
+				if (valid_alt2_limits) {
+					widths=strwidth(c(my_limits1,my_limits2,my_limits3,my_limits4,my_limits5,my_limits6,my_limits7),
+							cex=limits_cex)
+					xll0a = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] - 
+							widths[2] - widths[1] + 0.01
+					xll0b = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] - 
+							widths[2] - 0.01
+					xll1a = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] - 
+							widths[2] + 0.01
+					xll1b = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] - 0.01
+					xll2a = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - widths[3] + 0.01
+					xll2b = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] - 0.01
+					xul0a = 0.98 - widths[7] - widths[6] - widths[5] - widths[4] + 0.01
+					xul0b = 0.98 - widths[7] - widths[6] - widths[5] - 0.01
+					xul1a = 0.98 - widths[7] - widths[6] - widths[5] + 0.01
+					xul1b = 0.98 - widths[7] - widths[6] - 0.01
+					xul2a = 0.98 - widths[7] - widths[6] + 0.01
+					xul2b = 0.98 - widths[7] - 0.01
+					lines(c(xll0a,xll0b),c(0.1,0.1),lty="dashed",lwd=2,col="blue")
+					lines(c(xll1a,xll1b),c(0.1,0.1),lty="dotdash",lwd=2,col="green")
+					lines(c(xll2a,xll2b),c(0.1,0.1),lty="dashed",lwd=2,col="orange")
+					lines(c(xul0a,xul0b),c(0.1,0.1),lty="dashed",lwd=2,col="blue")
+					lines(c(xul1a,xul1b),c(0.1,0.1),lty="dotdash",lwd=2,col="green")
+					lines(c(xul2a,xul2b),c(0.1,0.1),lty="dashed",lwd=2,col="orange")
+
+				} else {
+					widths=strwidth(c(my_limits1,my_limits2,my_limits3),cex=limits_cex)
+					x0 = 0.98 - widths[3] - widths[2] - widths[1] + 0.01
+					x1 = 0.98 - widths[3] - widths[2] - 0.01
+					x2 = 0.98 - widths[3] - widths[2] + 0.01
+					x3 = 0.98 - widths[3] - 0.01
+					lines(c(x0,x1),c(0.1,0.1),lty="dashed",lwd=2,col="blue")
+					lines(c(x2,x3),c(0.1,0.1),lty="dotdash",lwd=2,col="green")
+				}
 			} else {
 				my_limits = sprintf("LL=%.2f  UL=%.2f  %s",ll,ul,my_units)
 				# determine font size if testname+limits is too big for page width
