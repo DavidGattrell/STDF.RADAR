@@ -1,6 +1,6 @@
 #  PlotRtdf.R
 #
-# $Id: PlotRtdf.R,v 1.29 2019/07/01 20:12:40 david Exp $
+# $Id: PlotRtdf.R,v 1.30 2019/07/04 01:02:59 david Exp $
 #
 # script used to generate statistics, histograms, and xy plots from Rtdf files
 #
@@ -375,6 +375,8 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
     # if alternate limits, add them to PlotParametersFrame
 	# ... kluge.. add support for 2 sets of alt, but not more
     #--------------------------------------------------------
+    valid_alt_limits = FALSE
+    valid_alt2_limits = FALSE
     if(alt_limits[1] != "") {
 		if (alt_lim_dir != "") {
 			my_dir = getwd()
