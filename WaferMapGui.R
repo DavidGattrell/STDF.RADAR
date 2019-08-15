@@ -1,11 +1,11 @@
 # WaferMapGui.R
 #
-# $Id: WaferMapGui.R,v 1.11 2019/02/05 01:54:31 david Exp $
+# $Id: WaferMapGui.R,v 1.12 2019/08/15 22:14:53 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling WaferMap.R
 # called by TkRadar.R
 #
-# Copyright (C) 2008-2015 David Gattrell
+# Copyright (C) 2008-2019 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -60,6 +60,8 @@ wmap_gen_bins_csv <- tclVar(0)
 wmap_borders_off <- tclVar(7000)
 wmap_borders_off_shadow <- tclVar(7000)
 
+wmap_bin_nums_in_map <- tclVar(0)
+
 wmap_pdf_name <- tclVar("wafer_map.pdf")
 wmap_xform_pdf_name <- tclVar("xform_wafer_map.pdf")
 
@@ -80,6 +82,7 @@ default_wmap_bin_vs_col_path <- tclVar("")
 default_wmap_gen_bins_csv <- tclVar(0)
 
 default_wmap_borders_off <- tclVar(7000)
+default_wmap_bin_nums_in_map <- tclVar(0)
 
 default_wmap_rotate_ccw <- tclVar(0)		# per user customizing
 default_wmap_x_rev_polarity <- tclVar(0)	# per user customizing
@@ -114,6 +117,8 @@ WaferMapGui_defaults <- function(...) {
 	tclvalue(wmap_borders_off) <- tclObj(default_wmap_borders_off)
 	tclvalue(wmap_borders_off_shadow) <- tclObj(default_wmap_borders_off)
 
+	tclvalue(wmap_bin_nums_in_map) <- tclObj(default_wmap_bin_nums_in_map)
+
 	tclvalue(wmap_rotate_ccw) <- tclObj(default_wmap_rotate_ccw)
 	tclvalue(wmap_x_rev_polarity) <- tclObj(default_wmap_x_rev_polarity)
 	tclvalue(wmap_y_rev_polarity) <- tclObj(default_wmap_y_rev_polarity)
@@ -145,6 +150,7 @@ run_WaferMap <-function(done=FALSE,...) {
 	generate_bins_file_ <- as.logical(tclObj(wmap_gen_bins_csv))
 
 	borders_off_ <- as.numeric(tclObj(wmap_borders_off))
+	bin_nums_in_map_ <- as.numeric(tclObj(wmap_bin_nums_in_map))
 
 	wmap_autoopen_ <- as.logical(tclObj(wmap_autoopen))
 	if(wmap_notch_=="x")  wmap_notch_ = ""
@@ -167,7 +173,7 @@ run_WaferMap <-function(done=FALSE,...) {
 					notch=wmap_notch_,
 					param_col_start=param_col_start_,param_col_end=param_col_end_,
 					param_col_rev_flag=param_col_rev_flag_,
-					borders_off=borders_off_)
+					borders_off=borders_off_,bin_nums_in_map=bin_nums_in_map_)
 		)
 	} else {
 		my_expr = substitute(
@@ -177,7 +183,7 @@ run_WaferMap <-function(done=FALSE,...) {
 					rtdf_dir=rtdf_dir_,notch=wmap_notch_,
 					bin_vs_colors=bin_vs_colors_,bin_vs_colors_path=bin_vs_colors_path_,
 					generate_bins_file=generate_bins_file_,
-					borders_off=borders_off_)
+					borders_off=borders_off_,bin_nums_in_map=bin_nums_in_map_)
 		)
 	}
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
@@ -683,6 +689,11 @@ WaferMapGui <-function(...) {
 						text="generate_bins_file",
 						variable=wmap_gen_bins_csv)
 	tkpack(gen_bins_csv_button,side="top",anchor="w")
+
+	bnum_in_map_button <- tkcheckbutton(wafermap_win,
+						text="bin_nums_in_map",
+						variable=wmap_bin_nums_in_map)
+	tkpack(bnum_in_map_button,side="top",anchor="w")
 
 	autoopen_button <- tkcheckbutton(wafermap_win,
 						text="auto_open_pdf",

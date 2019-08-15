@@ -1,6 +1,6 @@
 # SaveRtdf.R
 #
-# $Id: SaveRtdf.R,v 1.9 2013/02/19 02:15:13 david Exp $
+# $Id: SaveRtdf.R,v 1.10 2019/08/15 22:12:18 david Exp $
 #
 # script that writes an Rdata file containing the 4 key
 # objects of the rtdf format and any optional ones if they
@@ -30,6 +30,7 @@
 SaveRtdf <- function(rtdf_name="",output_dir="") {
 
     my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
+    if (exists("TestOrderMatrix"))  my_list[length(my_list)+1] = "TestOrderMatrix"
     if (exists("TestFlagMatrix"))  my_list[length(my_list)+1] = "TestFlagMatrix"
     if (exists("HbinInfoFrame"))  my_list[length(my_list)+1] = "HbinInfoFrame"
     if (exists("SbinInfoFrame"))  my_list[length(my_list)+1] = "SbinInfoFrame"

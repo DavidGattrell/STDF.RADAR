@@ -1,10 +1,10 @@
 # WaferMap.R
 #
-# $Id: WaferMap.R,v 1.23 2019/02/05 01:51:23 david Exp $
+# $Id: WaferMap.R,v 1.24 2019/08/15 22:16:32 david Exp $
 #
 # reads in rtdf file(s) and generates wafermap(s)
 #
-# Copyright (C) 2006-2018 David Gattrell
+# Copyright (C) 2006-2019 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 			x_shift=0,y_shift=0,
 			param_col_start=0.03,param_col_end=0.24,param_col_rev_flag=FALSE,
 			bin_vs_colors="",bin_vs_colors_path="",generate_bins_file=0,
-			borders_off=7000) {
+			borders_off=7000,bin_nums_in_map=FALSE) {
     # rtdf_name -- name of the rtdf file to read
     # pdf_name -- name of the pdf file to generate
     # type = "sbin"  or "hbin" or "parameter" 
@@ -95,6 +95,8 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 	#            that is drawn around each die in the wafer map
 	#            if -1, always do border
 	#            if 0, always suppress border
+	# bin_nums_in_map -- If true, the soft or hard bin numbers will be printed inside each die
+	#              in the wafer map
     ### other things not yet done... ###
     # - minx, maxx, miny, maxy to override wafer map size
     # - add vector for gaps for panels.. X or X and Y??
@@ -1081,6 +1083,14 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					if (do_borders)  my_border = NULL
 					else  my_border = my_col
 					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
+					if(bin_nums_in_map) {
+						# need to scale font based on how big the die are...
+						shrink_size = 1.0
+						if( (max_x - min_x)>20) {
+							shrink_size = 15.0/(1.0*(max_x - min_x))
+						}
+						text(x,y,sprintf("%d",good_sbins[i]),cex=shrink_size)
+					}
 				}
 				for( i in 1:length(xrefs)) {
 					fbins=which(my_map==sbins[xrefs[i]])
@@ -1105,6 +1115,14 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					if (do_borders)  my_border = NULL
 					else  my_border = my_col
 					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
+					if(bin_nums_in_map) {
+						# need to scale font based on how big the die are...
+						shrink_size = 1.0
+						if( (max_x - min_x)>20) {
+							shrink_size = 15.0/(1.0*(max_x - min_x))
+						}
+						text(x,y,sprintf("%d",sbins[xrefs[i]]),cex=shrink_size)
+					}
 				}
 			} else if (type=="hbin") {
 				i_ap = 0
@@ -1133,6 +1151,14 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					if (do_borders)  my_border = NULL
 					else  my_border = my_col
 					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
+					if(bin_nums_in_map) {
+						# need to scale font based on how big the die are...
+						shrink_size = 1.0
+						if( (max_x - min_x)>20) {
+							shrink_size = 15.0/(1.0*(max_x - min_x))
+						}
+						text(x,y,sprintf("%d",good_hbins[i]),cex=shrink_size)
+					}
 				}
 				for( i in 1:length(xrefs)) {
 					fbins=which(my_hbin_map==hbins[xrefs[i]])
@@ -1157,6 +1183,14 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 					if (do_borders)  my_border = NULL
 					else  my_border = my_col
 					rect(x-0.4,y-0.4,x+0.4,y+0.4,col=my_col,border=my_border)
+					if(bin_nums_in_map) {
+						# need to scale font based on how big the die are...
+						shrink_size = 1.0
+						if( (max_x - min_x)>20) {
+							shrink_size = 15.0/(1.0*(max_x - min_x))
+						}
+						text(x,y,sprintf("%d",hbins[xrefs[i]]),cex=shrink_size)
+					}
 				}
 			} else if ((type=="parameter") && valid_map) {
 				results_map[is.finite(results_map) & (results_map>breaks[100])] = breaks[100]

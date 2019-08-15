@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.49 2018/12/22 17:20:42 david Exp $
+# $Id: ConvertStdf.R,v 1.50 2019/08/15 22:14:08 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -205,6 +205,10 @@ assign("ResultsMatrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
 assign("TestFlagMatrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
 assign("Do_testflag_matrix",FALSE,envir=.ConvertStdf.env) # flag to enable/disable extra object
 
+assign("TestOrderMatrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
+assign("Do_test_order_matrix",FALSE,envir=.ConvertStdf.env) # flag to enable/disable extra object
+assign("Test_order_counter",0,envir=.ConvertStdf.env)	# number of tests processed (PTR/FTR/MPR*pins records)
+
 assign("HbinInfoFrame",data.frame(rbind(
 		list(hbin_num=NaN, hbin_cnt=NaN, hbin_pf="",hbin_nam="")
 		)),envir=.ConvertStdf.env)
@@ -387,6 +391,9 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	ResultsMatrix <<- array(NaN, dim=c(0,0))
 	TestFlagMatrix <<- array(NaN, dim=c(0,0))
 	Do_testflag_matrix <<- do_testflag_matrix
+	TestOrderMatrix <<- array(NaN, dim=c(0,0))
+	Do_test_order_matrix <<- 1		# do_test_order_matrix
+	Test_order_counter <<- 0
 	Max_parts <<- max_parts
 	Unknown_rec_count <<- 0
 
@@ -691,10 +698,13 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
     #----------------------------------------------
     ResultsMatrix <<- ResultsMatrix[1:Device_count,]
     if(Do_testflag_matrix)  TestFlagMatrix <<- TestFlagMatrix[1:Device_count,]
+    if(Do_test_order_matrix)  TestOrderMatrix <<- TestOrderMatrix[1:Device_count,]
 	# above creates a vector if only 1 device instead of a matrix, so below fixes this.
 	if(!is.matrix(ResultsMatrix)) {
 		ResultsMatrix <<- matrix(data=ResultsMatrix,nrow=Device_count,ncol=Parameter_count)
 		if(Do_testflag_matrix)  TestFlagMatrix <<- matrix(data=TestFlagMatrix,
+									nrow=Device_count,ncol=Parameter_count)
+		if(Do_test_order_matrix)  TestOrderMatrix <<- matrix(data=TestOrderMatrix,
 									nrow=Device_count,ncol=Parameter_count)
 	}
 
@@ -950,6 +960,9 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 
 	if ( (Do_testflag_matrix) && (dim(TestFlagMatrix)[1]>0) && (dim(TestFlagMatrix)[2]>0) ) {
         my_list[length(my_list)+1] = "TestFlagMatrix"
+	}
+	if ( (Do_test_order_matrix) && (dim(TestOrderMatrix)[1]>0) && (dim(TestOrderMatrix)[2]>0) ) {
+        my_list[length(my_list)+1] = "TestOrderMatrix"
 	}
     if (Hbin_count>0) {
         my_list[length(my_list)+1] = "HbinInfoFrame"
@@ -3030,6 +3043,7 @@ parse_PIR_record <- function(rec_len,endy) {
         # ... add row to ConditionsMatrix
         Device_count <<- Device_count + 1
 		PIR_count <<- PIR_count + 1
+		Test_order_counter <<- 0
 		# some systems start at site0, R arrays start at 1 so add 1 to site_num
 		Open_site[site_num+1] <<- Device_count	
         my_list = list(part_id=part_id, temp=NaN,
@@ -3059,6 +3073,7 @@ parse_PIR_record <- function(rec_len,endy) {
             #DevicesFrame[Device_count,] <<- my_list
             ResultsMatrix<<- array(NaN, dim=c(1,0))
             if(Do_testflag_matrix)  TestFlagMatrix<<- array(NaN, dim=c(1,0))
+            if(Do_test_order_matrix)  TestOrderMatrix<<- array(NaN, dim=c(1,0))
         } else {
             # wait 5 devices before allocating in chunks to allow 
             # parameters frame length to stabilize a bit.
@@ -3084,6 +3099,8 @@ parse_PIR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
                     if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,matrix(NaN,nrow=chunk-4,
                                         ncol=my_dims[2]))
+                    if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk-4,
+                                        ncol=my_dims[2]))
                 } else {
                     mod_d = Device_count %% chunk  # modulus
                     if(mod_d==0) {
@@ -3103,6 +3120,8 @@ parse_PIR_record <- function(rec_len,endy) {
                         ResultsMatrix<<- rbind(ResultsMatrix,matrix(NaN,nrow=chunk,
                                         ncol=my_dims[2]))
                         if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,matrix(NaN,nrow=chunk,
+                                        ncol=my_dims[2]))
+                        if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk,
                                         ncol=my_dims[2]))
                     }
                 }
@@ -3129,10 +3148,12 @@ parse_PIR_record <- function(rec_len,endy) {
 				if(params<1) {
 					ResultsMatrix<<-array(NaN, dim=c(Device_count,0))
 					if(Do_testflag_matrix)  TestFlagMatrix<<-array(NaN, dim=c(Device_count,0))
+					if(Do_test_order_matrix)  TestOrderMatrix<<-array(NaN, dim=c(Device_count,0))
 					
 				} else {
 					ResultsMatrix<<- rbind(ResultsMatrix,NaN)
 					if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,NaN)
+					if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,NaN)
 				}
             }
         }
@@ -4202,6 +4223,7 @@ parse_PDR_record <- function(rec_len,endy) {
             #---------------------------------------------
             ResultsMatrix <<- cbind(ResultsMatrix,NaN)
             if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
+            if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
         }
 
 		Previous_param_i <<- par_index
@@ -4603,6 +4625,7 @@ parse_PTR_record <- function(rec_len,endy) {
 				# Create a new device for changed condition...
 				# copy all fields from orig device...
 				Device_count <<- Device_count + 1
+				Test_order_counter <<- 0
 				Open_site[site_num+1] <<- Device_count	
 				# as in PIR section, allocate memory in chunks
 				if (Device_count>=5) {
@@ -4624,6 +4647,8 @@ parse_PTR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
 						if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,matrix(NaN,nrow=chunk-4,
                                         ncol=my_dims[2]))
+						if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk-4,
+                                        ncol=my_dims[2]))
 					} else {
 						mod_d = Device_count %% chunk  # modulus
 						if(mod_d==0) {
@@ -4643,6 +4668,8 @@ parse_PTR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
 							if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,matrix(NaN,nrow=chunk,
                                         ncol=my_dims[2]))
+							if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk,
+                                        ncol=my_dims[2]))
 						}
 					}
 				}
@@ -4659,6 +4686,7 @@ parse_PTR_record <- function(rec_len,endy) {
 
 				ResultsMatrix <<- rbind(ResultsMatrix,NaN)
 				if(Do_testflag_matrix)  TestFlagMatrix <<- rbind(TestFlagMatrix,NaN)
+				if(Do_test_order_matrix)  TestOrderMatrix <<- rbind(TestOrderMatrix,NaN)
 				if(Do_DTRs)  DTRsMatrix <<- rbind(DTRsMatrix,NaN)
 
 				ConditionsMatrix <<- rbind(ConditionsMatrix,NaN)
@@ -4746,6 +4774,7 @@ parse_PTR_record <- function(rec_len,endy) {
 				#---------------------------------------------
 				ResultsMatrix <<- cbind(ResultsMatrix,NaN)
 				if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
+				if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
 			}
 
 
@@ -4774,6 +4803,15 @@ parse_PTR_record <- function(rec_len,endy) {
 				}
 				TestFlagMatrix[device_count,par_index] <<- testflag
 			}
+
+
+			# update TestOrderMatrix 
+			#-----------------------
+			if(Do_test_order_matrix) {
+				Test_order_counter <<- Test_order_counter + 1
+				TestOrderMatrix[device_count,par_index] <<- Test_order_counter
+			}
+
 
 			Previous_param_i <<- par_index
 			Another_guess <<- par_index
@@ -5131,6 +5169,7 @@ parse_MPR_record <- function(rec_len,endy) {
 			#---------------------------------------------
 			ResultsMatrix <<- cbind(ResultsMatrix,NaN)
 			if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
+			if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
 		}
 
 		# update ResultsMatrix
@@ -5139,6 +5178,11 @@ parse_MPR_record <- function(rec_len,endy) {
 		else  failing = 0
 		ResultsMatrix[device_count,par_index] <<- failing
 		if(Do_testflag_matrix)  TestFlagMatrix[device_count,par_index] <<- failing
+
+		# update TestOrderMatrix
+		#------------------------
+		Test_order_counter <<- Test_order_counter + 1
+		if(Do_test_order_matrix)  TestOrderMatrix[device_count,par_index] <<- Test_order_counter	
 
 		Previous_param_i <<- par_index
 		Another_guess <<- par_index
@@ -5192,6 +5236,7 @@ parse_MPR_record <- function(rec_len,endy) {
 				# Create a new device for changed condition...
 				# copy all fields from orig device...
 				Device_count <<- Device_count + 1
+				Test_order_counter <<- 0
 				Open_site[site_num+1] <<- Device_count	
 				# as in PIR section, allocate memory in chunks
 				if (Device_count>=5) {
@@ -5213,6 +5258,8 @@ parse_MPR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
 						if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,matrix(NaN,nrow=chunk-4,
                                         ncol=my_dims[2]))
+						if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk-4,
+                                        ncol=my_dims[2]))
 					} else {
 						mod_d = Device_count %% chunk  # modulus
 						if(mod_d==0) {
@@ -5232,6 +5279,8 @@ parse_MPR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
 							if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,matrix(NaN,nrow=chunk,
                                         ncol=my_dims[2]))
+							if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk,
+                                        ncol=my_dims[2]))
 						}
 					}
 				}
@@ -5248,6 +5297,7 @@ parse_MPR_record <- function(rec_len,endy) {
 
 				ResultsMatrix <<- rbind(ResultsMatrix,NaN)
 				if(Do_testflag_matrix)  TestFlagMatrix <<- rbind(TestFlagMatrix,NaN)
+				if(Do_test_order_matrix)  TestOrderMatrix <<- rbind(TestOrderMatrix,NaN)
 				if(Do_DTRs)  DTRsMatrix <<- rbind(DTRsMatrix,NaN)
 				ConditionsMatrix <<- rbind(ConditionsMatrix,NaN)
 
@@ -5399,12 +5449,15 @@ parse_MPR_record <- function(rec_len,endy) {
 					#---------------------------------------------
 					ResultsMatrix <<- cbind(ResultsMatrix,NaN)
 					if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
+					if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
 				}
 
 				# update ResultsMatrix
 				#----------------------
 				ResultsMatrix[device_count,par_index] <<- rtn_rslt[j]
 				if(Do_testflag_matrix)  TestFlagMatrix[device_count,par_index] <<- testflag
+				Test_order_counter <<- Test_order_counter + 1
+				if(Do_test_order_matrix)  TestOrderMatrix[device_count,par_index] <<- Test_order_counter
 
 				Previous_param_i <<- par_index
 				if (j==1)  Another_guess <<- par_index
@@ -5513,6 +5566,7 @@ parse_FDR_record <- function(rec_len,endy) {
             #---------------------------------------------
             ResultsMatrix <<- cbind(ResultsMatrix,NaN)
             if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
+            if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
         }
 
 		Previous_param_i <<- par_index
@@ -5929,6 +5983,7 @@ parse_FTR_record <- function(rec_len,endy) {
             #---------------------------------------------
             ResultsMatrix <<- cbind(ResultsMatrix,NaN)
             if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
+            if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
         }
         # update ResultsMatrix
         #----------------------
@@ -5943,6 +5998,10 @@ parse_FTR_record <- function(rec_len,endy) {
 				testflag = testflag + 4		# pass/fail flag not valid
 			}
 			TestFlagMatrix[device_count,par_index] <<- testflag
+		}
+        if(Do_test_order_matrix) {
+			Test_order_counter <<- Test_order_counter + 1
+			TestOrderMatrix[device_count,par_index] <<- Test_order_counter
 		}
 
 		Previous_param_i <<- par_index

@@ -1,6 +1,6 @@
 # LoadRtdf.R
 #
-# $Id: LoadRtdf.R,v 1.3 2013/02/19 02:15:56 david Exp $
+# $Id: LoadRtdf.R,v 1.4 2019/08/15 22:13:33 david Exp $
 #
 # script that clears the RTDF objects and then loads
 # the specified rtdf file.
@@ -39,6 +39,8 @@ LoadRtdf <- function(rtdf_name="",in_dir="") {
 
 	if(exists("TestFlagMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
 			TestFlagMatrix,pos=".GlobalEnv",inherits=FALSE)
+	if(exists("TestOrderMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
+			TestOrderMatrix,pos=".GlobalEnv",inherits=FALSE)
 
 	if(exists("HbinInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
 			HbinInfoFrame,pos=".GlobalEnv",inherits=FALSE)
@@ -62,25 +64,33 @@ LoadRtdf <- function(rtdf_name="",in_dir="") {
 		my_dir = getwd()
 		setwd(in_dir)
 	}
-	load(rtdf_name)
+	my_objs = load(rtdf_name)
 	if(in_dir != "") setwd(my_dir)
 
-	if(exists("LotInfoFrame",inherits=FALSE))  LotInfoFrame<<-LotInfoFrame
-	if(exists("ParametersFrame",inherits=FALSE))  ParametersFrame<<-ParametersFrame
-	if(exists("DevicesFrame",inherits=FALSE))  DevicesFrame<<-DevicesFrame
-	if(exists("ResultsMatrix",inherits=FALSE))  ResultsMatrix<<-ResultsMatrix
+	old_way = TRUE
+	if(old_way) {
+		if(exists("LotInfoFrame",inherits=FALSE))  LotInfoFrame<<-LotInfoFrame
+		if(exists("ParametersFrame",inherits=FALSE))  ParametersFrame<<-ParametersFrame
+		if(exists("DevicesFrame",inherits=FALSE))  DevicesFrame<<-DevicesFrame
+		if(exists("ResultsMatrix",inherits=FALSE))  ResultsMatrix<<-ResultsMatrix
 
-	if(exists("TestFlagMatrix",inherits=FALSE))  TestFlagMatrix<<-TestFlagMatrix
+		if(exists("TestFlagMatrix",inherits=FALSE))  TestFlagMatrix<<-TestFlagMatrix
+		if(exists("TestOrderMatrix",inherits=FALSE))  TestOrderMatrix<<-TestOrderMatrix
 
-	if(exists("HbinInfoFrame",inherits=FALSE))  HbinInfoFrame<<-HbinInfoFrame
-	if(exists("SbinInfoFrame",inherits=FALSE))  SbinInfoFrame<<-SbinInfoFrame
-	if(exists("WaferInfoFrame",inherits=FALSE))  WaferInfoFrame<<-WaferInfoFrame
-	if(exists("TSRFrame",inherits=FALSE))  TSRFrame<<-TSRFrame
-	if(exists("WafersFrame",inherits=FALSE))  WafersFrame<<-WafersFrame
+		if(exists("HbinInfoFrame",inherits=FALSE))  HbinInfoFrame<<-HbinInfoFrame
+		if(exists("SbinInfoFrame",inherits=FALSE))  SbinInfoFrame<<-SbinInfoFrame
+		if(exists("WaferInfoFrame",inherits=FALSE))  WaferInfoFrame<<-WaferInfoFrame
+		if(exists("TSRFrame",inherits=FALSE))  TSRFrame<<-TSRFrame
+		if(exists("WafersFrame",inherits=FALSE))  WafersFrame<<-WafersFrame
 
-	if(exists("SiteSbinInfoFrame",inherits=FALSE))  SiteSbinInfoFrame<<-SiteSbinInfoFrame
-	if(exists("SiteSbinSiteVector",inherits=FALSE))  SiteSbinSiteVector<<-SiteSbinSiteVector
-	if(exists("SiteSbinCountMatrix",inherits=FALSE))  SiteSbinCountMatrix<<-SiteSbinCountMatrix
+		if(exists("SiteSbinInfoFrame",inherits=FALSE))  SiteSbinInfoFrame<<-SiteSbinInfoFrame
+		if(exists("SiteSbinSiteVector",inherits=FALSE))  SiteSbinSiteVector<<-SiteSbinSiteVector
+		if(exists("SiteSbinCountMatrix",inherits=FALSE))  SiteSbinCountMatrix<<-SiteSbinCountMatrix
+	} else {
+		# something not quite right here...
+		my_cmds = mapply(function(my_obj) sprintf("%s<<-%s",my_obj,my_obj),my_objs) 
+		mapply(function(my_cmd) eval(parse(text=my_cmd)),my_cmds)
+	}
 
 }
 
