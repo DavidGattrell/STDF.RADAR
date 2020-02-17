@@ -1,6 +1,6 @@
 # FindFirstFailsGui.R
 #
-# $Id: FindFirstFailsGui.R,v 1.2 2013/10/07 03:02:12 david Exp $
+# $Id: FindFirstFailsGui.R,v 1.3 2020/02/17 19:29:31 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
@@ -106,7 +106,7 @@ dec_index <- function() {
 		tclvalue(fff_in_name) <- tclObj(fff_in_names[[my_value]])
 		tclvalue(fff_out_name) <- tclObj(fff_out_names[[my_value]])
 	}
-	tclvalue(stdf_index) <- my_value
+	tclvalue(fff_file_index) <- my_value
 }
 
 #----------------------------------------------------

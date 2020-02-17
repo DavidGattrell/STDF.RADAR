@@ -1,22 +1,36 @@
 ===================================================================
-Version 0v6p9 -- 1july2019
+Version 0v6p9 -- 5feb2020
 ===================================================================
 
 to do...
 
-	YieldAdjust
-	- start on conceptualizing this..  adjust limits and re-generate binning results
-
-	finish integrating python xlsx script
-	- converts .csv to .xlsx with color formatting for failed results
-    that are dynamically determined by limits columns.
-
-	finish PlotRtdf_v2
+	ConvertStdf
+	- need to add do_FTR_fail_cycle to the PDF documentation
 
     FilterByResults
     - started adding code to expand filtering, but not done!
       + remove result and all subsequent results
       + remove result and following number of results (ie next 9 tests)
+
+	finish integrating python xlsx script
+	- converts .csv to .xlsx with color formatting for failed results
+    that are dynamically determined by limits columns.
+
+    PlotRtdfGui
+	- make file list section Yscrollbar for laptops and many files
+	  .. a lot harder than you would expect this to be!
+	  (not 100% sure it is possible yet)
+	- need to update PDF to include limits+10%, alt2_lim, count=fails
+
+	finish PlotRtdf_v2
+
+	SanityCheck
+	- started on script that checks for internal consistency and any missing
+	  bits in an RTDF file.  To help debug issues when writing scripts that
+	  generate RTDF files as outputs
+
+	ShrinkRetests.R
+	- started adding feature to keep last PASS not last run, but didn't finish
 
 	SplitConditions
     - it uses all 'extra' fields in DevicesFrame.
@@ -26,15 +40,17 @@ to do...
 	- created script, but no GUI yet... had little script that called it.
     - also need to add to documentation!
 
-    PlotRtdfGui
-	- make file list section Yscrollbar for laptops and many files
-	  .. a lot harder than you would expect this to be!
-	  (not 100% sure it is possible yet)
-	- need to update PDF to include limits+10%, alt2_lim, count=fails
+	YieldAdjust
+	- start on conceptualizing this..  adjust limits and re-generate binning results
+
 
 
 New Scripts:
 =============
+- NonGating2Gating
+    Post process an RTDF file, updating the binning information for a test that
+    was run non-gating, but you now want to make gating.
+
 - PlotRtdf_2
 	A more complicated, but more flexible version of PlotRtdf
 	(not done yet, but basically working for one use case of multiple histograms)
@@ -94,6 +110,8 @@ Improvements and Fixes:
 	* for 93k, support CONDITION: as well as CONDITION=
 	* only add "no_pin" when absolutely necessary
 	* fix some bugs that would show up if processing DTR records
+	* add do_FTR_fail_cycle option.  for FTR records, instead of putting the flag byte into the RTDF,
+	  put the failing cycle count instead, or -1 if PASS.  (0 if fail, but no valid cycle count) 
 
 - ConvertStdfGui, FingerprintGui
     * add real-time checking for integer entry box
@@ -110,6 +128,9 @@ Improvements and Fixes:
 
 - FilterByResult
 	* supports TestFlagMatrix object
+
+- FindFirstFailsGui
+    * fix bug in list decrement in gui
 
 - MergeRtdf
 	* fix bug when merging multiple wafers

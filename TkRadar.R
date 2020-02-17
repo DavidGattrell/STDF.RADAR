@@ -1,11 +1,11 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.53 2019/07/01 20:19:29 david Exp $
+# $Id: TkRadar.R,v 1.54 2020/02/17 21:47:25 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
 #
-# Copyright (C) 2008-2017 David Gattrell
+# Copyright (C) 2008-2019 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -88,6 +88,7 @@ sys.source("FindFirstFailsGui.R",envir=.TkRadar.env)
 sys.source("FingerprintGui.R",envir=.TkRadar.env)
 #sys.source("JustBin1sGui.R",envir=.TkRadar.env) obsoleted by FilterByBinning
 sys.source("MergeRtdfGui.R",envir=.TkRadar.env)
+sys.source("NonGating2GatingGui.R",envir=.TkRadar.env)
 sys.source("RemoveAtXYGui.R",envir=.TkRadar.env)
 #sys.source("RemoveDevicesAtIndicesGui.R",envir=.TkRadar.env) obsoleted by FilterByIndices
 sys.source("ReplaceTestnamesGui.R",envir=.TkRadar.env)
@@ -947,7 +948,7 @@ TkRadar <- function() {
 
 
 	my_main_win <- tktoplevel()
-	tkwm.title(my_main_win, "RADAR 0v6p9dev GUI 27jan2019")
+	tkwm.title(my_main_win, "RADAR 0v6p9dev GUI 16Feb2020")
 
 	# if user has been stuck with Vista or Windows7 (aka Vista with lipstick),
 	# set flag for alternate behaviour...
@@ -1367,6 +1368,20 @@ TkRadar <- function() {
 					mergertdf_win <- get("mergertdf_win",envir=.TkRadar.wins)
 				}
 				tkfocus(mergertdf_win)
+			}
+		)
+	tkadd(manip_menu,"command",label="NonGating2Gating",
+			command=function() {
+				if (exists("nongate2gate_win",envir=.TkRadar.wins,inherits=FALSE)) {
+					nongate2gate_win <- get("nongate2gate_win",envir=.TkRadar.wins)
+				}
+				if (exists("nongate2gate_win") && 
+					as.logical(tkwinfo("exists",nongate2gate_win)))  tkraise(nongate2gate_win)
+				else {
+					NonGating2GatingGui()
+					nongate2gate_win <- get("nongate2gate_win",envir=.TkRadar.wins)
+				}
+				tkfocus(nongate2gate_win)
 			}
 		)
 	tkadd(manip_menu,"command",label="RemoveAtXY",

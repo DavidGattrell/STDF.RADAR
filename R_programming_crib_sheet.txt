@@ -29,6 +29,8 @@ flush.console() -- inside fn to see messages immediately
 
 BASIC COMMANDS
 ==============
+help.start()   brings up the full web browser help/documentation/search tool
+
 example(solve) as well as help, you can get an example too!
 
 
@@ -36,6 +38,9 @@ help(solve)    shows help file for solve function
                help("[[") -- need "s or 's for some helps...
                special characters, and if, for, function
                (things that might otherwise be interpreted)
+
+help.search("keyword") will search help files for "keyword"
+
 
 search()
 
@@ -64,12 +69,34 @@ Sys.putenv() -- set environment variables
 getwd()  -- get working directory
 setwd()  -- set working directory
 
-help.search("keyword") will search help files for "keyword"
 
 save(object1, object2, object3, ... , file="filename.Rdata", compress=TRUE)
 load("filename.Rdata")
 
 
+Interacting with operating system
+=================================
+getwd()
+	- will return the current 'working directory' that you are in
+
+setwd("C:/Users/my_name/Documents/RADAR/project3/2019_05_27_data")
+	- set working directory on disk to new location
+
+dir(pattern="*.rtdf")
+	ALSO
+list.files(pattern="*.Rdata")
+	- will list all files in current directory 
+
+my_filename = file.choose()  
+	- pops up file browser window...
+
+system("ls *.rtdf")
+	- non-windows
+shell("dir *rtdf")
+	- run windows DIR command
+
+
+ 
 Graphing Commands
 =================
 === basic kinds of graphs ===

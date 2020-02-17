@@ -1,12 +1,12 @@
 # TkRadarDefaultsGui.R
 #
-# $Id: TkRadarDefaultsGui.R,v 1.24 2019/07/01 20:21:05 david Exp $
+# $Id: TkRadarDefaultsGui.R,v 1.25 2020/02/17 21:45:55 david Exp $
 #
 # Tk/Tcl GUI wrapper for loading and saving .TkRadar files which
 # define default directories and settings for TkRadar sessions
 #
 # Copyright (C) 2009-14 David Gattrell
-#               2019
+#               2019-20
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -81,6 +81,7 @@ defaults_set_default_ltx_ignore_testname_objects <- tclVar(0)
 defaults_set_default_do_testflag_matrix <- tclVar(0)
 defaults_set_default_keep_alarmed_values <- tclVar(0)
 defaults_set_default_do_raw_tsrs <- tclVar(0)
+defaults_set_default_do_FTR_fail_cycle <- tclVar(0)
 
 # MergeRtdf
 defaults_set_default_merge_union_of_tests <- tclVar(0)
@@ -236,6 +237,7 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_do_testflag_matrix) <- 0	
 	tclvalue(defaults_set_default_keep_alarmed_values) <- 0	
 	tclvalue(defaults_set_default_do_raw_tsrs) <- 0	
+	tclvalue(defaults_set_default_do_FTR_fail_cycle) <- 0	
 
 	tclvalue(defaults_set_default_merge_union_of_tests) <- 0
 
@@ -662,6 +664,14 @@ save_default_settings_file <- function() {
 		cat(the_string,file=out_conn)
 		my_value <- as.integer(tclObj(default_do_raw_tsrs))
 		the_string = sprintf("tclvalue(default_do_raw_tsrs) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+
+	if (as.logical(tclObj(defaults_set_default_do_FTR_fail_cycle))) {
+		the_string = "tclvalue(defaults_set_default_do_FTR_fail_cycle) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_do_FTR_fail_cycle))
+		the_string = sprintf("tclvalue(default_do_FTR_fail_cycle) <- %d \n",my_value)
 		cat(the_string,file=out_conn)
 	}
 
@@ -1665,6 +1675,16 @@ TkRadarDefaultsGui <- function() {
 						variable=default_do_raw_tsrs)
 	tkpack(do_raw_tsrs_button,side="left",anchor="n")
 	tkpack(raw_tsrs_frame,side="top",anchor="w",fill="x")
+	ftr_fcycle_frame <- tkframe(tab4)
+	set_ftr_fcycle_button <- tkcheckbutton(ftr_fcycle_frame,
+						text="Set",
+						variable=defaults_set_default_do_FTR_fail_cycle)
+	tkpack(set_ftr_fcycle_button,side="left",anchor="n")
+	do_ftr_fcycle_button <- tkcheckbutton(ftr_fcycle_frame,
+						text="default do_FTR_fail_cycle",
+						variable=default_do_FTR_fail_cycle)
+	tkpack(do_ftr_fcycle_button,side="left",anchor="n")
+	tkpack(ftr_fcycle_frame,side="top",anchor="w",fill="x")
 
 	# === PlotRtdf tab ===
 	min_plots_ppage_frame <- tkframe(tab5)
@@ -1720,16 +1740,31 @@ TkRadarDefaultsGui <- function() {
 						variable=default_add_normal_curve)
 	tkpack(add_normal_curve_button,side="left",anchor="n")
 	tkpack(add_normal_curve_frame,side="top",anchor="w",fill="x")
+
 	do_robust_stats_frame <- tkframe(tab5)
 	set_do_robust_stats_button <- tkcheckbutton(do_robust_stats_frame,
 						text="Set",
 						variable=defaults_set_default_do_robust_stats)
 	tkpack(set_do_robust_stats_button,side="left",anchor="n")
-	do_robust_stats_button <- tkcheckbutton(do_robust_stats_frame,
-						text="default do_robust_stats",
+	robust_stats_label <- tklabel(do_robust_stats_frame, text="default do_robust_stats")
+	tkpack(robust_stats_label,side="left")
+	robust0 <- tkradiobutton(do_robust_stats_frame,
+						text="use mean/sdev",
+						value="0",
 						variable=default_do_robust_stats)
-	tkpack(do_robust_stats_button,side="left",anchor="n")
+	tkpack(robust0,side="left")
+	robust1 <- tkradiobutton(do_robust_stats_frame,
+						text="use robust mean/sdev",
+						value="1",
+						variable=default_do_robust_stats)
+	tkpack(robust1,side="left")
+	robust2 <- tkradiobutton(do_robust_stats_frame,
+						text="use 2 sided robust mean/sdev",
+						value="2",
+						variable=default_do_robust_stats)
+	tkpack(robust2,side="left")
 	tkpack(do_robust_stats_frame,side="top",anchor="w",fill="x")
+
 	superimpose_frame <- tkframe(tab5)
 	set_superimpose_button <- tkcheckbutton(superimpose_frame,
 						text="Set",

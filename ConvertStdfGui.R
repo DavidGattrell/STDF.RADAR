@@ -1,12 +1,13 @@
 # ConvertStdfGui.R
 #
-# $Id: ConvertStdfGui.R,v 1.23 2019/01/28 00:25:26 david Exp $
+# $Id: ConvertStdfGui.R,v 1.24 2020/02/17 19:27:34 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
 #
 # Copyright (C) 2008-2015 David Gattrell
 #               2018 David Gattrell
+#               2020 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -49,6 +50,7 @@ do_demangle <- tclVar(0)
 auto_flex <- tclVar(1)
 keep_alarmed_values <- tclVar(0)
 do_raw_tsrs <- tclVar(0)
+do_FTR_fail_cycle <- tclVar(1)
 
 stdf_count <- tclVar(1)
 stdf_index <- tclVar(1)
@@ -72,6 +74,7 @@ default_ltx_ignore_testname_objects <- tclVar(1) # per user customizing
 default_do_testflag_matrix <- tclVar(0)			# per user customizing
 default_keep_alarmed_values <- tclVar(0)	
 default_do_raw_tsrs <- tclVar(0)	
+default_do_FTR_fail_cycle <- tclVar(1)	
 
 
 #----------------------------------------------------
@@ -255,6 +258,7 @@ ConvertStdfGui_defaults <- function() {
 	tclvalue(auto_flex) <- 1
 	tclvalue(keep_alarmed_values) <- tclObj(default_keep_alarmed_values)
 	tclvalue(do_raw_tsrs) <- tclObj(default_do_raw_tsrs)
+	tclvalue(do_FTR_fail_cycle) <- tclObj(default_do_FTR_fail_cycle)
 }
 
 #----------------------------------------------------
@@ -284,6 +288,7 @@ run_ConvertStdf <-function(done=FALSE,...) {
 	auto_flex_ <- as.logical(tclObj(auto_flex))
 	keep_alarmed_values_ <- as.logical(tclObj(keep_alarmed_values))
 	do_raw_tsrs_ <- as.logical(tclObj(do_raw_tsrs))
+	do_FTR_fail_cycle_ <- as.logical(tclObj(do_FTR_fail_cycle))
 	
 	# go to output directory...
 	full_path = output_dir
@@ -308,7 +313,7 @@ run_ConvertStdf <-function(done=FALSE,...) {
 						do_DTRs=do_dtrs_,max_parts=max_parts_,
 						auto_demangle=auto_demangle_,auto_flex=auto_flex_,
 						keep_alarmed_values=keep_alarmed_values_,
-						raw_TSRs=do_raw_tsrs_)
+						raw_TSRs=do_raw_tsrs_,do_FTR_fail_cycle=do_FTR_fail_cycle_)
 		)
 		tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 		tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -554,6 +559,11 @@ ConvertStdfGui <- function() {
 						text="raw_TSRs",
 						variable=do_raw_tsrs)
 	tkpack(do_raw_tsrs_button,side="top",anchor="w")
+
+	do_FTR_fcycles_button <- tkcheckbutton(convertstdf_win,
+						text="do_FTR_fail_cycle",
+						variable=do_FTR_fail_cycle)
+	tkpack(do_FTR_fcycles_button,side="top",anchor="w")
 
 	endian_frame <- tkframe(convertstdf_win)
 	endian_label <- tklabel(endian_frame, text="default endian:")

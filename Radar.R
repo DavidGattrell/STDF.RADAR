@@ -7,12 +7,12 @@
 #  Analysis
 #  Resources
 #
-# $Id: Radar.R,v 1.25 2019/03/03 02:15:42 david Exp $
+# $Id: Radar.R,v 1.26 2020/02/17 21:22:32 david Exp $
 #
 # This script loads the various RADAR command scripts until such
 # time as it gets put into a proper R package.
 #
-# Copyright (C) 2006-2015 David Gattrell
+# Copyright (C) 2006-2020 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -85,6 +85,7 @@ sys.source("AsciiWaferMap.R",envir=.Radar)
 sys.source("SplitBySubstr.R",envir=.Radar)
 sys.source("XYWid2Partid.R",envir=.Radar)
 sys.source("StackedWaferMap.R",envir=.Radar)
+sys.source("NonGating2Gating.R",envir=.Radar)
 
 # source("Pareto.R")		# on the to-do list...
 # source("StdfRehab.R")		# on the to-do list...

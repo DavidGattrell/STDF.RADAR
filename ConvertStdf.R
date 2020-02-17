@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.50 2019/08/15 22:14:08 david Exp $
+# $Id: ConvertStdf.R,v 1.51 2020/02/17 19:22:38 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -8,6 +8,7 @@
 # Copyright (C) 2006-2016 David Gattrell
 #               2012 Chad Erven
 #               2018 David Gattrell
+#               2020 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -139,6 +140,8 @@ assign("PRRtxt_Matrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env) # PRRtxt_N
 assign("PRRtxt_Names_count",0,envir=.ConvertStdf.env)	# number of different DevicesFrame fields to add from PRR part_txt info.
 assign("PIR_count",0,envir=.ConvertStdf.env)		# number of different PIR records
 
+assign("Do_FTR_fail_cycle",FALSE,envir=.ConvertStdf.env)		# flag to change FTR result from fail_flag to failing_vector 
+
 assign("Duplicate_testnames",FALSE,envir=.ConvertStdf.env) # if T testname = testtxt_tnum else testname = testtxt
 assign("Use_MPR_invalid_pf_data",FALSE,envir=.ConvertStdf.env) # Credence weirdness
 
@@ -148,6 +151,7 @@ assign("Keep_alarmed_values",FALSE,envir=.ConvertStdf.env) 	# if alarm detected,
 assign("Executive_type",'',envir=.ConvertStdf.env)	# "enVision" or "Image" or ...
 													# use to make some PTR interpretation
 													# decisions.
+assign("Executive_version",'',envir=.ConvertStdf.env)	# from MIR EXEC_VER field.. for 93K bugs by version
 assign("MIR_Tester_type",'',envir=.ConvertStdf.env)	# "Fusion_HFi" "Catalyst" "IntegraFlex" "93000-SOC" "CMT" ...
 assign("Ignore_testname_objects",FALSE,envir=.ConvertStdf.env)	# for Ltx/enVision long testnames
 assign("Endy","big",envir=.ConvertStdf.env)			# initial guess at Endian type of stdf file
@@ -304,7 +308,8 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 						use_MPR_invalid_pf_data=FALSE,ltx_ignore_testname_objects=TRUE,
 						do_testflag_matrix=FALSE,do_DTRs=FALSE,max_parts=-1,
 						auto_demangle=FALSE,auto_flex=TRUE,keep_alarmed_values=FALSE,
-						skip_TSRs=FALSE,raw_TSRs=FALSE,parse_PRR_part_txt=TRUE) {
+						skip_TSRs=FALSE,raw_TSRs=FALSE,parse_PRR_part_txt=TRUE,
+						do_FTR_fail_cycle=TRUE) {
     # stdf_name - name of stdf formatted file to convert to rtdf format
     # rtdf_name - name to give to rtdf formatted file
     # auto_93k  - if stdf is from HP/Agilent/Verigy 93K, try to auto fix
@@ -361,6 +366,10 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	#        	  dump all the TSRs.  (faster than if checking)
 	# parse_PRR_part_txt - if true, will parse the part_txt field based on comma separated list of
 	#             name=value sets and create additional DeviceFrame fields for each name
+	# do_FTR_fail_cycle - if true, datalog the failing vector number, rather than just the fail flag
+	#             fail flag .. 0=PASS, >0=FAIL
+	#             fail vector .. -1=PASS, >-1=FAIL
+	#             (added option 1-Feb-2020)
     #---------------------------------------------
 	#attach(.ConvertStdf.env) #...environment() is better approach?
 
@@ -375,6 +384,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
     #------------------------------
 	Stdf_Version <<- 3
     Executive_type <<- ''
+    Executive_version <<- ''
     MIR_Tester_type <<- ''
     Device_count <<- 0
 	Open_site <<- rep(0,32)
@@ -441,6 +451,8 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	ConditionsMatrix <<- array(NaN, dim=c(0,0)) 
 	DTRsMatrix <<- array(NaN, dim=c(0,0))
 	
+	Do_FTR_fail_cycle <<- do_FTR_fail_cycle
+
 	Parse_PRR_part_txt <<- parse_PRR_part_txt
 	PRRtxt_Names <<- NA
 	PRRtxt_Names_count <<- 0
@@ -854,28 +866,77 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 
 			dbg_1 = 5.1
 
+			#browser()
+
 			# find limits that are the wrong polarity and fix them
 			#------------------------------------------------------
-			results_vector = ResultsMatrix[,j]
-            results_vector = results_vector[is.finite(results_vector)]
-            med = median(results_vector)
-            fix_it = FALSE
-			if(is.finite(med)) {
-				if((length(ll)>0) && is.finite(ll)) {
-                	if( (med<ll) && (med<(-1.0*ll)) ) {
-                    	if(is.finite(ul)) {
-                        	if( med>(-1.0*ul) )  fix_it = TRUE
-                    	} else {
-                        	fix_it = TRUE
-                    	}
-                	}
-            	} else if((length(ul)>0) && is.finite(ul)) {
-                	if( (med>ul) && (med<(-1.0*ul)) )  {
-                    	fix_it=TRUE
-                	}
-            	}
+			# if we have TestFlagMatrix, use that as sanity check, else look for median result
+			#... won't work
+			#    93K MPR records - all tests as fail, not just the failing test so below
+			#                      won't work ?
+			if(Do_testflag_matrix) {
+				fix_it = FALSE
+
+				flags_vector = TestFlagMatrix[,j]
+				pass_flag_indices = which(flags_vector==0)
+
+				results_vector = ResultsMatrix[,j]
+				pass_results_vector = results_vector[pass_flag_indices]
+
+				# compare results vs. limits to flags with/without limit swap
+				# which is closest?
+				len_ll_inconc = 0
+				len_ll_inconc2 = 0
+				len_ul_inconc = 0
+				len_ll_inconc2 = 0
+				if(length(pass_results_vector) > 0) {
+					if((length(ll)>0) && is.finite(ll)) {
+						inconceivable = which(pass_results_vector<ll)		# should not have any pass parts <ll
+						inconceivable2 = which(pass_results_vector>(-1*ll))	# what if limits are x -1?
+
+						len_ll_inconc = length(inconceivable)
+						len_ll_inconc2 = length(inconceivable2)
+					}
+
+					if((length(ul)>0) && is.finite(ul)) {
+						inconceivable = which(pass_results_vector>ul)		# should not have any pass parts <ll
+						inconceivable2 = which(pass_results_vector<(-1*ul))	# what if limits are x -1?
+
+						len_ul_inconc = length(inconceivable)
+						len_ul_inconc2 = length(inconceivable2)
+					}
+
+					if( (len_ll_inconc+len_ul_inconc) > (len_ll_inconc2+len_ul_inconc2)) {
+						# if more good parts fail limits vs -1x limits, then -1x
+						fix_it = TRUE
+						#browser()
+					}
+				}
+				# REVISIT ... not done here!
+
+			} else {
+				results_vector = ResultsMatrix[,j]
+				results_vector = results_vector[is.finite(results_vector)]
+				med = median(results_vector)
+				fix_it = FALSE
+				if(is.finite(med)) {
+					if((length(ll)>0) && is.finite(ll)) {
+						if( (med<ll) && (med<(-1.0*ll)) ) {
+							if(is.finite(ul)) {
+								if( med>(-1.0*ul) )  fix_it = TRUE
+							} else {
+								fix_it = TRUE
+							}
+						}
+					} else if((length(ul)>0) && is.finite(ul)) {
+						if( (med>ul) && (med<(-1.0*ul)) )  {
+							fix_it=TRUE
+						}
+					}
+				}
 			}
             if(fix_it) {
+				#browser()
                 ParametersFrame$ll[[j]] = -1.0*ul
                 ParametersFrame$ul[[j]] = -1.0*ll
             }
@@ -2051,6 +2112,8 @@ parse_MIR_record <- function(rec_len,endy) {
 			sblot_id = str_list$string
 		} else {
 			exec_ver = str_list$string
+    		Executive_version <<- exec_ver	# "s/w rev. 6.5.4.13 (E), 16-Aug-12"
+			#browser()
         }
 		rec_len = str_list$bytes_left
     } 
@@ -5792,25 +5855,25 @@ parse_FTR_record <- function(rec_len,endy) {
 	    j2 = as.integer(0.5001 + j/2)
 	    k2 = as.integer(0.5001 + k/2)
 	
-	    if (rec_len >= 2*j) {
+	    if ( (j>0) && (rec_len >= 2*j)) {
 	        rtn_indx = readBin(Stdf[Ptr:(Ptr+(2*j))],integer(),n=j,size=2,endian=endy,signed=FALSE)
 	        Ptr <<- Ptr + (2*j)
 	        rec_len = rec_len - (2*j)
 	    } 
 	
-	    if (rec_len >= j2) {
+	    if ( (j2>0) && (rec_len >= j2) ) {
 	        rtn_stat = readBin(Stdf[Ptr:(Ptr+j2)],integer(),n=j2,size=1,signed=FALSE)
 	        Ptr <<- Ptr + j2
 	        rec_len = rec_len - j2
 	    } 
 	
-	    if (rec_len >= 2*k) {
+	    if ( (k>0) && (rec_len >= 2*k) ) {
 	        pgm_indx = readBin(Stdf[Ptr:(Ptr+(2*k))],integer(),n=k,size=2,endian=endy,signed=FALSE)
 	        Ptr <<- Ptr + (2*k)
 	        rec_len = rec_len - (2*k)
 	    } 
 	
-	    if (rec_len >= k2) {
+	    if ( (k2>0) && (rec_len >= k2) ) {
 	        pgm_stat = readBin(Stdf[Ptr:(Ptr+k2)],integer(),n=k2,size=1,signed=FALSE)
 	        Ptr <<- Ptr + k2
 	        rec_len = rec_len - k2
@@ -5830,10 +5893,12 @@ parse_FTR_record <- function(rec_len,endy) {
 				#.. if next byte is zero, wipe it
 				#.. some versions of 6 and 7 have extra byte if pattern fails and # of pins modulo 8 = 0
 				# vect_nam is always present, so next byte should be >0 unless it is above Smartest bug.
+				# WAIT... an example smartest 6.5.4 doesn't have vect_nam, so can be length 0!
 		        vect_nam_len = as.integer(Stdf[Ptr])
-				if (vect_nam_len == 0) {
+				if ( (grepl("7.1.",Executive_version,fixed=TRUE)[1]) && (vect_name_len == 0) ) { 
+					#browser()
 					part_num = Open_site[site_num+1]
-					#cat(sprintf("... WARNING: part_num %d : zapping byte in FTR record... \n",part_num))
+					cat(sprintf("... WARNING: part_num %d : zapping byte in FTR record... \n",part_num))
 		        	Ptr <<- Ptr + 1
 		        	rec_len = rec_len - 1
 				}
@@ -5966,10 +6031,16 @@ parse_FTR_record <- function(rec_len,endy) {
                 Parameters_Names[Parameter_count] <<- test_txt
             }
             Parameters_scaler[Parameter_count] <<- 0
-            Parameters_units[Parameter_count] <<- 'fails'
-            Parameters_ll[Parameter_count] <<- NaN
-            #Parameters_ul[Parameter_count] <<- NaN
-            Parameters_ul[Parameter_count] <<- 0.5		# seems like a sensible thing to do
+			if(Do_FTR_fail_cycle) {
+				Parameters_units[Parameter_count] <<- 'fail_cycle'
+				Parameters_ll[Parameter_count] <<- NaN
+				Parameters_ul[Parameter_count] <<- -0.5		# seems like a sensible thing to do
+			} else {
+				Parameters_units[Parameter_count] <<- 'fails'
+				Parameters_ll[Parameter_count] <<- NaN
+				#Parameters_ul[Parameter_count] <<- NaN
+				Parameters_ul[Parameter_count] <<- 0.5		# seems like a sensible thing to do
+			}
             Parameters_plot_ll[Parameter_count] <<- NaN
             Parameters_plot_ul[Parameter_count] <<- NaN
 
@@ -5988,7 +6059,16 @@ parse_FTR_record <- function(rec_len,endy) {
         # update ResultsMatrix
         #----------------------
 		device_count = Open_site[site_num+1]
-        ResultsMatrix[device_count,par_index] <<- test_flg
+		if(Do_FTR_fail_cycle) {
+			if(test_flg>0) {
+				failing_cycle = cycl_cnt
+			} else {
+				failing_cycle = -1
+			}
+        	ResultsMatrix[device_count,par_index] <<- failing_cycle
+		} else {
+        	ResultsMatrix[device_count,par_index] <<- test_flg
+		}
         if(Do_testflag_matrix) {
 			testflag = 0
 			if( (as.raw(test_flg)&as.raw(128)) > 0 ) {

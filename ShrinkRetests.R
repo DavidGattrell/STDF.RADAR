@@ -1,6 +1,6 @@
 #  ShrinkRetests.R
 #
-# $Id: ShrinkRetests.R,v 1.5 2019/02/01 02:10:15 david Exp $
+# $Id: ShrinkRetests.R,v 1.6 2020/02/17 21:48:28 david Exp $
 #
 # script that parses rtdf file and removes devices if there is
 #  a retest for that part_id later in the file
@@ -27,7 +27,8 @@
 #  gmail.com
 #
 #-----------------------------------------------
-ShrinkRetests <- function(in_file="",out_file="",in_dir="",use_xy_coords=FALSE) {
+ShrinkRetests <- function(in_file="",out_file="",in_dir="",use_xy_coords=FALSE,
+						  keep_first_pass=FALSE,verbose=FALSE) {
 
     # in_file -- string of rtdf file name to process
     # out_file -- string of rtdf file name to write to
@@ -36,6 +37,11 @@ ShrinkRetests <- function(in_file="",out_file="",in_dir="",use_xy_coords=FALSE) 
 	#           than current directory.
 	# use_xy_coords -- if set to TRUE, then look for matching x_coord,y_coord
 	#			pairs rather than matching part_id 
+	#
+	# REVISIT: started coding below, but did NOT finish!
+	# keep_first_pass -- if a part is tested multiple times, 
+	#           ignore subsequent fail runs once it has passed.
+	# verbose -- 
 	# ------------------------------------------------------------
 
     if (out_file == "")  out_file = in_file
@@ -52,13 +58,43 @@ ShrinkRetests <- function(in_file="",out_file="",in_dir="",use_xy_coords=FALSE) 
     devs = dim(DevicesFrame)[1]
     keepers = rep(1, times=devs)
 
+	if(keep_first_pass) {
+		# figure out which die are PASS die
+		hbins = as.integer(DevicesFrame[["hard_bin"]])
+		# HbinInfoFrame .. to determine passing hbin values
+		# pass_fail_results = 
+	}
+
 	if (use_xy_coords) {
 		x_coords = as.character(DevicesFrame[["x_coord"]])
 		y_coords = as.character(DevicesFrame[["y_coord"]])
 		xys = array(c(x_coords,y_coords),dim=c(devs,2))
 
 		indices = which(duplicated(xys,fromLast=TRUE))
-		if(length(indices)>0)  keepers[indices]=0
+
+		if(length(indices)>0) {
+			if(verbose) {
+				cat(sprintf("repeats count is %d... \n",length(indices)))
+			}
+			if(keep_first_pass) {
+				# rather than just blindly keeping the most recent test run for a part,
+				# keep the first PASSING run, discard the rest.
+				already_reviewed = rep(FALSE, times=devs)
+				xy_strings = paste(x_coords,y_coords,sep=",")
+
+				for (i in 1:length(indices)) {
+					idx = indices[i]
+
+					if(!already_reviewed[idx]) {
+						repeats = which(xy_strings==xy_strings[idx])
+						#passes = which(pass_fail_results[repeats]==1)
+
+					}
+				}
+			} else {
+				keepers[indices]=0
+			}
+		}
 	} else {
 		x_coord = as.integer(DevicesFrame[[1,"x_coord"]])
 		if(is.finite(x_coord) && x_coord>-32768) {
@@ -67,7 +103,13 @@ ShrinkRetests <- function(in_file="",out_file="",in_dir="",use_xy_coords=FALSE) 
 		part_ids = as.character(DevicesFrame[["part_id"]])
 
 		indices = which(duplicated(part_ids,fromLast=TRUE))
-		if(length(indices)>0)  keepers[indices]=0
+
+		if(length(indices)>0) {
+			if(keep_first_pass) {
+			} else {
+				keepers[indices]=0
+			}
+		}
 
 		#for (i in 1:devs) {
 		#	part_id = part_ids[i]
@@ -85,14 +127,6 @@ ShrinkRetests <- function(in_file="",out_file="",in_dir="",use_xy_coords=FALSE) 
 
     # save rtdf file
     #------------------
-#    my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
-#    if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
-#    if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"
-#  	 if (exists("TSRFrame",inherits=FALSE))		 my_list[length(my_list)+1] = "TSRFrame"
-#    if (exists("WafersFrame",inherits=FALSE))    my_list[length(my_list)+1] = "WafersFrame"
-#    if (exists("WaferInfoFrame",inherits=FALSE)) my_list[length(my_list)+1] = "WaferInfoFrame"
-#    
-#    save(list=my_list, file=out_file)
     save(list=my_objs, file=out_file)
     dims = dim(ResultsMatrix)
     cat(sprintf("Removed %d Devices, now %d Devices x %d Parameters \n",
