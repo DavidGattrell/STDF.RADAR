@@ -1,6 +1,6 @@
 #  MergeRtdf.R
 #
-# $Id: MergeRtdf.R,v 1.12 2015/08/02 01:07:17 david Exp $
+# $Id: MergeRtdf.R,v 1.13 2020/02/25 01:43:10 david Exp $
 #
 # script that merges multiple rtdf files into a single rtdf file
 #
@@ -74,10 +74,17 @@ MergeRtdf <- function(in_files="",out_file="",in_dirs="",union_of_tests=TRUE) {
         }
 
 		# check if TestFlagMatrix is present
+		valid_testflagmatrix = FALSE
 		if (is.finite(match("TestFlagMatrix",my_objs))) {
-			valid_testflagmatrix = TRUE
-		} else {
-			valid_testflagmatrix = FALSE
+			# is it the same size as the ResultsMatrix?
+			RM_dims = dim(ResultsMatrix)
+			TFM_dims = dim(TestFlagMatrix)
+			if (identical(RM_dims,TFM_dims)) {
+				valid_testflagmatrix = TRUE
+			} else {
+				cat(sprintf("WARNING: TestFlagMatrix ignored in file %d, %s, mismatch in size!\n",
+						j,in_files[j]))
+			}
 		}
 
 		# check if WafersFrame is present
@@ -107,7 +114,7 @@ MergeRtdf <- function(in_files="",out_file="",in_dirs="",union_of_tests=TRUE) {
 					}
 					AllWafers_valid = TRUE
 				} 
-				DevicesFrame[["wafer_index"]] == new_idxs
+				DevicesFrame[["wafer_index"]] = new_idxs
 			}
 			AllDevicesFrame = DevicesFrame
 			AllParametersFrame = ParametersFrame
@@ -148,6 +155,7 @@ MergeRtdf <- function(in_files="",out_file="",in_dirs="",union_of_tests=TRUE) {
 
 			# merge WafersFrame BEFORE merging DevicesFrame
 			#----------------------------------------------
+			#browser()  # ... revisit, 23feb2020, bug when merging a595 split wafers back together!
 			if (valid_wafersframe) {
 				if (AllWafers_valid) {
 					# need to append WafersFrame to AllWafersFrame
@@ -173,7 +181,7 @@ MergeRtdf <- function(in_files="",out_file="",in_dirs="",union_of_tests=TRUE) {
 					if(length(valid_idxs>0)) {
 						for (i in 1:length(valid_idxs)) {
 							# is this wafer number already in the AllWafersFrame?
-							wafer_id = WafersFrame[[valid_idxs[i],"wafer_id"]]
+							wafer_id = as.integer(WafersFrame[[valid_idxs[i],"wafer_id"]])
 							all_wafer_ids = as.integer(AllWafersFrame[["wafer_id"]])
 							new_idx = match(wafer_id,all_wafer_ids,nomatch=0)
 							if(new_idx>0) {
@@ -186,7 +194,7 @@ MergeRtdf <- function(in_files="",out_file="",in_dirs="",union_of_tests=TRUE) {
 							}
 						}
 					}
-					DevicesFrame[["wafer_index"]] == new_idxs
+					DevicesFrame[["wafer_index"]] = new_idxs
 				} else {
 					wafer_idxs = as.integer(DevicesFrame[["wafer_index"]])
 					valid_idxs = unique(wafer_idxs)
@@ -201,7 +209,7 @@ MergeRtdf <- function(in_files="",out_file="",in_dirs="",union_of_tests=TRUE) {
 						}
 						AllWafers_valid = TRUE
 					} 
-					DevicesFrame[["wafer_index"]] == new_idxs
+					DevicesFrame[["wafer_index"]] = new_idxs
 				}
 			}
 
