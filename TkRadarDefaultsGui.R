@@ -1,6 +1,6 @@
 # TkRadarDefaultsGui.R
 #
-# $Id: TkRadarDefaultsGui.R,v 1.25 2020/02/17 21:45:55 david Exp $
+# $Id: TkRadarDefaultsGui.R,v 1.26 2020/05/28 00:20:26 david Exp $
 #
 # Tk/Tcl GUI wrapper for loading and saving .TkRadar files which
 # define default directories and settings for TkRadar sessions
@@ -82,6 +82,8 @@ defaults_set_default_do_testflag_matrix <- tclVar(0)
 defaults_set_default_keep_alarmed_values <- tclVar(0)
 defaults_set_default_do_raw_tsrs <- tclVar(0)
 defaults_set_default_do_FTR_fail_cycle <- tclVar(0)
+defaults_set_default_use_testorder <- tclVar(0)
+defaults_set_default_save_testorder <- tclVar(0)
 
 # MergeRtdf
 defaults_set_default_merge_union_of_tests <- tclVar(0)
@@ -238,6 +240,8 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_keep_alarmed_values) <- 0	
 	tclvalue(defaults_set_default_do_raw_tsrs) <- 0	
 	tclvalue(defaults_set_default_do_FTR_fail_cycle) <- 0	
+	tclvalue(defaults_set_default_use_testorder) <- 0	
+	tclvalue(defaults_set_default_save_testorder) <- 0	
 
 	tclvalue(defaults_set_default_merge_union_of_tests) <- 0
 
@@ -672,6 +676,22 @@ save_default_settings_file <- function() {
 		cat(the_string,file=out_conn)
 		my_value <- as.integer(tclObj(default_do_FTR_fail_cycle))
 		the_string = sprintf("tclvalue(default_do_FTR_fail_cycle) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+
+	if (as.logical(tclObj(defaults_set_default_use_testorder))) {
+		the_string = "tclvalue(defaults_set_default_use_testorder) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_use_testorder))
+		the_string = sprintf("tclvalue(default_use_testorder) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+	
+	if (as.logical(tclObj(defaults_set_default_save_testorder))) {
+		the_string = "tclvalue(defaults_set_default_save_testorder) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_save_testorder))
+		the_string = sprintf("tclvalue(default_save_testorder) <- %d \n",my_value)
 		cat(the_string,file=out_conn)
 	}
 
@@ -1685,6 +1705,26 @@ TkRadarDefaultsGui <- function() {
 						variable=default_do_FTR_fail_cycle)
 	tkpack(do_ftr_fcycle_button,side="left",anchor="n")
 	tkpack(ftr_fcycle_frame,side="top",anchor="w",fill="x")
+	use_testorder_frame <- tkframe(tab4)
+	set_use_testorder_button <- tkcheckbutton(use_testorder_frame,
+						text="Set",
+						variable=defaults_set_default_use_testorder)
+	tkpack(set_use_testorder_button,side="left",anchor="n")
+	do_use_testorder_button <- tkcheckbutton(use_testorder_frame,
+						text="default use_testorder",
+						variable=default_use_testorder)
+	tkpack(do_use_testorder_button,side="left",anchor="n")
+	tkpack(use_testorder_frame,side="top",anchor="w",fill="x")
+	save_testorder_frame <- tkframe(tab4)
+	set_save_testorder_button <- tkcheckbutton(save_testorder_frame,
+						text="Set",
+						variable=defaults_set_default_save_testorder)
+	tkpack(set_save_testorder_button,side="left",anchor="n")
+	do_save_testorder_button <- tkcheckbutton(save_testorder_frame,
+						text="default save_testorder",
+						variable=default_save_testorder)
+	tkpack(do_save_testorder_button,side="left",anchor="n")
+	tkpack(save_testorder_frame,side="top",anchor="w",fill="x")
 
 	# === PlotRtdf tab ===
 	min_plots_ppage_frame <- tkframe(tab5)

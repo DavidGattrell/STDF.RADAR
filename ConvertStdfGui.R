@@ -1,6 +1,6 @@
 # ConvertStdfGui.R
 #
-# $Id: ConvertStdfGui.R,v 1.24 2020/02/17 19:27:34 david Exp $
+# $Id: ConvertStdfGui.R,v 1.25 2020/05/28 00:19:23 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
@@ -51,6 +51,8 @@ auto_flex <- tclVar(1)
 keep_alarmed_values <- tclVar(0)
 do_raw_tsrs <- tclVar(0)
 do_FTR_fail_cycle <- tclVar(1)
+use_testorder <- tclVar(0)
+save_testorder <- tclVar(0)
 
 stdf_count <- tclVar(1)
 stdf_index <- tclVar(1)
@@ -75,6 +77,8 @@ default_do_testflag_matrix <- tclVar(0)			# per user customizing
 default_keep_alarmed_values <- tclVar(0)	
 default_do_raw_tsrs <- tclVar(0)	
 default_do_FTR_fail_cycle <- tclVar(1)	
+default_use_testorder <- tclVar(0)
+default_save_testorder <- tclVar(0)
 
 
 #----------------------------------------------------
@@ -259,6 +263,8 @@ ConvertStdfGui_defaults <- function() {
 	tclvalue(keep_alarmed_values) <- tclObj(default_keep_alarmed_values)
 	tclvalue(do_raw_tsrs) <- tclObj(default_do_raw_tsrs)
 	tclvalue(do_FTR_fail_cycle) <- tclObj(default_do_FTR_fail_cycle)
+	tclvalue(use_testorder) <- tclObj(default_use_testorder)
+	tclvalue(save_testorder) <- tclObj(default_save_testorder)
 }
 
 #----------------------------------------------------
@@ -289,7 +295,9 @@ run_ConvertStdf <-function(done=FALSE,...) {
 	keep_alarmed_values_ <- as.logical(tclObj(keep_alarmed_values))
 	do_raw_tsrs_ <- as.logical(tclObj(do_raw_tsrs))
 	do_FTR_fail_cycle_ <- as.logical(tclObj(do_FTR_fail_cycle))
-	
+	use_testorder_ <- as.logical(tclObj(use_testorder))
+	save_testorder_ <- as.integer(tclObj(save_testorder))
+		
 	# go to output directory...
 	full_path = output_dir
 	if (nchar(full_path)<1)  full_path <- paste(tclObj(Output_dir),sep="",collapse=" ")
@@ -313,7 +321,8 @@ run_ConvertStdf <-function(done=FALSE,...) {
 						do_DTRs=do_dtrs_,max_parts=max_parts_,
 						auto_demangle=auto_demangle_,auto_flex=auto_flex_,
 						keep_alarmed_values=keep_alarmed_values_,
-						raw_TSRs=do_raw_tsrs_,do_FTR_fail_cycle=do_FTR_fail_cycle_)
+						raw_TSRs=do_raw_tsrs_,do_FTR_fail_cycle=do_FTR_fail_cycle_,
+						use_testorder=use_testorder_,save_testorder=save_testorder_)
 		)
 		tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 		tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -564,6 +573,19 @@ ConvertStdfGui <- function() {
 						text="do_FTR_fail_cycle",
 						variable=do_FTR_fail_cycle)
 	tkpack(do_FTR_fcycles_button,side="top",anchor="w")
+
+	testorder_frame <- tkframe(convertstdf_win)
+	testorder_label <- tklabel(testorder_frame, text="TestOrderMatrix:")
+	tkpack(testorder_label,side="left")
+	testorder_use <- tkcheckbutton(testorder_frame,
+					text="use",
+					variable=use_testorder)
+	tkpack(testorder_use,side="left")
+	testorder_save <- tkcheckbutton(testorder_frame,
+					text="save",
+					variable=save_testorder)
+	tkpack(testorder_save,side="left")
+	tkpack(testorder_frame,side="top",anchor="w")
 
 	endian_frame <- tkframe(convertstdf_win)
 	endian_label <- tklabel(endian_frame, text="default endian:")

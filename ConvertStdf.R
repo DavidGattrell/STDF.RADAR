@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.51 2020/02/17 19:22:38 david Exp $
+# $Id: ConvertStdf.R,v 1.52 2020/05/28 00:19:46 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -92,11 +92,11 @@
 #                     ,"fail_cnt"]]
 #                     ,"fixed_exec_cnt"]]
 #                     ,"fixed_fail_cnt"]]
-#  ResultsMatrix
+#  ResultsMatrix[row,col]
 #      rows = devices
 #      cols = parameters
 #
-#  TestFlagMatrix
+#  TestFlagMatrix[row,col]
 #      rows = devices
 #      cols = parameters
 #
@@ -211,6 +211,8 @@ assign("Do_testflag_matrix",FALSE,envir=.ConvertStdf.env) # flag to enable/disab
 
 assign("TestOrderMatrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
 assign("Do_test_order_matrix",FALSE,envir=.ConvertStdf.env) # flag to enable/disable extra object
+assign("Use_test_order_matrix",FALSE,envir=.ConvertStdf.env) # flag to revisit ParametersFrame order
+assign("Save_test_order_matrix",FALSE,envir=.ConvertStdf.env) # flag save TestOrderMatris in RTDF
 assign("Test_order_counter",0,envir=.ConvertStdf.env)	# number of tests processed (PTR/FTR/MPR*pins records)
 
 assign("HbinInfoFrame",data.frame(rbind(
@@ -309,7 +311,8 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 						do_testflag_matrix=FALSE,do_DTRs=FALSE,max_parts=-1,
 						auto_demangle=FALSE,auto_flex=TRUE,keep_alarmed_values=FALSE,
 						skip_TSRs=FALSE,raw_TSRs=FALSE,parse_PRR_part_txt=TRUE,
-						do_FTR_fail_cycle=TRUE) {
+						do_FTR_fail_cycle=TRUE,
+						use_testorder_matrix=FALSE,save_testorder_matrix=FALSE) {
     # stdf_name - name of stdf formatted file to convert to rtdf format
     # rtdf_name - name to give to rtdf formatted file
     # auto_93k  - if stdf is from HP/Agilent/Verigy 93K, try to auto fix
@@ -370,6 +373,13 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	#             fail flag .. 0=PASS, >0=FAIL
 	#             fail vector .. -1=PASS, >-1=FAIL
 	#             (added option 1-Feb-2020)
+	# use_testorder_matrix - if this is set, a TestOrderMatrix will be generated, and then used to
+	#             try to more intelligently order the ParametersFrame rather than just by the order
+	#             the tests appear in the STDF file.  (Useful for multi-variant products or programs
+	#             that have sampling tests, ie every 3rd part does slower parametric test
+	# save_testorder_matrix - as above, the will generate a TestOrderMatrix, but will also save this
+	#             matrix to the RTDF file.  If you don't want your RTDF files to be too bloated,
+	#             but you still want the ParametersFrame order 'optimized'
     #---------------------------------------------
 	#attach(.ConvertStdf.env) #...environment() is better approach?
 
@@ -402,7 +412,17 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	TestFlagMatrix <<- array(NaN, dim=c(0,0))
 	Do_testflag_matrix <<- do_testflag_matrix
 	TestOrderMatrix <<- array(NaN, dim=c(0,0))
-	Do_test_order_matrix <<- 1		# do_test_order_matrix
+	Do_test_order_matrix <<- 0	
+	Use_test_order_matrix <<- 0
+	Save_test_order_matrix <<- 0
+	if(use_testorder_matrix>0) {
+		Do_test_order_matrix <<- 1	
+		Use_test_order_matrix <<- 1
+	}
+	if(save_testorder_matrix>0) {
+		Do_test_order_matrix <<- 1	
+		Save_test_order_matrix <<- 1
+	}
 	Test_order_counter <<- 0
 	Max_parts <<- max_parts
 	Unknown_rec_count <<- 0
@@ -1015,6 +1035,69 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	}
 
 
+	# should we try to reorder ParametersFrame based on TestOrderMatrix?
+	if( Use_test_order_matrix ) {
+		cat(sprintf("Now reordering ParametersFrame based on TestOrderMatrix...\n"))
+
+		# make cross-reference list to existing ParametersFrame order, we'll sort this,
+		# then do all the mapping at the end.
+		xref_ParametersFrame = c(1:dim(ParametersFrame)[1])	
+
+		# first device will have its tests in order, so start from there.
+		last_sorted = which(TestOrderMatrix[1,]==max(TestOrderMatrix[1,],na.rm=TRUE))
+		for (next_to_sort in (last_sorted+1):dim(ParametersFrame)[1]) {
+			# which devices actually have results for this test?  
+			valid_results = which(is.finite(TestOrderMatrix[,next_to_sort]))
+			valid_part = valid_results[1]	# there should always be at least one!
+			curr_order = TestOrderMatrix[valid_part,next_to_sort]
+			prev_order = curr_order - 1
+			unsorted_prev_param = which(TestOrderMatrix[valid_part,]==prev_order)
+			# but this is the presorted index
+			prev_param = which(xref_ParametersFrame==unsorted_prev_param)
+
+			# ok, we will want to add next_to_sort at least after prev_param,
+			# so step through params until we've gone too far
+			curr_param = prev_param + 1
+			sorted = FALSE
+			while(!sorted && (curr_param < next_to_sort)) {
+				valid_indices1 = which(is.finite(TestOrderMatrix[,next_to_sort]))
+				valid_indices2 = which(is.finite(TestOrderMatrix[,xref_ParametersFrame[curr_param]]))
+				indices = intersect(valid_indices1,valid_indices2)
+				if(length(indices)>0) {
+					min_incr = min(TestOrderMatrix[indices,next_to_sort] - 
+							TestOrderMatrix[indices,xref_ParametersFrame[curr_param]],na.rm=TRUE)
+				}
+				if ((length(indices)>0) && min_incr<0) {
+					# place the next_to_sort param before the curr_param
+					# really, just shuffle xref_ParametersFrame vector
+					xref_ParametersFrame[(curr_param+1):next_to_sort] = xref_ParametersFrame[curr_param:(next_to_sort-1)]
+					xref_ParametersFrame[curr_param] = next_to_sort
+					sorted = TRUE
+				} else if(length(indices)>0) {
+					curr_param = curr_param + 1
+				} else {
+					# we don't actually know... 50/50 guess,
+					# can we be smarter?  REVISIT
+					curr_param = curr_param + 1
+				}
+			}
+		}
+
+		# now re-sort all the Frames and Matrices
+		old_ParametersFrame = ParametersFrame
+		old_ResultsMatrix = ResultsMatrix
+		old_TestFlagMatrix = TestFlagMatrix
+		old_TestOrderMatrix = TestOrderMatrix
+
+		ParametersFrame = old_ParametersFrame[xref_ParametersFrame,]
+		ResultsMatrix = old_ResultsMatrix[,xref_ParametersFrame]
+		TestFlagMatrix = old_TestFlagMatrix[,xref_ParametersFrame]
+		TestOrderMatrix = old_TestOrderMatrix[,xref_ParametersFrame]
+
+		cat(sprintf("... Done reordering ParametersFrame based on TestOrderMatrix\n"))
+	}
+
+
     # save Rtdf file
     #-----------------
     my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
@@ -1022,7 +1105,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	if ( (Do_testflag_matrix) && (dim(TestFlagMatrix)[1]>0) && (dim(TestFlagMatrix)[2]>0) ) {
         my_list[length(my_list)+1] = "TestFlagMatrix"
 	}
-	if ( (Do_test_order_matrix) && (dim(TestOrderMatrix)[1]>0) && (dim(TestOrderMatrix)[2]>0) ) {
+	if ( (Save_test_order_matrix) && (dim(TestOrderMatrix)[1]>0) && (dim(TestOrderMatrix)[2]>0) ) {
         my_list[length(my_list)+1] = "TestOrderMatrix"
 	}
     if (Hbin_count>0) {

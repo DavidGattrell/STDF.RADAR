@@ -1,11 +1,20 @@
 ===================================================================
-Version 0v6p9 -- 5feb2020
+Version 0v6p9 -- 27may2020
 ===================================================================
 
 to do...
 
 	ConvertStdf
-	- need to add do_FTR_fail_cycle to the PDF documentation
+	- add flag for multiple limit values
+      ge vs gt complicates things...
+	  what data object to use?
+	  also add LimitsIndexMatrix, same size as results
+  	  ** would need to revisit all merge/manipulate routines
+	  ? what to do with PlotRtdf...
+	  ... maybe add function to extract ParametersFrame for a particular part?
+	      (could search for unique parts
+      ... ok, generate multiple rtdf files based on limits
+    - try to intelligently order the ParametersFrame...
 
     FilterByResults
     - started adding code to expand filtering, but not done!
@@ -112,6 +121,7 @@ Improvements and Fixes:
 	* fix some bugs that would show up if processing DTR records
 	* add do_FTR_fail_cycle option.  for FTR records, instead of putting the flag byte into the RTDF,
 	  put the failing cycle count instead, or -1 if PASS.  (0 if fail, but no valid cycle count) 
+    * add option to generate a TestOrderMatrix and to use it to order the ParametersFrame
 
 - ConvertStdfGui, FingerprintGui
     * add real-time checking for integer entry box
@@ -133,8 +143,9 @@ Improvements and Fixes:
     * fix bug in list decrement in gui
 
 - MergeRtdf
-	* fix bug when merging multiple wafers
-	* fix bug when first rtdf doesn't have a TestFlagMatrix object
+	* fix a few bugs when merging multiple wafers
+	* fix a few bugs when first rtdf doesn't have a TestFlagMatrix object, or
+      crashes if TestFlagMatrix size doesn't match ResultsMatrix size
 	
 - PlotRtdf
     * change warning decision from >2000 plots to a passed-in variable.  
