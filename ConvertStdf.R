@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.52 2020/05/28 00:19:46 david Exp $
+# $Id: ConvertStdf.R,v 1.53 2020/06/23 00:00:07 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -215,6 +215,14 @@ assign("Use_test_order_matrix",FALSE,envir=.ConvertStdf.env) # flag to revisit P
 assign("Save_test_order_matrix",FALSE,envir=.ConvertStdf.env) # flag save TestOrderMatris in RTDF
 assign("Test_order_counter",0,envir=.ConvertStdf.env)	# number of tests processed (PTR/FTR/MPR*pins records)
 
+assign("Do_mult_limits",0,envir=.ConvertStdf.env) # flag to enable/disable Multi-limits, also max # of limits sets to allow.
+assign("MultLimIndexMatrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)	# same size as ResultsMatrix, which limits set to use
+assign("MultLim_ll_Matrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)	# [# of params,# of limits]
+assign("MultLim_ul_Matrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
+assign("MultLim_ll_ge_Matrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
+assign("MultLim_ul_ge_Matrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
+assign("MultLim_idx",NA,envir=.ConvertStdf.env) 	# <<- as.integer(  -- how many sets of limits for this particular Parameter?
+
 assign("HbinInfoFrame",data.frame(rbind(
 		list(hbin_num=NaN, hbin_cnt=NaN, hbin_pf="",hbin_nam="")
 		)),envir=.ConvertStdf.env)
@@ -312,7 +320,8 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 						auto_demangle=FALSE,auto_flex=TRUE,keep_alarmed_values=FALSE,
 						skip_TSRs=FALSE,raw_TSRs=FALSE,parse_PRR_part_txt=TRUE,
 						do_FTR_fail_cycle=TRUE,
-						use_testorder_matrix=FALSE,save_testorder_matrix=FALSE) {
+						use_testorder_matrix=FALSE,save_testorder_matrix=FALSE,
+						mult_limits=0) {
     # stdf_name - name of stdf formatted file to convert to rtdf format
     # rtdf_name - name to give to rtdf formatted file
     # auto_93k  - if stdf is from HP/Agilent/Verigy 93K, try to auto fix
@@ -380,6 +389,10 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	# save_testorder_matrix - as above, the will generate a TestOrderMatrix, but will also save this
 	#             matrix to the RTDF file.  If you don't want your RTDF files to be too bloated,
 	#             but you still want the ParametersFrame order 'optimized'
+	# mult_limits -- a value <2 = original behaviour... 
+	#             check limits as well as testname and track if limits change during run,
+	#             if so, generate output files per sets of limits up to the value of 
+	#             mult_limits, <20 is probably the limit of sanity
     #---------------------------------------------
 	#attach(.ConvertStdf.env) #...environment() is better approach?
 
@@ -426,6 +439,14 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	Test_order_counter <<- 0
 	Max_parts <<- max_parts
 	Unknown_rec_count <<- 0
+
+	Do_mult_limits <<- 0
+	MultLimIndexMatrix <<- array(NaN, dim=c(0,0))
+	MultLim_ll_Matrix <<- array(NaN, dim=c(0,0))
+	MultLim_ul_Matrix <<- array(NaN, dim=c(0,0))
+	MultLim_ll_ge_Matrix <<- array(NaN, dim=c(0,0))
+	MultLim_ul_ge_Matrix <<- array(NaN, dim=c(0,0))
+	MultLim_idx <<- NA
 
 	Another_guess <<- 0
 	Previous_param_i <<- 1
@@ -503,6 +524,13 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 
 	#if(auto_flex)  endian = "little"	# force initial guess to little vs. big
 	#if(auto_flex)  duplicate_testnames = TRUE	# necessary?
+
+	if(mult_limits>1) {
+		# need to create
+		# extra matrix for lower, upper limits and their GT vs GE
+		# extra matrix sized like ResultsMatrix that gives index for limits reference
+		Do_mult_limits <<- mult_limits
+	}
 
 
     # if filenames not defined, prompt for them
@@ -731,12 +759,16 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
     ResultsMatrix <<- ResultsMatrix[1:Device_count,]
     if(Do_testflag_matrix)  TestFlagMatrix <<- TestFlagMatrix[1:Device_count,]
     if(Do_test_order_matrix)  TestOrderMatrix <<- TestOrderMatrix[1:Device_count,]
-	# above creates a vector if only 1 device instead of a matrix, so below fixes this.
+	if(Do_mult_limits>0)  MultLimIndexMatrix <<- MultLimIndexMatrix[1:Device_count,]
+
+	# above creates a vector instead of a matrix if only 1 device, so below fixes this.
 	if(!is.matrix(ResultsMatrix)) {
 		ResultsMatrix <<- matrix(data=ResultsMatrix,nrow=Device_count,ncol=Parameter_count)
 		if(Do_testflag_matrix)  TestFlagMatrix <<- matrix(data=TestFlagMatrix,
 									nrow=Device_count,ncol=Parameter_count)
 		if(Do_test_order_matrix)  TestOrderMatrix <<- matrix(data=TestOrderMatrix,
+									nrow=Device_count,ncol=Parameter_count)
+		if(Do_mult_limits>0)  MultLimIndexMatrix <<- matrix(data=MultLimIndexMatrix,
 									nrow=Device_count,ncol=Parameter_count)
 	}
 
@@ -821,7 +853,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	                ll=NaN, ul=NaN,
 					ll_ge=NaN, ul_ge=NaN,
 	                plot_ll=NaN, plot_ul=NaN)
-	ParametersFrame <- data.frame(rbind(my_list))
+	ParametersFrame <<- data.frame(rbind(my_list))
 	ParametersFrame[1:Parameter_count,"testnum"] <- Parameters_testnum[1:Parameter_count]
 	ParametersFrame[1:Parameter_count,"testname"] <- Parameters_Names[1:Parameter_count]
 	ParametersFrame[1:Parameter_count,"scaler"] <- Parameters_scaler[1:Parameter_count]
@@ -1089,11 +1121,25 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 		old_TestFlagMatrix = TestFlagMatrix
 		old_TestOrderMatrix = TestOrderMatrix
 
-		ParametersFrame = old_ParametersFrame[xref_ParametersFrame,]
-		ResultsMatrix = old_ResultsMatrix[,xref_ParametersFrame]
-		TestFlagMatrix = old_TestFlagMatrix[,xref_ParametersFrame]
-		TestOrderMatrix = old_TestOrderMatrix[,xref_ParametersFrame]
+		ParametersFrame <- old_ParametersFrame[xref_ParametersFrame,]	# Frames were local, not global
+		ResultsMatrix <<- old_ResultsMatrix[,xref_ParametersFrame]
+		TestFlagMatrix <<- old_TestFlagMatrix[,xref_ParametersFrame]
+		TestOrderMatrix <<- old_TestOrderMatrix[,xref_ParametersFrame]
 
+		if(Do_mult_limits>0) {
+			old_MultLimIndexMatrix = MultLimIndexMatrix
+			MultLimIndexMatrix <<- old_MultLimIndexMatrix[,xref_ParametersFrame]
+			if(sum(dim(MultLim_ll_Matrix))>0) {
+				old_MultLim_ll_Matrix = MultLim_ll_Matrix
+				old_MultLim_ul_Matrix = MultLim_ul_Matrix
+				old_MultLim_ll_ge_Matrix = MultLim_ll_ge_Matrix
+				old_MultLim_ul_ge_Matrix = MultLim_ul_ge_Matrix
+				MultLim_ll_Matrix <<- old_MultLim_ll_Matrix[xref_ParametersFrame,]
+				MultLim_ul_Matrix <<- old_MultLim_ul_Matrix[xref_ParametersFrame,]
+				MultLim_ll_ge_Matrix <<- old_MultLim_ll_ge_Matrix[xref_ParametersFrame,]
+				MultLim_ul_ge_Matrix <<- old_MultLim_ul_ge_Matrix[xref_ParametersFrame,]
+			}
+		}
 		cat(sprintf("... Done reordering ParametersFrame based on TestOrderMatrix\n"))
 	}
 
@@ -1132,8 +1178,122 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 		my_list[length(my_list)+1] = "SiteSbinSiteVector"
 		my_list[length(my_list)+1] = "SiteSbinCountMatrix"
 	}
-    save(list=my_list, file=rtdf_name)
 
+	if (Do_mult_limits>0) {
+		cat(sprintf("Now Separating based on unique Limit Sets...\n"))
+		# REVISIT: temporary debug dump while coding this feature!
+		dump_MultLim_objects = FALSE
+		if (dump_MultLim_objects) {
+			my_list[length(my_list)+1] = "MultLimIndexMatrix"
+			my_list[length(my_list)+1] = "MultLim_ll_Matrix"
+			my_list[length(my_list)+1] = "MultLim_ul_Matrix"
+			my_list[length(my_list)+1] = "MultLim_ll_ge_Matrix"
+			my_list[length(my_list)+1] = "MultLim_ul_ge_Matrix"
+			my_list[length(my_list)+1] = "MultLim_idx"
+		}
+
+		# we now need to step through devices to see how many unique limit sets we have,
+		# which parts go with which limit set,
+		# and dump to separate RTDF files based on limit set.
+		LimSetIndex = rep(1,times=Device_count)
+		for (i in 1:Device_count) {
+			found_it = FALSE
+			if (i==1) {
+				LimSetMatrix = matrix(MultLimIndexMatrix[1,],nrow=1,ncol=Parameter_count)
+				LimSets = 1
+			} else {
+				valid_tests = which(is.finite(MultLimIndexMatrix[i,]))
+				lim_set = 1
+				while(!found_it && (lim_set <= LimSets)) {
+					# does this device's limits match an existing set?
+					limset_valid_tests = which(is.finite(LimSetMatrix[lim_set,]))
+					common_tests = intersect(valid_tests,limset_valid_tests)
+					if(all(MultLimIndexMatrix[i,common_tests]==LimSetMatrix[lim_set,common_tests])) {
+						found_it = TRUE
+						LimSetIndex[i] = lim_set
+						# do we have any new tests to add to this LimSet?
+						new_tests = setdiff(valid_tests,limset_valid_tests)
+						LimSetMatrix[lim_set,new_tests] = MultLimIndexMatrix[i,new_tests]
+					}
+					lim_set = lim_set + 1
+				}
+				if(!found_it) {
+					if(LimSets<Do_mult_limits) {
+						# add to LimSetMatrix
+						LimSetIndex[i] = lim_set
+						LimSetMatrix = rbind( LimSetMatrix, MultLimIndexMatrix[i,] )
+						LimSets = LimSets + 1
+					} else {
+						# REVISIT...
+						cat("Oh poop!  need to fix this!")
+					}
+				}
+			}
+		}
+
+		if (dump_MultLim_objects) {
+			my_list[length(my_list)+1] = "LimSetIndex"
+			my_list[length(my_list)+1] = "LimSetMatrix"
+		}
+
+    	save(list=my_list, file=rtdf_name)
+
+		# now cycle through the unique datasets and dump into separate RTDF files...
+		if(LimSets>1) {
+			orig_ParametersFrame = ParametersFrame	# we'll be overwriting the limits here
+			orig_DevicesFrame = DevicesFrame
+			orig_ResultsMatrix = ResultsMatrix
+			# what other objects will get resized per limit set?
+			if(Do_testflag_matrix)  orig_TestFlagMatrix = TestFlagMatrix
+			if(Do_test_order_matrix)  orig_TestOrderMatrix = TestOrderMatrix
+			orig_MultLimIndexMatrix = MultLimIndexMatrix
+
+			base_rtdf_name = as.character(strsplit(rtdf_name,"[.]rtdf$"))
+
+			for (i in 1:LimSets) {
+				ParametersFrame = orig_ParametersFrame
+				alt_limits = which(LimSetMatrix[i,]>0)
+				if(length(alt_limits)>0) {
+					#browser()
+					#ParametersFrame[alt_limits,"ll"] = MultLim_ll_Matrix[alt_limits,LimSetMatrix[i,alt_limits]]
+					my_vec = function(x) MultLim_ll_Matrix[x,LimSetMatrix[i,x]]
+					ParametersFrame[alt_limits,"ll"] = mapply(my_vec,alt_limits)
+					my_vec = function(x) MultLim_ul_Matrix[x,LimSetMatrix[i,x]]
+					ParametersFrame[alt_limits,"ul"] = mapply(my_vec,alt_limits)
+					my_vec = function(x) MultLim_ll_ge_Matrix[x,LimSetMatrix[i,x]]
+					ParametersFrame[alt_limits,"ll_ge"] = mapply(my_vec,alt_limits)
+					my_vec = function(x) MultLim_ul_ge_Matrix[x,LimSetMatrix[i,x]]
+					ParametersFrame[alt_limits,"ul_ge"] = mapply(my_vec,alt_limits)
+				}
+
+				keepers = which(LimSetIndex==i)
+				dev_count = length(keepers)
+
+				DevicesFrame <- orig_DevicesFrame[keepers,]
+				ResultsMatrix <<- orig_ResultsMatrix[keepers,]
+				if(Do_testflag_matrix)  TestFlagMatrix <<- orig_TestFlagMatrix[keepers,]
+				if(Do_test_order_matrix)  TestOrderMatrix <<- orig_TestOrderMatrix[keepers,]
+				
+				# above creates a vector instead of a matrix if only 1 device, so below fixes this.
+				if(!is.matrix(ResultsMatrix)) {
+					ResultsMatrix <<- matrix(data=ResultsMatrix,nrow=dev_count,ncol=Parameter_count)
+					if(Do_testflag_matrix)  TestFlagMatrix <<- matrix(data=TestFlagMatrix,
+												nrow=dev_count,ncol=Parameter_count)
+					if(Do_test_order_matrix)  TestOrderMatrix <<- matrix(data=TestOrderMatrix,
+												nrow=dev_count,ncol=Parameter_count)
+					if(Do_mult_limits>0)  MultLimIndexMatrix <<- matrix(data=MultLimIndexMatrix,
+												nrow=dev_count,ncol=Parameter_count)
+				}
+				lim_rtdf_name = paste(base_rtdf_name,"_lim",i,".rtdf",sep="")
+				save(list=my_list, file=lim_rtdf_name)
+			}
+		}
+
+		cat(sprintf("... Done separating into %d unique Limit Sets\n",LimSets))
+
+	} else {
+    	save(list=my_list, file=rtdf_name)
+	}
     timestamp9 = proc.time()
     timestamp9 = timestamp9[3] - timestamp0
     if (timestamp9<200.0) {
@@ -1171,6 +1331,12 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	}
 	#cat(sprintf("Another_guess was used %d times \n",Good_guesses2))
 
+
+	if(Do_mult_limits>0) {
+		# if the multiple limits flag is set, then search through MultLimIndexMatrix to
+		# find common groups of limits and split into associated RTDF files
+
+	}
 }
 
 
@@ -3220,6 +3386,7 @@ parse_PIR_record <- function(rec_len,endy) {
             ResultsMatrix<<- array(NaN, dim=c(1,0))
             if(Do_testflag_matrix)  TestFlagMatrix<<- array(NaN, dim=c(1,0))
             if(Do_test_order_matrix)  TestOrderMatrix<<- array(NaN, dim=c(1,0))
+            if(Do_mult_limits>0)  MultLimIndexMatrix<<- array(NaN, dim=c(1,0))
         } else {
             # wait 5 devices before allocating in chunks to allow 
             # parameters frame length to stabilize a bit.
@@ -3247,6 +3414,8 @@ parse_PIR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
                     if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk-4,
                                         ncol=my_dims[2]))
+                    if(Do_mult_limits>0)  MultLimIndexMatrix<<- rbind(MultLimIndexMatrix,matrix(NaN,nrow=chunk-4,
+                                        ncol=my_dims[2]))
                 } else {
                     mod_d = Device_count %% chunk  # modulus
                     if(mod_d==0) {
@@ -3268,6 +3437,8 @@ parse_PIR_record <- function(rec_len,endy) {
                         if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,matrix(NaN,nrow=chunk,
                                         ncol=my_dims[2]))
                         if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk,
+                                        ncol=my_dims[2]))
+                        if(Do_mult_limits>0)  MultLimIndexMatrix<<- rbind(MultLimIndexMatrix,matrix(NaN,nrow=chunk,
                                         ncol=my_dims[2]))
                     }
                 }
@@ -3295,11 +3466,13 @@ parse_PIR_record <- function(rec_len,endy) {
 					ResultsMatrix<<-array(NaN, dim=c(Device_count,0))
 					if(Do_testflag_matrix)  TestFlagMatrix<<-array(NaN, dim=c(Device_count,0))
 					if(Do_test_order_matrix)  TestOrderMatrix<<-array(NaN, dim=c(Device_count,0))
+					if(Do_mult_limits>0)  MultLimIndexMatrix<<-array(NaN, dim=c(Device_count,0))
 					
 				} else {
 					ResultsMatrix<<- rbind(ResultsMatrix,NaN)
 					if(Do_testflag_matrix)  TestFlagMatrix<<- rbind(TestFlagMatrix,NaN)
 					if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,NaN)
+					if(Do_mult_limits>0)  MultLimIndexMatrix<<- rbind(MultLimIndexMatrix,NaN)
 				}
             }
         }
@@ -4370,6 +4543,7 @@ parse_PDR_record <- function(rec_len,endy) {
             ResultsMatrix <<- cbind(ResultsMatrix,NaN)
             if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
             if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
+            if(Do_mult_limits>0)  MultLimIndexMatrix <<- cbind(MultLimIndexMatrix,NaN)
         }
 
 		Previous_param_i <<- par_index
@@ -4795,6 +4969,8 @@ parse_PTR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
 						if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk-4,
                                         ncol=my_dims[2]))
+						if(Do_mult_limits>0)  MultLimIndexMatrix<<- rbind(MultLimIndexMatrix,matrix(NaN,nrow=chunk-4,
+                                        ncol=my_dims[2]))
 					} else {
 						mod_d = Device_count %% chunk  # modulus
 						if(mod_d==0) {
@@ -4816,6 +4992,8 @@ parse_PTR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
 							if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk,
                                         ncol=my_dims[2]))
+							if(Do_mult_limits>0)  MultLimIndexMatrix<<- rbind(MultLimIndexMatrix,matrix(NaN,nrow=chunk,
+                                        ncol=my_dims[2]))
 						}
 					}
 				}
@@ -4833,6 +5011,7 @@ parse_PTR_record <- function(rec_len,endy) {
 				ResultsMatrix <<- rbind(ResultsMatrix,NaN)
 				if(Do_testflag_matrix)  TestFlagMatrix <<- rbind(TestFlagMatrix,NaN)
 				if(Do_test_order_matrix)  TestOrderMatrix <<- rbind(TestOrderMatrix,NaN)
+				if(Do_mult_limits>0)  MultLimIndexMatrix <<- rbind(MultLimIndexMatrix,NaN)
 				if(Do_DTRs)  DTRsMatrix <<- rbind(DTRsMatrix,NaN)
 
 				ConditionsMatrix <<- rbind(ConditionsMatrix,NaN)
@@ -4918,9 +5097,110 @@ parse_PTR_record <- function(rec_len,endy) {
 				# we added a new parameter, so we need to add
 				# a new column to Results Matrix...
 				#---------------------------------------------
+				#browser()	# debugging MultLimIndexMatrix stuff...
 				ResultsMatrix <<- cbind(ResultsMatrix,NaN)
 				if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
 				if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
+				if(Do_mult_limits>0) {
+					MultLimIndexMatrix <<- cbind(MultLimIndexMatrix,NaN)
+					MultLim_idx[Parameter_count] <<- 0
+					if(sum(dim(MultLim_ll_Matrix))>0) {
+						# if we've already created the ll/ul matrices, we will need to grow them
+						MultLim_ll_Matrix <<- rbind(MultLim_ll_Matrix,NaN)  
+						MultLim_ul_Matrix <<- rbind(MultLim_ul_Matrix,NaN)  
+						MultLim_ll_ge_Matrix <<- rbind(MultLim_ll_ge_Matrix,NaN)  
+						MultLim_ul_ge_Matrix <<- rbind(MultLim_ul_ge_Matrix,NaN)  
+					}
+				}
+			}
+			if (Do_mult_limits>0) {
+				if(valid_opt_flag) {
+					# put the limit info into 4 new_xxx variables...
+					new_ll = lo_limit
+					if (!valid_llim)  new_ll = NaN
+					new_ul = hi_limit
+					if (!valid_ulim)  new_ul = NaN
+					new_ll_ge = 0
+					if( (as.raw(parm_flg) & as.raw(64))>0 )  new_ll_ge = 1
+					new_ul_ge = 0
+					if( (as.raw(parm_flg) & as.raw(128))>0 )  new_ul_ge = 1
+
+
+					# need to check if limits are different from initial limits
+					# if if no limit aka NaN, both are NaN
+					mult_lim_idx = 0	# assume default limits are valid
+					def_lims_ok = TRUE
+					if(is.finite(Parameters_ll[par_index]) != is.finite(new_ll)) {
+						def_lims_ok = FALSE
+					} else if(is.finite(Parameters_ll[par_index]) && is.finite(new_ll) &&
+						(Parameters_ll[par_index] != new_ll) ) {
+						def_lims_ok = FALSE
+					}
+					if(is.finite(Parameters_ul[par_index]) != is.finite(new_ul)) {
+						def_lims_ok = FALSE
+					} else if(is.finite(Parameters_ul[par_index]) && is.finite(new_ul) &&
+						(Parameters_ul[par_index] != new_ul) ) {
+						def_lims_ok = FALSE
+					}
+					if(Parameters_ll_ge[par_index] != new_ll_ge)  def_lims_ok = FALSE
+					if(Parameters_ul_ge[par_index] != new_ul_ge)  def_lims_ok = FALSE
+				} else {
+					# no limits in PTR record, implicitly means the limits are the same
+					# as the first occurrence of this record
+					mult_lim_idx = 0	# assume default limits are valid
+					def_lims_ok = TRUE
+				}
+
+				if (!def_lims_ok) {
+					# ok, now need to look for a match in the mult_lim matrices
+
+					# have we created this matrix yet?
+					if(sum(dim(MultLim_ll_Matrix))==0) {
+						MultLim_ll_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+						MultLim_ul_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+						MultLim_ll_ge_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+						MultLim_ul_ge_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+					}
+
+					mult_lim_idx = 1
+					matching = FALSE
+					#step through valid indices until we have a match, or add to end of filled portion of matrices
+					# note missing limit is NaN, so need to do extra checking with is.finite()
+					while( (mult_lim_idx<=MultLim_idx[par_index]) && !matching ) {
+						matching = TRUE
+						if(is.finite(new_ll) != is.finite(MultLim_ll_Matrix[par_index,mult_lim_idx]) ) {
+							matching = FALSE
+						} else if(is.finite(new_ll) && (new_ll != MultLim_ll_Matrix[par_index,mult_lim_idx]) ) {
+							matching = FALSE
+						}
+						if(is.finite(new_ul) != is.finite(MultLim_ul_Matrix[par_index,mult_lim_idx]) ) {
+							matching = FALSE
+						} else if(is.finite(new_ul) && (new_ul != MultLim_ul_Matrix[par_index,mult_lim_idx]) ) {
+							matching = FALSE
+						}
+						if(new_ll_ge != MultLim_ll_ge_Matrix[par_index,mult_lim_idx])  matching = FALSE 
+						if(new_ul_ge != MultLim_ul_ge_Matrix[par_index,mult_lim_idx])  matching = FALSE 
+
+						if(!matching)  mult_lim_idx = mult_lim_idx + 1
+					}
+					if(!matching) {
+						if(mult_lim_idx<Do_mult_limits) {
+							# ok, append new limits to end of used part of matrix, increment used counter
+							MultLim_idx[par_index] <<- mult_lim_idx
+							MultLim_ll_Matrix[par_index,mult_lim_idx] <<- new_ll
+							MultLim_ul_Matrix[par_index,mult_lim_idx] <<- new_ul
+							MultLim_ll_ge_Matrix[par_index,mult_lim_idx] <<- new_ll_ge
+							MultLim_ul_ge_Matrix[par_index,mult_lim_idx] <<- new_ul_ge
+						} else {
+							# ok, used up all reserved space for limits... 0, 1..(max-1)
+							# keep last one for tracking widest limits 
+
+							# REVISIT
+						}
+					}
+
+
+				}
 			}
 
 
@@ -4930,6 +5210,7 @@ parse_PTR_record <- function(rec_len,endy) {
 			if (valid_result) {
 				ResultsMatrix[device_count,par_index] <<- result
 			}
+
 
 			# update TestFlagMatrix
 			#-----------------------
@@ -4956,6 +5237,13 @@ parse_PTR_record <- function(rec_len,endy) {
 			if(Do_test_order_matrix) {
 				Test_order_counter <<- Test_order_counter + 1
 				TestOrderMatrix[device_count,par_index] <<- Test_order_counter
+			}
+
+
+			# update MultLimIndexMatrix 
+			#--------------------------
+			if(Do_mult_limits>0) {
+				MultLimIndexMatrix[device_count,par_index] <<- mult_lim_idx
 			}
 
 
@@ -5316,6 +5604,17 @@ parse_MPR_record <- function(rec_len,endy) {
 			ResultsMatrix <<- cbind(ResultsMatrix,NaN)
 			if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
 			if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
+			if(Do_mult_limits>0) {
+				MultLimIndexMatrix <<- cbind(MultLimIndexMatrix,NaN)
+				MultLim_idx[Parameter_count] <<- 0
+				if(sum(dim(MultLim_ll_Matrix))>0) {
+					# if we've already created the ll/ul matrices, we will need to grow them
+					MultLim_ll_Matrix <<- rbind(MultLim_ll_Matrix,NaN)  
+					MultLim_ul_Matrix <<- rbind(MultLim_ul_Matrix,NaN)  
+					MultLim_ll_ge_Matrix <<- rbind(MultLim_ll_ge_Matrix,NaN)  
+					MultLim_ul_ge_Matrix <<- rbind(MultLim_ul_ge_Matrix,NaN)  
+				}
+			}
 		}
 
 		# update ResultsMatrix
@@ -5329,6 +5628,107 @@ parse_MPR_record <- function(rec_len,endy) {
 		#------------------------
 		Test_order_counter <<- Test_order_counter + 1
 		if(Do_test_order_matrix)  TestOrderMatrix[device_count,par_index] <<- Test_order_counter	
+
+		# update MultLim 
+		#---------------
+		if (Do_mult_limits>0) {
+			if (valid_llim) {
+				new_ll = lo_limit
+			} else {
+				new_ll = NaN
+			}
+			if (valid_ulim) {
+				new_ul = hi_limit
+			} else {
+				new_ul = NaN
+			}
+			if( (as.raw(parm_flg) & as.raw(64))>0 ) {
+				new_ll_ge = 1
+			} else {
+				new_ll_ge = 0
+			}
+			if( (as.raw(parm_flg) & as.raw(128))>0 ) {
+				new_ul_ge = 1
+			} else {
+				new_ul_ge = 0
+			}
+			if(valid_llim || valid_ulim) {
+				# explicit limits, check if different than initial limits
+				mult_lim_idx = 0
+				def_lims_ok = TRUE
+				if(is.finite(Parameters_ll[par_index]) != is.finite(new_ll)) {
+					def_lims_ok = FALSE
+				} else if(is.finite(Parameters_ll[par_index]) && is.finite(new_ll) &&
+					(Parameters_ll[par_index] != new_ll) ) {
+					def_lims_ok = FALSE
+				}
+				if(is.finite(Parameters_ul[par_index]) != is.finite(new_ul)) {
+					def_lims_ok = FALSE
+				} else if(is.finite(Parameters_ul[par_index]) && is.finite(new_ul) &&
+					(Parameters_ul[par_index] != new_ul) ) {
+					def_lims_ok = FALSE
+				}
+				if(Parameters_ll_ge[par_index] != new_ll_ge)  def_lims_ok = FALSE
+				if(Parameters_ul_ge[par_index] != new_ul_ge)  def_lims_ok = FALSE
+			} else {
+				# no limits in MPR record, implicitly means the limits are the same
+				# as the first occurrence of this record
+				mult_lim_idx = 0	# assume default limits are valid
+				def_lims_ok = TRUE
+			}
+			if (!def_lims_ok) {
+				# ok, now need to look for a match in the mult_lim matrices
+
+				# have we created this matrix yet?
+				if(sum(dim(MultLim_ll_Matrix))==0) {
+					MultLim_ll_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+					MultLim_ul_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+					MultLim_ll_ge_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+					MultLim_ul_ge_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+				}
+
+				mult_lim_idx = 1
+				matching = FALSE
+
+				#step through valid indices until we have a match, or add to end of filled portion of matrices
+				# note missing limit is NaN, so need to do extra checking with is.finite()
+				while( (mult_lim_idx<=MultLim_idx[par_index]) && !matching ) {
+					matching = TRUE
+					if(is.finite(new_ll) != is.finite(MultLim_ll_Matrix[par_index,mult_lim_idx]) ) {
+						matching = FALSE
+					} else if(is.finite(new_ll) && (new_ll != MultLim_ll_Matrix[par_index,mult_lim_idx]) ) {
+						matching = FALSE
+					}
+					if(is.finite(new_ul) != is.finite(MultLim_ul_Matrix[par_index,mult_lim_idx]) ) {
+						matching = FALSE
+					} else if(is.finite(new_ul) && (new_ul != MultLim_ul_Matrix[par_index,mult_lim_idx]) ) {
+						matching = FALSE
+					}
+					if(new_ll_ge != MultLim_ll_ge_Matrix[par_index,mult_lim_idx])  matching = FALSE 
+					if(new_ul_ge != MultLim_ul_ge_Matrix[par_index,mult_lim_idx])  matching = FALSE 
+
+					if(!matching)  mult_lim_idx = mult_lim_idx + 1
+				}
+				if(!matching) {
+					if(mult_lim_idx<Do_mult_limits) {
+						# ok, append new limits to end of used part of matrix, increment used counter
+						MultLim_idx[par_index] <<- mult_lim_idx
+						MultLim_ll_Matrix[par_index,mult_lim_idx] <<- new_ll
+						MultLim_ul_Matrix[par_index,mult_lim_idx] <<- new_ul
+						MultLim_ll_ge_Matrix[par_index,mult_lim_idx] <<- new_ll_ge
+						MultLim_ul_ge_Matrix[par_index,mult_lim_idx] <<- new_ul_ge
+					} else {
+						# ok, used up all reserved space for limits... 0, 1..(max-1)
+						# keep last one for tracking widest limits 
+
+						# REVISIT
+					}
+				}
+			}
+			#...
+			MultLimIndexMatrix[device_count,par_index] <<- mult_lim_idx
+		}
+
 
 		Previous_param_i <<- par_index
 		Another_guess <<- par_index
@@ -5406,6 +5806,8 @@ parse_MPR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
 						if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk-4,
                                         ncol=my_dims[2]))
+						if(Do_mult_limits>0)  MultLimIndexMatrix<<- rbind(MultLimIndexMatrix,matrix(NaN,nrow=chunk-4,
+                                        ncol=my_dims[2]))
 					} else {
 						mod_d = Device_count %% chunk  # modulus
 						if(mod_d==0) {
@@ -5427,6 +5829,8 @@ parse_MPR_record <- function(rec_len,endy) {
                                         ncol=my_dims[2]))
 							if(Do_test_order_matrix)  TestOrderMatrix<<- rbind(TestOrderMatrix,matrix(NaN,nrow=chunk,
                                         ncol=my_dims[2]))
+							if(Do_mult_limits>0)  MultLimIndexMatrix<<- rbind(MultLimIndexMatrix,matrix(NaN,nrow=chunk,
+                                        ncol=my_dims[2]))
 						}
 					}
 				}
@@ -5444,6 +5848,7 @@ parse_MPR_record <- function(rec_len,endy) {
 				ResultsMatrix <<- rbind(ResultsMatrix,NaN)
 				if(Do_testflag_matrix)  TestFlagMatrix <<- rbind(TestFlagMatrix,NaN)
 				if(Do_test_order_matrix)  TestOrderMatrix <<- rbind(TestOrderMatrix,NaN)
+				if(Do_mult_limits>0)  MultLimIndexMatrix <<- rbind(MultLimIndexMatrix,NaN)
 				if(Do_DTRs)  DTRsMatrix <<- rbind(DTRsMatrix,NaN)
 				ConditionsMatrix <<- rbind(ConditionsMatrix,NaN)
 
@@ -5596,6 +6001,17 @@ parse_MPR_record <- function(rec_len,endy) {
 					ResultsMatrix <<- cbind(ResultsMatrix,NaN)
 					if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
 					if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
+					if(Do_mult_limits>0) {
+						MultLimIndexMatrix <<- cbind(MultLimIndexMatrix,NaN)
+						MultLim_idx[Parameter_count] <<- 0
+						if(sum(dim(MultLim_ll_Matrix))>0) {
+							# if we've already created the ll/ul matrices, we will need to grow them
+							MultLim_ll_Matrix <<- rbind(MultLim_ll_Matrix,NaN)  
+							MultLim_ul_Matrix <<- rbind(MultLim_ul_Matrix,NaN)  
+							MultLim_ll_ge_Matrix <<- rbind(MultLim_ll_ge_Matrix,NaN)  
+							MultLim_ul_ge_Matrix <<- rbind(MultLim_ul_ge_Matrix,NaN)  
+						}
+					}
 				}
 
 				# update ResultsMatrix
@@ -5604,6 +6020,110 @@ parse_MPR_record <- function(rec_len,endy) {
 				if(Do_testflag_matrix)  TestFlagMatrix[device_count,par_index] <<- testflag
 				Test_order_counter <<- Test_order_counter + 1
 				if(Do_test_order_matrix)  TestOrderMatrix[device_count,par_index] <<- Test_order_counter
+
+
+				# update MultLimIndexMatrix 
+				#--------------------------
+				if(Do_mult_limits>0) {
+					if (valid_llim) {
+						new_ll = lo_limit
+					} else {
+						new_ll = NaN
+					}
+					if (valid_ulim) {
+						new_ul = hi_limit
+					} else {
+						new_ul = NaN
+					}
+					if( (as.raw(parm_flg) & as.raw(64))>0 ) {
+						new_ll_ge = 1
+					} else {
+						new_ll_ge = 0
+					}
+					if( (as.raw(parm_flg) & as.raw(128))>0 ) {
+						new_ul_ge = 1
+					} else {
+						new_ul_ge = 0
+					}
+					if(valid_llim || valid_ulim) {
+						# explicit limits, check if different than initial limits
+						mult_lim_idx = 0
+						def_lims_ok = TRUE
+						if(is.finite(Parameters_ll[par_index]) != is.finite(new_ll)) {
+							def_lims_ok = FALSE
+						} else if(is.finite(Parameters_ll[par_index]) && is.finite(new_ll) &&
+							(Parameters_ll[par_index] != new_ll) ) {
+							def_lims_ok = FALSE
+						}
+						if(is.finite(Parameters_ul[par_index]) != is.finite(new_ul)) {
+							def_lims_ok = FALSE
+						} else if(is.finite(Parameters_ul[par_index]) && is.finite(new_ul) &&
+							(Parameters_ul[par_index] != new_ul) ) {
+							def_lims_ok = FALSE
+						}
+						if(Parameters_ll_ge[par_index] != new_ll_ge)  def_lims_ok = FALSE
+						if(Parameters_ul_ge[par_index] != new_ul_ge)  def_lims_ok = FALSE
+					} else {
+						# no limits in MPR record, implicitly means the limits are the same
+						# as the first occurrence of this record
+						mult_lim_idx = 0	# assume default limits are valid
+						def_lims_ok = TRUE
+					}
+					if (!def_lims_ok) {
+						# ok, now need to look for a match in the mult_lim matrices
+
+						# have we created this matrix yet?
+						if(sum(dim(MultLim_ll_Matrix))==0) {
+							MultLim_ll_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+							MultLim_ul_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+							MultLim_ll_ge_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+							MultLim_ul_ge_Matrix <<- array(NaN, dim=c(Parameter_count,Do_mult_limits))
+						}
+
+						mult_lim_idx = 1
+						matching = FALSE
+						#step through valid indices until we have a match, or add to end of filled portion of matrices
+						# note missing limit is NaN, so need to do extra checking with is.finite()
+						while( (mult_lim_idx<=MultLim_idx[par_index]) && !matching ) {
+							matching = TRUE
+							if(is.finite(new_ll) != is.finite(MultLim_ll_Matrix[par_index,mult_lim_idx]) ) {
+								matching = FALSE
+							} else if(is.finite(new_ll) && (new_ll != MultLim_ll_Matrix[par_index,mult_lim_idx]) ) {
+								matching = FALSE
+							}
+							if(is.finite(new_ul) != is.finite(MultLim_ul_Matrix[par_index,mult_lim_idx]) ) {
+								matching = FALSE
+							} else if(is.finite(new_ul) && (new_ul != MultLim_ul_Matrix[par_index,mult_lim_idx]) ) {
+								matching = FALSE
+							}
+							if(new_ll_ge != MultLim_ll_ge_Matrix[par_index,mult_lim_idx])  matching = FALSE 
+							if(new_ul_ge != MultLim_ul_ge_Matrix[par_index,mult_lim_idx])  matching = FALSE 
+
+							if(!matching)  mult_lim_idx = mult_lim_idx + 1
+						}
+						if(!matching) {
+							if(mult_lim_idx<Do_mult_limits) {
+								# ok, append new limits to end of used part of matrix, increment used counter
+								MultLim_idx[par_index] <<- mult_lim_idx
+								MultLim_ll_Matrix[par_index,mult_lim_idx] <<- new_ll
+								MultLim_ul_Matrix[par_index,mult_lim_idx] <<- new_ul
+								MultLim_ll_ge_Matrix[par_index,mult_lim_idx] <<- new_ll_ge
+								MultLim_ul_ge_Matrix[par_index,mult_lim_idx] <<- new_ul_ge
+							} else {
+								# ok, used up all reserved space for limits... 0, 1..(max-1)
+								# keep last one for tracking widest limits 
+
+								# REVISIT
+							}
+						}
+
+
+					}
+
+
+					MultLimIndexMatrix[device_count,par_index] <<- mult_lim_idx
+				}
+
 
 				Previous_param_i <<- par_index
 				if (j==1)  Another_guess <<- par_index
@@ -5713,6 +6233,7 @@ parse_FDR_record <- function(rec_len,endy) {
             ResultsMatrix <<- cbind(ResultsMatrix,NaN)
             if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
             if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
+            if(Do_mult_limits>0)  MultLimIndexMatrix <<- cbind(MultLimIndexMatrix,NaN)
         }
 
 		Previous_param_i <<- par_index
@@ -6138,7 +6659,19 @@ parse_FTR_record <- function(rec_len,endy) {
             ResultsMatrix <<- cbind(ResultsMatrix,NaN)
             if(Do_testflag_matrix)  TestFlagMatrix <<- cbind(TestFlagMatrix,NaN)
             if(Do_test_order_matrix)  TestOrderMatrix <<- cbind(TestOrderMatrix,NaN)
+            if(Do_mult_limits>0) {
+				MultLimIndexMatrix <<- cbind(MultLimIndexMatrix,NaN)
+				MultLim_idx[Parameter_count] <<- 0
+				if(sum(dim(MultLim_ll_Matrix))>0) {
+					# if we've already created the ll/ul matrices, we will need to grow them
+					MultLim_ll_Matrix <<- rbind(MultLim_ll_Matrix,NaN)  
+					MultLim_ul_Matrix <<- rbind(MultLim_ul_Matrix,NaN)  
+					MultLim_ll_ge_Matrix <<- rbind(MultLim_ll_ge_Matrix,NaN)  
+					MultLim_ul_ge_Matrix <<- rbind(MultLim_ul_ge_Matrix,NaN)  
+				}
+			}
         }
+
         # update ResultsMatrix
         #----------------------
 		device_count = Open_site[site_num+1]
@@ -6152,6 +6685,9 @@ parse_FTR_record <- function(rec_len,endy) {
 		} else {
         	ResultsMatrix[device_count,par_index] <<- test_flg
 		}
+
+		# update TestFlagMatrix
+		#-----------------------
         if(Do_testflag_matrix) {
 			testflag = 0
 			if( (as.raw(test_flg)&as.raw(128)) > 0 ) {
@@ -6162,9 +6698,20 @@ parse_FTR_record <- function(rec_len,endy) {
 			}
 			TestFlagMatrix[device_count,par_index] <<- testflag
 		}
-        if(Do_test_order_matrix) {
+
+		# update TestOrderMatrix 
+		#-----------------------
+		if(Do_test_order_matrix) {
 			Test_order_counter <<- Test_order_counter + 1
 			TestOrderMatrix[device_count,par_index] <<- Test_order_counter
+		}
+
+		# update MultLimIndexMatrix 
+		#--------------------------
+		if(Do_mult_limits>0) {
+			# FTR limits are fixed... so not too complicated here!
+			mult_lim_idx = 0
+			MultLimIndexMatrix[device_count,par_index] <<- mult_lim_idx
 		}
 
 		Previous_param_i <<- par_index

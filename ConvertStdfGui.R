@@ -1,6 +1,6 @@
 # ConvertStdfGui.R
 #
-# $Id: ConvertStdfGui.R,v 1.25 2020/05/28 00:19:23 david Exp $
+# $Id: ConvertStdfGui.R,v 1.26 2020/06/22 23:58:09 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
@@ -53,6 +53,8 @@ do_raw_tsrs <- tclVar(0)
 do_FTR_fail_cycle <- tclVar(1)
 use_testorder <- tclVar(0)
 save_testorder <- tclVar(0)
+mult_limits <- tclVar(0)
+mult_limits_shadow <- tclVar(0)
 
 stdf_count <- tclVar(1)
 stdf_index <- tclVar(1)
@@ -79,6 +81,7 @@ default_do_raw_tsrs <- tclVar(0)
 default_do_FTR_fail_cycle <- tclVar(1)	
 default_use_testorder <- tclVar(0)
 default_save_testorder <- tclVar(0)
+default_mult_limits <- tclVar(0)
 
 
 #----------------------------------------------------
@@ -265,6 +268,8 @@ ConvertStdfGui_defaults <- function() {
 	tclvalue(do_FTR_fail_cycle) <- tclObj(default_do_FTR_fail_cycle)
 	tclvalue(use_testorder) <- tclObj(default_use_testorder)
 	tclvalue(save_testorder) <- tclObj(default_save_testorder)
+	tclvalue(mult_limits) <- tclObj(default_mult_limits)
+	tclvalue(mult_limits_shadow) <- tclObj(default_mult_limits)
 }
 
 #----------------------------------------------------
@@ -297,6 +302,8 @@ run_ConvertStdf <-function(done=FALSE,...) {
 	do_FTR_fail_cycle_ <- as.logical(tclObj(do_FTR_fail_cycle))
 	use_testorder_ <- as.logical(tclObj(use_testorder))
 	save_testorder_ <- as.integer(tclObj(save_testorder))
+	mult_limits_ <- as.integer(tclObj(mult_limits))
+	if(!is.finite(mult_limits_))  mult_limits_ = 0
 		
 	# go to output directory...
 	full_path = output_dir
@@ -322,7 +329,8 @@ run_ConvertStdf <-function(done=FALSE,...) {
 						auto_demangle=auto_demangle_,auto_flex=auto_flex_,
 						keep_alarmed_values=keep_alarmed_values_,
 						raw_TSRs=do_raw_tsrs_,do_FTR_fail_cycle=do_FTR_fail_cycle_,
-						use_testorder=use_testorder_,save_testorder=save_testorder_)
+						use_testorder_matrix=use_testorder_,save_testorder_matrix=save_testorder_,
+						mult_limits=mult_limits_)
 		)
 		tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 		tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -372,11 +380,19 @@ ConvertStdfGui <- function() {
 	assign("convertstdf_win",convertstdf_win,envir=.TkRadar.wins)
 	tkwm.title(convertstdf_win, "ConvertStdf")
 		
+	# yellow/white background stuff needs to be defined first... before DEFAULTS button
 	maxparts_entry_frame <- tkframe(convertstdf_win)
 	maxparts_entry <- tkentry(maxparts_entry_frame,
 						width=30,
 						background="white",
 						textvariable=max_parts_shadow)
+
+	multlim_entry_frame <- tkframe(convertstdf_win)
+	multlim_entry <- tkentry(multlim_entry_frame,
+						width=30,
+						background="white",
+						textvariable=mult_limits_shadow)
+
 
 	bottom_row <- tkframe(convertstdf_win)
 	default_button <- tkbutton(bottom_row,
@@ -386,6 +402,7 @@ ConvertStdfGui <- function() {
 						command=function() {
 							ConvertStdfGui_defaults()
 							tkconfigure(maxparts_entry,background="white")
+							tkconfigure(multlim_entry,background="white")
 						})
 	tkpack(default_button,side="right")
 
@@ -604,7 +621,7 @@ ConvertStdfGui <- function() {
 
 	# maxparts_entry_frame defined prior to DEFAULTS button
 	maxparts_entry_label <- tklabel(maxparts_entry_frame,
-						width=10,
+						width=15,
 						text="max_parts")
 	tkpack(maxparts_entry_label,side="left")
 	# maxparts_entry defined prior to DEFAULTS button
@@ -620,6 +637,25 @@ ConvertStdfGui <- function() {
 					tcl('update')
 				})
 	tkpack(maxparts_entry_frame,side="top",anchor="w",fill="x")
+
+	# multlim_entry_frame defined prior to DEFAULTS button
+	multlim_entry_label <- tklabel(multlim_entry_frame,
+						width=15,
+						text="mult_limits")
+	tkpack(multlim_entry_label,side="left")
+	# multlim_entry defined prior to DEFAULTS button
+	tkpack(multlim_entry,side="left",fill="x",expand=1)
+	tkbind(multlim_entry,"<KeyRelease>",function() {
+					tmp <- as.integer(tclObj(mult_limits_shadow))
+					if( (length(tmp)>0) && is.finite(tmp)) {
+						tkconfigure(multlim_entry,background="white")
+						tclvalue(mult_limits) <- tmp
+					} else {
+						tkconfigure(multlim_entry,background="yellow")
+					}
+					tcl('update')
+				})
+	tkpack(multlim_entry_frame,side="top",anchor="w",fill="x")
 }
 
 

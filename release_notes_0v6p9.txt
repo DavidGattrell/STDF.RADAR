@@ -4,6 +4,9 @@ Version 0v6p9 -- 27may2020
 
 to do...
 
+	maybe add RtdfObjects to .RTDF files...
+	... to track what objects are present/valid
+
 	ConvertStdf
 	- add flag for multiple limit values
       ge vs gt complicates things...

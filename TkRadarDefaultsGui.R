@@ -1,6 +1,6 @@
 # TkRadarDefaultsGui.R
 #
-# $Id: TkRadarDefaultsGui.R,v 1.26 2020/05/28 00:20:26 david Exp $
+# $Id: TkRadarDefaultsGui.R,v 1.27 2020/06/22 23:59:27 david Exp $
 #
 # Tk/Tcl GUI wrapper for loading and saving .TkRadar files which
 # define default directories and settings for TkRadar sessions
@@ -84,6 +84,8 @@ defaults_set_default_do_raw_tsrs <- tclVar(0)
 defaults_set_default_do_FTR_fail_cycle <- tclVar(0)
 defaults_set_default_use_testorder <- tclVar(0)
 defaults_set_default_save_testorder <- tclVar(0)
+defaults_set_default_mult_limits <- tclVar(0)
+default_mult_limits_shadow <- tclVar(0)
 
 # MergeRtdf
 defaults_set_default_merge_union_of_tests <- tclVar(0)
@@ -242,6 +244,7 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_do_FTR_fail_cycle) <- 0	
 	tclvalue(defaults_set_default_use_testorder) <- 0	
 	tclvalue(defaults_set_default_save_testorder) <- 0	
+	tclvalue(defaults_set_default_mult_limits) <- 0	
 
 	tclvalue(defaults_set_default_merge_union_of_tests) <- 0
 
@@ -304,6 +307,8 @@ load_default_settings_file <- function() {
 		tclvalue(csv_out_csv_dir) <- temp_dir
 	}
 
+	# update 'shadow' variables
+	tclvalue(default_mult_limits_shadow) <- tclObj(default_mult_limits)
 	tclvalue(default_max_tests_shadow) <- tclObj(default_plot_max_tests)
 }
 
@@ -692,6 +697,14 @@ save_default_settings_file <- function() {
 		cat(the_string,file=out_conn)
 		my_value <- as.integer(tclObj(default_save_testorder))
 		the_string = sprintf("tclvalue(default_save_testorder) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+
+	if (as.logical(tclObj(defaults_set_default_mult_limits))) {
+		the_string = "tclvalue(defaults_set_default_mult_limits) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_mult_limits))
+		the_string = sprintf("tclvalue(default_mult_limits) <- %d \n",my_value)
 		cat(the_string,file=out_conn)
 	}
 
@@ -1725,6 +1738,31 @@ TkRadarDefaultsGui <- function() {
 						variable=default_save_testorder)
 	tkpack(do_save_testorder_button,side="left",anchor="n")
 	tkpack(save_testorder_frame,side="top",anchor="w",fill="x")
+	mult_limits_frame <- tkframe(tab4)
+	set_mult_limits_button <- tkcheckbutton(mult_limits_frame,
+						text="Set",
+						variable=defaults_set_default_mult_limits)
+	tkpack(set_mult_limits_button,side="left",anchor="n")
+	mult_limits_label <- tklabel(mult_limits_frame,
+						#width=10,
+						text="default mult_limits")
+	tkpack(mult_limits_label,side="left")
+	tclvalue(default_mult_limits_shadow) <- tclObj(default_mult_limits)
+	mult_limits_entry <- tkentry(mult_limits_frame,
+						width=10,
+						background="white",
+						textvariable=default_mult_limits_shadow)
+	tkpack(mult_limits_entry,side="left")
+	tkbind(mult_limits_entry,"<KeyRelease>",function() {
+					tmp <- as.integer(tclObj(default_mult_limits_shadow))
+					if( (length(tmp)>0) && is.finite(tmp)) {
+						tkconfigure(mult_limits_entry,background="white")
+						tclvalue(default_mult_limits) <- tmp
+					} else {
+						tkconfigure(mult_limits_entry,background="yellow")
+					}
+				})
+	tkpack(mult_limits_frame,side="top",anchor="w",fill="x")
 
 	# === PlotRtdf tab ===
 	min_plots_ppage_frame <- tkframe(tab5)

@@ -67,6 +67,10 @@ tclvalue(.Radar$.TkRadar.env$TkRadar_verbose) <- -1		# default is 1
 tclvalue(.Radar$.TkRadar.env$default_do_testflag_matrix) <- 1	# default is 0
 #tclvalue(.Radar$.TkRadar.env$default_keep_alarmed_values) <- 0
 #tclvalue(.Radar$.TkRadar.env$default_do_raw_tsrs) <- 0
+#tclvalue(.Radar$.TkRadar.env$default_do_FTR_fail_cycle) <- 1
+#tclvalue(.Radar$.TkRadar.env$default_use_testorder) <- 0
+#tclvalue(.Radar$.TkRadar.env$default_save_testorder) <- 0
+#tclvalue(.Radar$.TkRadar.env$default_mult_limits) <- 0
 
 # ConvertXlsxGui defaults
 # -----------------------

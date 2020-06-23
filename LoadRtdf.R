@@ -1,6 +1,6 @@
 # LoadRtdf.R
 #
-# $Id: LoadRtdf.R,v 1.4 2019/08/15 22:13:33 david Exp $
+# $Id: LoadRtdf.R,v 1.5 2020/06/22 23:55:19 david Exp $
 #
 # script that clears the RTDF objects and then loads
 # the specified rtdf file.
@@ -86,6 +86,16 @@ LoadRtdf <- function(rtdf_name="",in_dir="") {
 		if(exists("SiteSbinInfoFrame",inherits=FALSE))  SiteSbinInfoFrame<<-SiteSbinInfoFrame
 		if(exists("SiteSbinSiteVector",inherits=FALSE))  SiteSbinSiteVector<<-SiteSbinSiteVector
 		if(exists("SiteSbinCountMatrix",inherits=FALSE))  SiteSbinCountMatrix<<-SiteSbinCountMatrix
+
+		if(exists("MultLimIndexMatrix",inherits=FALSE))  MultLimIndexMatrix<<-MultLimIndexMatrix
+		if(exists("MultLim_ll_Matrix",inherits=FALSE))  MultLim_ll_Matrix<<-MultLim_ll_Matrix
+		if(exists("MultLim_ul_Matrix",inherits=FALSE))  MultLim_ul_Matrix<<-MultLim_ul_Matrix
+		if(exists("MultLim_ll_ge_Matrix",inherits=FALSE))  MultLim_ll_ge_Matrix<<-MultLim_ll_ge_Matrix
+		if(exists("MultLim_ul_ge_Matrix",inherits=FALSE))  MultLim_ul_ge_Matrix<<-MultLim_ul_ge_Matrix
+		if(exists("MultLim_idx",inherits=FALSE))  MultLim_idx<<-MultLim_idx
+
+		if(exists("LimSetIndex",inherits=FALSE))  LimSetIndex<<-LimSetIndex
+		if(exists("LimSetMatrix",inherits=FALSE))  LimSetMatrix<<-LimSetMatrix
 	} else {
 		# something not quite right here...
 		my_cmds = mapply(function(my_obj) sprintf("%s<<-%s",my_obj,my_obj),my_objs) 
