@@ -1,6 +1,6 @@
 # SaveRtdf.R
 #
-# $Id: SaveRtdf.R,v 1.10 2019/08/15 22:12:18 david Exp $
+# $Id: SaveRtdf.R,v 1.11 2020/07/14 23:11:49 david Exp $
 #
 # script that writes an Rdata file containing the 4 key
 # objects of the rtdf format and any optional ones if they
@@ -27,19 +27,29 @@
 #  gmail.com
 #
 #--------------------------------------------------------------------
-SaveRtdf <- function(rtdf_name="",output_dir="") {
+SaveRtdf <- function(rtdf_name="",output_dir="",use_RtdfObjects=TRUE) {
 
-    my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
-    if (exists("TestOrderMatrix"))  my_list[length(my_list)+1] = "TestOrderMatrix"
-    if (exists("TestFlagMatrix"))  my_list[length(my_list)+1] = "TestFlagMatrix"
-    if (exists("HbinInfoFrame"))  my_list[length(my_list)+1] = "HbinInfoFrame"
-    if (exists("SbinInfoFrame"))  my_list[length(my_list)+1] = "SbinInfoFrame"
-    if (exists("TSRFrame"))  my_list[length(my_list)+1] = "TSRFrame"
-    if (exists("WafersFrame"))  my_list[length(my_list)+1] = "WafersFrame"
-	if (exists("WaferInfoFrame"))  my_list[length(my_list)+1] = "WaferInfoFrame"
-	if (exists("SiteSbinInfoFrame"))  my_list[length(my_list)+1] = "SiteSbinInfoFrame"
-	if (exists("SiteSbinSiteVector"))  my_list[length(my_list)+1] = "SiteSbinSiteVector"
-	if (exists("SiteSbinCountMatrix"))  my_list[length(my_list)+1] = "SiteSbinCountMatrix"
+
+	if(use_RtdfObjects) {
+		if (!exists("RtdfObjects")) {
+			use_RtdfObjects = FALSE	
+		}
+	}
+	if(use_RtdfObjects) {
+		my_list = RtdfObjects
+	} else {
+		my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
+		if (exists("TestOrderMatrix"))  my_list[length(my_list)+1] = "TestOrderMatrix"
+		if (exists("TestFlagMatrix"))  my_list[length(my_list)+1] = "TestFlagMatrix"
+		if (exists("HbinInfoFrame"))  my_list[length(my_list)+1] = "HbinInfoFrame"
+		if (exists("SbinInfoFrame"))  my_list[length(my_list)+1] = "SbinInfoFrame"
+		if (exists("TSRFrame"))  my_list[length(my_list)+1] = "TSRFrame"
+		if (exists("WafersFrame"))  my_list[length(my_list)+1] = "WafersFrame"
+		if (exists("WaferInfoFrame"))  my_list[length(my_list)+1] = "WaferInfoFrame"
+		if (exists("SiteSbinInfoFrame"))  my_list[length(my_list)+1] = "SiteSbinInfoFrame"
+		if (exists("SiteSbinSiteVector"))  my_list[length(my_list)+1] = "SiteSbinSiteVector"
+		if (exists("SiteSbinCountMatrix"))  my_list[length(my_list)+1] = "SiteSbinCountMatrix"
+	}
 
 	if(output_dir != "") {
 		my_dir = getwd()

@@ -1,6 +1,6 @@
 # LoadRtdf.R
 #
-# $Id: LoadRtdf.R,v 1.5 2020/06/22 23:55:19 david Exp $
+# $Id: LoadRtdf.R,v 1.6 2020/07/14 23:10:46 david Exp $
 #
 # script that clears the RTDF objects and then loads
 # the specified rtdf file.
@@ -28,37 +28,37 @@
 #--------------------------------------------------------------------
 LoadRtdf <- function(rtdf_name="",in_dir="") {
 
-	if(exists("LotInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
-			LotInfoFrame,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("ParametersFrame",where=".GlobalEnv",inherits=FALSE))  rm(
-			ParametersFrame,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("DevicesFrame",where=".GlobalEnv",inherits=FALSE))  rm(
-			DevicesFrame,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("ResultsMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
-			ResultsMatrix,pos=".GlobalEnv",inherits=FALSE)
-
-	if(exists("TestFlagMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
-			TestFlagMatrix,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("TestOrderMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
-			TestOrderMatrix,pos=".GlobalEnv",inherits=FALSE)
-
-	if(exists("HbinInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
-			HbinInfoFrame,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("SbinInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
-			SbinInfoFrame,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("WaferInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
-			WaferInfoFrame,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("TSRFrame",where=".GlobalEnv",inherits=FALSE))  rm(
-			TSRFrame,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("WafersFrame",where=".GlobalEnv",inherits=FALSE))  rm(
-			WafersFrame,pos=".GlobalEnv",inherits=FALSE)
-
-	if(exists("SiteSbinInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
-			SiteSbinInfoFrame,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("SiteSbinSiteVector",where=".GlobalEnv",inherits=FALSE))  rm(
-			SiteSbinSiteVector,pos=".GlobalEnv",inherits=FALSE)
-	if(exists("SiteSbinCountMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
-			SiteSbinCountMatrix,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("LotInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
+#			LotInfoFrame,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("ParametersFrame",where=".GlobalEnv",inherits=FALSE))  rm(
+#			ParametersFrame,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("DevicesFrame",where=".GlobalEnv",inherits=FALSE))  rm(
+#			DevicesFrame,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("ResultsMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
+#			ResultsMatrix,pos=".GlobalEnv",inherits=FALSE)
+#
+#	if(exists("TestFlagMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
+#			TestFlagMatrix,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("TestOrderMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
+#			TestOrderMatrix,pos=".GlobalEnv",inherits=FALSE)
+#
+#	if(exists("HbinInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
+#			HbinInfoFrame,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("SbinInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
+#			SbinInfoFrame,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("WaferInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
+#			WaferInfoFrame,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("TSRFrame",where=".GlobalEnv",inherits=FALSE))  rm(
+#			TSRFrame,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("WafersFrame",where=".GlobalEnv",inherits=FALSE))  rm(
+#			WafersFrame,pos=".GlobalEnv",inherits=FALSE)
+#
+#	if(exists("SiteSbinInfoFrame",where=".GlobalEnv",inherits=FALSE))  rm(
+#			SiteSbinInfoFrame,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("SiteSbinSiteVector",where=".GlobalEnv",inherits=FALSE))  rm(
+#			SiteSbinSiteVector,pos=".GlobalEnv",inherits=FALSE)
+#	if(exists("SiteSbinCountMatrix",where=".GlobalEnv",inherits=FALSE))  rm(
+#			SiteSbinCountMatrix,pos=".GlobalEnv",inherits=FALSE)
 
 	if(in_dir != "") {
 		my_dir = getwd()
@@ -67,7 +67,7 @@ LoadRtdf <- function(rtdf_name="",in_dir="") {
 	my_objs = load(rtdf_name)
 	if(in_dir != "") setwd(my_dir)
 
-	old_way = TRUE
+	old_way = FALSE		#TRUE
 	if(old_way) {
 		if(exists("LotInfoFrame",inherits=FALSE))  LotInfoFrame<<-LotInfoFrame
 		if(exists("ParametersFrame",inherits=FALSE))  ParametersFrame<<-ParametersFrame
@@ -98,10 +98,14 @@ LoadRtdf <- function(rtdf_name="",in_dir="") {
 		if(exists("LimSetMatrix",inherits=FALSE))  LimSetMatrix<<-LimSetMatrix
 	} else {
 		# something not quite right here...
-		my_cmds = mapply(function(my_obj) sprintf("%s<<-%s",my_obj,my_obj),my_objs) 
-		mapply(function(my_cmd) eval(parse(text=my_cmd)),my_cmds)
+		my_cmds = as.character(mapply(function(my_obj) sprintf("%s<<-%s",my_obj,my_obj),my_objs))
+		#mapply(function(my_cmd) eval(parse(text=my_cmd)),my_cmds)
+		for(i in 1:length(my_cmds)) {
+			eval(parse(text=my_cmds[i]))
+		}
 	}
-
+	
+	RtdfObjects<<-my_objs
 }
 
 

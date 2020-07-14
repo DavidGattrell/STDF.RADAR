@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.53 2020/06/23 00:00:07 david Exp $
+# $Id: ConvertStdf.R,v 1.54 2020/07/14 23:07:53 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -1077,40 +1077,42 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 
 		# first device will have its tests in order, so start from there.
 		last_sorted = which(TestOrderMatrix[1,]==max(TestOrderMatrix[1,],na.rm=TRUE))
-		for (next_to_sort in (last_sorted+1):dim(ParametersFrame)[1]) {
-			# which devices actually have results for this test?  
-			valid_results = which(is.finite(TestOrderMatrix[,next_to_sort]))
-			valid_part = valid_results[1]	# there should always be at least one!
-			curr_order = TestOrderMatrix[valid_part,next_to_sort]
-			prev_order = curr_order - 1
-			unsorted_prev_param = which(TestOrderMatrix[valid_part,]==prev_order)
-			# but this is the presorted index
-			prev_param = which(xref_ParametersFrame==unsorted_prev_param)
+		if(last_sorted < dim(ParametersFrame)[1]) {
+			for (next_to_sort in (last_sorted+1):dim(ParametersFrame)[1]) {
+				# which devices actually have results for this test?  
+				valid_results = which(is.finite(TestOrderMatrix[,next_to_sort]))
+				valid_part = valid_results[1]	# there should always be at least one!
+				curr_order = TestOrderMatrix[valid_part,next_to_sort]
+				prev_order = curr_order - 1
+				unsorted_prev_param = which(TestOrderMatrix[valid_part,]==prev_order)
+				# but this is the presorted index
+				prev_param = which(xref_ParametersFrame==unsorted_prev_param)
 
-			# ok, we will want to add next_to_sort at least after prev_param,
-			# so step through params until we've gone too far
-			curr_param = prev_param + 1
-			sorted = FALSE
-			while(!sorted && (curr_param < next_to_sort)) {
-				valid_indices1 = which(is.finite(TestOrderMatrix[,next_to_sort]))
-				valid_indices2 = which(is.finite(TestOrderMatrix[,xref_ParametersFrame[curr_param]]))
-				indices = intersect(valid_indices1,valid_indices2)
-				if(length(indices)>0) {
-					min_incr = min(TestOrderMatrix[indices,next_to_sort] - 
-							TestOrderMatrix[indices,xref_ParametersFrame[curr_param]],na.rm=TRUE)
-				}
-				if ((length(indices)>0) && min_incr<0) {
-					# place the next_to_sort param before the curr_param
-					# really, just shuffle xref_ParametersFrame vector
-					xref_ParametersFrame[(curr_param+1):next_to_sort] = xref_ParametersFrame[curr_param:(next_to_sort-1)]
-					xref_ParametersFrame[curr_param] = next_to_sort
-					sorted = TRUE
-				} else if(length(indices)>0) {
-					curr_param = curr_param + 1
-				} else {
-					# we don't actually know... 50/50 guess,
-					# can we be smarter?  REVISIT
-					curr_param = curr_param + 1
+				# ok, we will want to add next_to_sort at least after prev_param,
+				# so step through params until we've gone too far
+				curr_param = prev_param + 1
+				sorted = FALSE
+				while(!sorted && (curr_param < next_to_sort)) {
+					valid_indices1 = which(is.finite(TestOrderMatrix[,next_to_sort]))
+					valid_indices2 = which(is.finite(TestOrderMatrix[,xref_ParametersFrame[curr_param]]))
+					indices = intersect(valid_indices1,valid_indices2)
+					if(length(indices)>0) {
+						min_incr = min(TestOrderMatrix[indices,next_to_sort] - 
+								TestOrderMatrix[indices,xref_ParametersFrame[curr_param]],na.rm=TRUE)
+					}
+					if ((length(indices)>0) && min_incr<0) {
+						# place the next_to_sort param before the curr_param
+						# really, just shuffle xref_ParametersFrame vector
+						xref_ParametersFrame[(curr_param+1):next_to_sort] = xref_ParametersFrame[curr_param:(next_to_sort-1)]
+						xref_ParametersFrame[curr_param] = next_to_sort
+						sorted = TRUE
+					} else if(length(indices)>0) {
+						curr_param = curr_param + 1
+					} else {
+						# we don't actually know... 50/50 guess,
+						# can we be smarter?  REVISIT
+						curr_param = curr_param + 1
+					}
 				}
 			}
 		}
@@ -1141,6 +1143,18 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 			}
 		}
 		cat(sprintf("... Done reordering ParametersFrame based on TestOrderMatrix\n"))
+	}
+
+
+	# above creates a vector instead of a matrix if only 1 device, so below fixes this.
+	if(!is.matrix(ResultsMatrix)) {
+		ResultsMatrix <<- matrix(data=ResultsMatrix,nrow=Device_count,ncol=Parameter_count)
+		if(Do_testflag_matrix)  TestFlagMatrix <<- matrix(data=TestFlagMatrix,
+									nrow=Device_count,ncol=Parameter_count)
+		if(Do_test_order_matrix)  TestOrderMatrix <<- matrix(data=TestOrderMatrix,
+									nrow=Device_count,ncol=Parameter_count)
+		if(Do_mult_limits>0)  MultLimIndexMatrix <<- matrix(data=MultLimIndexMatrix,
+									nrow=Device_count,ncol=Parameter_count)
 	}
 
 

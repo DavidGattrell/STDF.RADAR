@@ -1,6 +1,6 @@
 #  MergeRtdf.R
 #
-# $Id: MergeRtdf.R,v 1.13 2020/02/25 01:43:10 david Exp $
+# $Id: MergeRtdf.R,v 1.14 2020/07/14 23:20:16 david Exp $
 #
 # script that merges multiple rtdf files into a single rtdf file
 #
@@ -181,8 +181,10 @@ MergeRtdf <- function(in_files="",out_file="",in_dirs="",union_of_tests=TRUE) {
 					if(length(valid_idxs>0)) {
 						for (i in 1:length(valid_idxs)) {
 							# is this wafer number already in the AllWafersFrame?
-							wafer_id = as.integer(WafersFrame[[valid_idxs[i],"wafer_id"]])
-							all_wafer_ids = as.integer(AllWafersFrame[["wafer_id"]])
+							# .. GlobalFoundaries unique 7char wafer_id, not actually 1-25 anymore,
+							#    so need to update this code.  11-jul-2020, stop those NA warnings
+							wafer_id = as.character(WafersFrame[[valid_idxs[i],"wafer_id"]])
+							all_wafer_ids = as.character(AllWafersFrame[["wafer_id"]])
 							new_idx = match(wafer_id,all_wafer_ids,nomatch=0)
 							if(new_idx>0) {
 								new_idxs[which(wafer_idxs==valid_idxs[i])] = new_idx
