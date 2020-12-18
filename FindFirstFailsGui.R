@@ -1,6 +1,6 @@
 # FindFirstFailsGui.R
 #
-# $Id: FindFirstFailsGui.R,v 1.3 2020/02/17 19:29:31 david Exp $
+# $Id: FindFirstFailsGui.R,v 1.4 2020/12/18 01:18:14 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
@@ -81,7 +81,7 @@ FindFirstFailsGui_defaults <- function() {
 }
 
 #-----------------------------------------------------
-inc_index <- function() {
+ff_inc_index <- function() {
 	my_value <- as.integer(tclObj(fff_file_index))
 	tclvalue(fff_in_names[[my_value]]) <- tclObj(fff_in_name)
 	tclvalue(fff_out_names[[my_value]]) <- tclObj(fff_out_name)
@@ -96,7 +96,7 @@ inc_index <- function() {
 }
 
 #-----------------------------------------------------
-dec_index <- function() {
+ff_dec_index <- function() {
 	my_value <- as.integer(tclObj(fff_file_index))
 	tclvalue(fff_in_names[[my_value]]) <- tclObj(fff_in_name)
 	tclvalue(fff_out_names[[my_value]]) <- tclObj(fff_out_name)
@@ -386,11 +386,11 @@ FindFirstFailsGui <- function() {
 	tkpack(count_value,side="left")
 	index_minus <- tkbutton(multiple_frame,
 						text="-",
-						command=function() dec_index())
+						command=function() ff_dec_index())
 	tkpack(index_minus,side="left")
 	index_plus <- tkbutton(multiple_frame,
 						text="+",
-						command=function() inc_index())
+						command=function() ff_inc_index())
 	tkpack(index_plus,side="left")
 	tkpack(multiple_frame,side="top",anchor="w",fill="x")
 

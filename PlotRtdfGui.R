@@ -1,6 +1,6 @@
 # PlotRtdfGui.R
 #
-# $Id: PlotRtdfGui.R,v 1.16 2019/07/01 20:17:19 david Exp $
+# $Id: PlotRtdfGui.R,v 1.17 2020/12/18 01:23:41 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling PlotRtdf.R
 # called by TkRadar.R
@@ -122,6 +122,7 @@ PlotRtdfGui_defaults <- function(...) {
 	tclvalue(do_norm_prob_plots) <- tclObj(default_do_norm_prob_plots)
 	tclvalue(plotrtdf_to_png) <- tclObj(default_plotrtdf_to_png)
 	tclvalue(plot_max_tests) <- tclObj(default_plot_max_tests)
+	tclvalue(plot_max_tests_shadow) <- tclObj(default_plot_max_tests)
 	tclvalue(plot_limits_plus_10pct) <- tclObj(default_plot_limits_plus_10pct)
 	tclvalue(outside_limits_count) <- tclObj(default_outside_limits_count)
 

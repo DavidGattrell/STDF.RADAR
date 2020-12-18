@@ -1,6 +1,6 @@
 # ExpandMPRsGui.R
 #
-# $Id: ExpandMPRsGui.R,v 1.7 2010/11/24 01:40:36 David Exp $
+# $Id: ExpandMPRsGui.R,v 1.8 2020/12/18 01:17:27 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ExpandMPRs.R
 # called by TkRadar.R
@@ -256,11 +256,11 @@ ExpandMPRsGui <- function() {
 	tkpack(count_value,side="left")
 	index_minus <- tkbutton(multiple_frame,
 						text="-",
-						command=function() dec_index(TRUE))
+						command=function() dec_index())
 	tkpack(index_minus,side="left")
 	index_plus <- tkbutton(multiple_frame,
 						text="+",
-						command=function() inc_index(TRUE))
+						command=function() inc_index())
 	tkpack(index_plus,side="left")
 	tkpack(multiple_frame,side="top",anchor="w",fill="x")
 

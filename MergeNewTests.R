@@ -1,6 +1,6 @@
 # MergeNewTests.R 
 #
-# $Id: MergeNewTests.R,v 1.1 2020/08/13 01:21:41 david Exp $
+# $Id: MergeNewTests.R,v 1.2 2020/12/18 01:19:24 david Exp $
 #
 # script that parses 2 rtdf files, looks for new tests (Parameters) in
 # the 2nd file, then looks for matching devices (either part_id or x/y coord in
@@ -10,12 +10,13 @@
 #   (DevicesFrame)
 #
 #---------------------------------------------------------------------------
-MergeNewTests <- function(in_file1="",in_file2="",in_dir="",use_xy_coords=FALSE,
+MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_coords=FALSE,
 						out_file="",verbose=TRUE) {
 
 	# in_file1 -- the original file
 	# in_file2 -- a file that contains additional tests for the same devices
-	# in_dir -- absolute path for where to find in_files
+	# in_dir1 -- absolute path for where to find in_file1
+	# in_dir2 -- absolute path for where to find in_file2
 	# use_xy_coords -- if set to TRUE, use x_coord,y_coord rather than part_id when
 	#            matching devices between the 2 input files
 	# out_file -- string of rtdf filename you want generated
@@ -35,12 +36,12 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir="",use_xy_coords=FALSE,
     }
 	
 
-	if (in_dir != "") {
+	if (in_dir1 != "") {
 		my_dir = getwd()
-		setwd(in_dir)
+		setwd(in_dir1)
 	}
     my_objs = load(in_file1)
-	if (in_dir != "")  setwd(my_dir)
+	if (in_dir1 != "")  setwd(my_dir)
 
 	# copy key objects from in_file1 rtdf to out_file rtdf
 	#-----------------------------------------------------
@@ -108,12 +109,12 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir="",use_xy_coords=FALSE,
 
 	# load 2nd file into memory...
 	#------------------------------
-	if (in_dir != "") {
+	if (in_dir2 != "") {
 		my_dir = getwd()
-		setwd(in_dir)
+		setwd(in_dir2)
 	}
     my_objs = load(in_file2)
-	if (in_dir != "")  setwd(my_dir)
+	if (in_dir2 != "")  setwd(my_dir)
 
 
 	# what are the new tests/Parameters?
@@ -200,6 +201,13 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir="",use_xy_coords=FALSE,
 
 		cat(sprintf("%d of %d devices had no matching device in 2nd file\n",
 					unmatched_devs,devs))
+
+
+		# now update Binning in DevicesFrame and xBinInfoFrames
+		#------------------------------------------------------
+		# look for parts that pass the original file, but fail 2nd file
+		# REVISIT .. not coded yet!
+
 	}
 
 	

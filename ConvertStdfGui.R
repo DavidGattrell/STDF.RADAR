@@ -1,6 +1,6 @@
 # ConvertStdfGui.R
 #
-# $Id: ConvertStdfGui.R,v 1.26 2020/06/22 23:58:09 david Exp $
+# $Id: ConvertStdfGui.R,v 1.27 2020/12/18 01:15:53 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
@@ -95,9 +95,11 @@ stdf_browser <-function() {
 		my_dir <- paste(tclObj(Orig_dir),sep="",collapse=" ")
 	}
 	if(as.numeric(tclObj(Bad_Vista))>0) {
-		my_str = "{{All files} *} {{STDF Files} {.stdf .std .stdf.gz .std.gz}}"
+		my_str = "{{All files} *} {{stdf Files} {.stdf .std .stdf.gz .std.gz}}"
 	} else {
-		my_str = "{{STDF Files} {.stdf .std .stdf.gz .std.gz}} {{All files} *}"
+		# TkgetOpenFile really wants an explicit extension... *_STDF doesn't work
+		#my_str = "{{stdf Files} {.stdf .std .stdf.gz .std.gz}} {{STDF Files} {*_STDF *_STDF.gz}} {{All files} *}"
+		my_str = "{{stdf Files} {.stdf .std .stdf.gz .std.gz}} {{All files} *}"
 	}
 	if (nchar(my_dir)>0) {
 		name <- tclvalue(tkgetOpenFile(filetypes=my_str,
@@ -141,12 +143,13 @@ stdf_browser <-function() {
 					# nasty message... shouldn't get here...
 				}
 
-				my_rtdf <- sub("(.stdf)?(.std)?(.gz)?$",".rtdf",name)
+				#my_rtdf <- sub("(.stdf)?(.std)?(.gz)?$",".rtdf",name)
+				my_rtdf <- sub("(_STDF)?(.stdf)?(.std)?(.gz)?$",".rtdf",name)
 				if (length(multi_stdf_rtdfs)<j)  multi_stdf_rtdfs[[j]] <<- tclVar(my_rtdf)
 				else  tclvalue(multi_stdf_rtdfs[[j]]) <- my_rtdf
 
 				# for ExpandMPRs script
-				my_stdf <- sub("((.stdf)?(.gz)?)$","_ptr\\1",name)
+				my_stdf <- sub("(_STDF)?(.stdf)?(.gz)?)$","_ptr\\1",name)
 				if (length(multi_stdf_stdfs)<j)  multi_stdf_stdfs[[j]] <<- tclVar(my_stdf)
 				else  tclvalue(multi_stdf_stdfs[[j]]) <- my_stdf
 			}
@@ -203,7 +206,7 @@ convertstdf_rtdf_browser <-function(...) {
 }
 
 #-----------------------------------------------------
-inc_index <- function(from_expandmpr=FALSE) {
+inc_index <- function() {
 	my_value <- as.integer(tclObj(stdf_index))
 	tclvalue(multi_stdf_names[[my_value]]) <- tclObj(stdf_name)
 
@@ -221,7 +224,7 @@ inc_index <- function(from_expandmpr=FALSE) {
 }
 
 #-----------------------------------------------------
-dec_index <- function(from_expandmpr=FALSE) {
+dec_index <- function() {
 	my_value <- as.integer(tclObj(stdf_index))
 	tclvalue(multi_stdf_names[[my_value]]) <- tclObj(stdf_name)
 
@@ -483,11 +486,11 @@ ConvertStdfGui <- function() {
 	tkpack(count_value,side="left")
 	index_minus <- tkbutton(multiple_frame,
 						text="-",
-						command=function() dec_index(from_expandmpr=FALSE))
+						command=function() dec_index())
 	tkpack(index_minus,side="left")
 	index_plus <- tkbutton(multiple_frame,
 						text="+",
-						command=function() inc_index(from_expandmpr=FALSE))
+						command=function() inc_index())
 	tkpack(index_plus,side="left")
 	tkpack(multiple_frame,side="top",anchor="w",fill="x")
 

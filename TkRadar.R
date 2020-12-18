@@ -1,11 +1,11 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.54 2020/02/17 21:47:25 david Exp $
+# $Id: TkRadar.R,v 1.55 2020/12/18 01:30:31 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
 #
-# Copyright (C) 2008-2019 David Gattrell
+# Copyright (C) 2008-2020 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -63,7 +63,9 @@ assign("My_indices_entry",tclVar(""),envir=.TkRadar.env)
 assign("TkRadar_logfile",tclVar("TkRadar.log"),envir=.TkRadar.env)
 assign("TkRadar_verbose",tclVar(1),envir=.TkRadar.env)
 
-assign("Bad_Vista",tclVar(0),envir=.TkRadar.env)	# Microsoft Vista/Windows7 
+assign("Bad_Vista",tclVar(0),envir=.TkRadar.env)			# Microsoft Vista/Windows7 
+assign("Use_MS_dir_browser",tclVar(0),envir=.TkRadar.env)	# Microsoft Vista/Windows7 
+assign("Filetype_list_reversed",tclVar(0),envir=.TkRadar.env)	# Microsoft Vista/Windows7 
 
 sys.source("Convert9470CSVGui.R",envir=.TkRadar.env)
 sys.source("ConvertA5xxGui.R",envir=.TkRadar.env)
@@ -87,6 +89,7 @@ sys.source("FilterByResultGui.R",envir=.TkRadar.env)
 sys.source("FindFirstFailsGui.R",envir=.TkRadar.env)
 sys.source("FingerprintGui.R",envir=.TkRadar.env)
 #sys.source("JustBin1sGui.R",envir=.TkRadar.env) obsoleted by FilterByBinning
+sys.source("MergeNewTestsGui.R",envir=.TkRadar.env)
 sys.source("MergeRtdfGui.R",envir=.TkRadar.env)
 sys.source("NonGating2GatingGui.R",envir=.TkRadar.env)
 sys.source("RemoveAtXYGui.R",envir=.TkRadar.env)
@@ -449,7 +452,7 @@ dir_browser <-function(my_dir) {
 	if (nchar(init_dir)<1) {
 		init_dir <- paste(tclObj(Orig_dir),sep="",collapse=" ")
 	}
-	if ( (as.character(Sys.info()["sysname"])=="Windows") && (as.numeric(tclObj(Bad_Vista))==0) ) {
+	if ( (as.character(Sys.info()["sysname"])=="Windows") && (as.numeric(tclObj(Use_MS_dir_browser))==1) ) {
 #	if ( (as.character(Sys.info()["sysname"])=="Windows") &&
 #			(substr(as.character(Sys.info()["release"]),1,2)=="XP") ) {
 		win_init_dir <- gsub("/","\\\\",init_dir)
@@ -500,7 +503,7 @@ rtdf_browser <-function(my_name,my_dir,output=FALSE) {
 	if (nchar(init_dir)<1) {
 		init_dir <- paste(tclObj(Orig_dir),sep="",collapse=" ")
 	}
-	if(as.numeric(tclObj(Bad_Vista))>0) {
+	if(as.numeric(tclObj(Filetype_list_reversed))>0) {
 		my_str = "{{All files} *} {{RTDF Files} {.rtdf .Rtdf .Rdata}}"
 	} else {
 		my_str = "{{RTDF Files} {.rtdf .Rtdf .Rdata}} {{All files} *}"
@@ -553,7 +556,7 @@ pdf_browser <-function(my_name) {
 	if (nchar(output_dir)<1) {
 		output_dir <- paste(tclObj(Orig_dir),sep="",collapse=" ")
 	}
-	if(as.numeric(tclObj(Bad_Vista))>0) {
+	if(as.numeric(tclObj(Filetype_list_reversed))>0) {
 		my_str = "{{All files} *} {{PDF Files} {.pdf .PDF}}"
 	} else {
 		my_str = "{{PDF Files} {.pdf .PDF}} {{All files} *}"
@@ -592,7 +595,7 @@ csv_browser <-function(my_name) {
 	if (nchar(output_dir)<1) {
 		output_dir <- paste(tclObj(Orig_dir),sep="",collapse=" ")
 	}
-	if(as.numeric(tclObj(Bad_Vista))>0) {
+	if(as.numeric(tclObj(Filetype_list_reversed))>0) {
 		my_str = "{{All files} *} {{CSV Files} {.csv .CSV}}"
 	} else {
 		my_str = "{{CSV Files} {.csv .CSV}} {{All files} *}"
@@ -631,7 +634,7 @@ wmap_browser <-function(wmap_name) {
 	if (nchar(output_dir)<1) {
 		output_dir <- paste(tclObj(Orig_dir),sep="",collapse=" ")
 	}
-	if(as.numeric(tclObj(Bad_Vista))>0) {
+	if(as.numeric(tclObj(Filetype_list_reversed))>0) {
 		my_str = "{{All files} *} {{wmap Files} {.wmap .WMAP}}"
 	} else {
 		my_str = "{{wmap Files} {.wmap .WMAP}} {{All files} *}"
@@ -1356,6 +1359,20 @@ TkRadar <- function() {
 				tkfocus(fingerprint_win)
 			}
 		)
+	tkadd(manip_menu,"command",label="MergeNewTests",
+			command=function() {
+				if (exists("mergetests_win",envir=.TkRadar.wins,inherits=FALSE)) {
+					mergetests_win <- get("mergetests_win",envir=.TkRadar.wins)
+				}
+				if (exists("mergetests_win") && 
+					as.logical(tkwinfo("exists",mergetests_win)))  tkraise(mergetests_win)
+				else {
+					MergeNewTestsGui()
+					mergetests_win <- get("mergetests_win",envir=.TkRadar.wins)
+				}
+				tkfocus(mergetests_win)
+			}
+		)
 	tkadd(manip_menu,"command",label="MergeRtdf",
 			command=function() {
 				if (exists("mergertdf_win",envir=.TkRadar.wins,inherits=FALSE)) {
@@ -1855,6 +1872,10 @@ TkRadar <- function() {
 							if (exists("fingerprint_win",envir=.TkRadar.wins,inherits=FALSE)) {
 								fingerprint_win <- get("fingerprint_win",envir=.TkRadar.wins)
 								tkdestroy(fingerprint_win)
+							}
+							if (exists("mergetests_win",envir=.TkRadar.wins,inherits=FALSE)) {
+								mergetests_win <- get("mergetests_win",envir=.TkRadar.wins)
+								tkdestroy(mergetests_win)
 							}
 							if (exists("mergertdf_win",envir=.TkRadar.wins,inherits=FALSE)) {
 								mergertdf_win <- get("mergertdf_win",envir=.TkRadar.wins)

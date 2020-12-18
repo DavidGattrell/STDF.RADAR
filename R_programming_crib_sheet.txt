@@ -200,9 +200,10 @@ y = x[2 * 1:3]  -- y becomes just even elements  2,4,6 of x
 
 --- matrices and arrays
     -- vector is one dimensional array
-    -- matrix is two dimensional array
+    -- matrix is two+ dimensional array
 array()
-matrix()
+matrix()  -- [row,column]  so [y,x] 
+		
 
 dim(a) = c(3,4,2)
 the data vector is stored in this order:
@@ -438,6 +439,22 @@ debug()
 	qqq()	quit the debugger
 	bp(5)	set breakpoint at line 5
 	bp(5,a>b)	will break at line 5 if a>5... 
+
+
+Environments
+============
+places where variables and functions reside.. top level environment is R_GlobalEnv
+
+environment()  -- returns your current working environment
+ls(envir=.Radar)   -- lists Radar functions  
+ls(envir=.TkRadar.env)   -- lists TkRadar variables and functions
+
+finding values of variables in child environments
+
+.TkRadar.env$plot_max_tests    ... and, in this case, it is a tcl object, so...
+tclObj(.TkRadar.env$plot_max_tests)   
+
+
 
 Packages
 ==========

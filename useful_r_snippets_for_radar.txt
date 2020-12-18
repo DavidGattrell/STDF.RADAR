@@ -4,7 +4,7 @@ View the device numbers...
 
 
 list the rtdf files in the current directory...
-	system("ls *rtdf",intern=TRUE)
+	system("ls *rtdf",intern=TRUE)		# linux
 
 	or
 

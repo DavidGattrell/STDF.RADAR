@@ -1,6 +1,6 @@
 # NonGating2GatingGui.R
 #
-# $Id: NonGating2GatingGui.R,v 1.1 2020/02/17 21:53:22 david Exp $
+# $Id: NonGating2GatingGui.R,v 1.2 2020/12/18 01:22:43 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling NonGating2Gating.R
 # called by TkRadar.R
@@ -78,7 +78,7 @@ NonGating2GatingGui_defaults <- function() {
 }
 
 #-----------------------------------------------------
-inc_index <- function() {
+ng_inc_index <- function() {
 	my_value <- as.integer(tclObj(ng2g_file_index))
 	tclvalue(ng2g_in_names[[my_value]]) <- tclObj(ng2g_in_name)
 	tclvalue(ng2g_out_names[[my_value]]) <- tclObj(ng2g_out_name)
@@ -93,7 +93,7 @@ inc_index <- function() {
 }
 
 #-----------------------------------------------------
-dec_index <- function() {
+ng_dec_index <- function() {
 	my_value <- as.integer(tclObj(ng2g_file_index))
 	tclvalue(ng2g_in_names[[my_value]]) <- tclObj(ng2g_in_name)
 	tclvalue(ng2g_out_names[[my_value]]) <- tclObj(ng2g_out_name)
@@ -404,11 +404,11 @@ NonGating2GatingGui <- function() {
 	tkpack(count_value,side="left")
 	index_minus <- tkbutton(multiple_frame,
 						text="-",
-						command=function() dec_index())
+						command=function() ng_dec_index())
 	tkpack(index_minus,side="left")
 	index_plus <- tkbutton(multiple_frame,
 						text="+",
-						command=function() inc_index())
+						command=function() ng_inc_index())
 	tkpack(index_plus,side="left")
 	tkpack(multiple_frame,side="top",anchor="w",fill="x")
 

@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.54 2020/07/14 23:07:53 david Exp $
+# $Id: ConvertStdf.R,v 1.55 2020/12/18 00:58:20 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -940,7 +940,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 				len_ll_inconc = 0
 				len_ll_inconc2 = 0
 				len_ul_inconc = 0
-				len_ll_inconc2 = 0
+				len_ul_inconc2 = 0
 				if(length(pass_results_vector) > 0) {
 					if((length(ll)>0) && is.finite(ll)) {
 						inconceivable = which(pass_results_vector<ll)		# should not have any pass parts <ll
@@ -1996,6 +1996,21 @@ parse_stdf_record <- function(rec_typ,rec_sub,skip_TSRs,...) {
 		if ( (Max_parts>=0) && (Device_count>Max_parts) ) {
 			ignore_STDF_record(...)
 		} else {
+			# if >5K new tests, it take take a looong time..
+			# so progress updates here are nice if per PIR is >10seconds
+			timestamp2 = proc.time()
+			timestamp2 = timestamp2[3]
+			if (timestamp2>(Timestamp1+10.0)) {
+				Timestamp1 <<- timestamp2
+				pct = 100.0 * (Stdf_ptr + Ptr) / Stdf_size
+				cat(sprintf("processing PIR record %d ... ",Device_count+1))
+				cat(sprintf("at byte %d ... ",(Stdf_ptr + Ptr)))
+				if(Stdf_size_true==1) {
+					cat(sprintf(" %.1f%% through file \n",pct))
+				} else {
+					cat(sprintf(" estimate %.1f%% through file \n",pct))
+				}
+			}
 			if (rec_sub == 10) {
 				if (Verbose2) cat("processing PTR record... \n")
 				parse_PTR_record(...)
@@ -6795,7 +6810,26 @@ parse_DTR_record <- function(rec_len,endy) {
 		dtr_name = "trace_id"
 		valid_dtr = 1
 		#browser()
-	}
+	} else if(substr(text_dat,1,14)=="LASER_MARKING[") {
+		# LASER_MARKING[n]: ssss: field_name laser_string
+		#   extract [n] site number
+		#   extract field_name
+		#   extract laser_string
+		site_num = as.integer(sub("LASER_MARKING\\[([0-9]+)\\].*$","\\1",text_dat))
+
+		# split text string on white spaces
+		tokens = strsplit(text_dat,"\\s+")[[1]]       
+
+		# field_name into dtr_name
+		dtr_name = tokens[length(tokens)-1]
+
+		# laser string into dtr_info
+		dtr_info = tokens[length(tokens)]
+		#dtr_info = sub("^.+ ([0-9a-fA-F]+)\\s*$","\\1",text_dat)
+
+		valid_dtr = 1
+		#browser()
+ 	}
 
 	if(valid_dtr) {
 		dtr_index = match(dtr_name,DTR_Names,nomatch=0)

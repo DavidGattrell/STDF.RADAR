@@ -7,7 +7,7 @@
 #  Analysis
 #  Resources
 #
-# $Id: Radar.R,v 1.26 2020/02/17 21:22:32 david Exp $
+# $Id: Radar.R,v 1.27 2020/12/18 01:25:01 david Exp $
 #
 # This script loads the various RADAR command scripts until such
 # time as it gets put into a proper R package.
@@ -54,6 +54,7 @@ sys.source("PlotRtdf_2.R",envir=.Radar)	# alternate version
 #sys.source("JustBin1s.R",envir=.Radar)	# obsoleted, use FilterByBinning
 sys.source("ConvertParameters.R",envir=.Radar)
 sys.source("WaferMap.R",envir=.Radar)
+sys.source("MergeNewTests.R",envir=.Radar)
 sys.source("MergeRtdf.R",envir=.Radar)
 sys.source("ShrinkRetests.R",envir=.Radar)
 sys.source("LoadRtdf.R",envir=.Radar)
