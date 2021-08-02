@@ -1,6 +1,6 @@
 #  PlotRtdf.R
 #
-# $Id: PlotRtdf.R,v 1.30 2019/07/04 01:02:59 david Exp $
+# $Id: PlotRtdf.R,v 1.31 2021/08/02 00:28:13 david Exp $
 #
 # script used to generate statistics, histograms, and xy plots from Rtdf files
 #
@@ -43,7 +43,7 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 			plot_widest_limits_or_values=FALSE,superimpose_hist=FALSE,
 			just_superimposed_histo=FALSE,do_norm_prob_plots=FALSE,
 			to_png=FALSE,max_tests=2000,plot_limits_plus_10pct=FALSE,
-			outside_limits_count=FALSE) {
+			outside_limits_count=FALSE,do_xy_outliers=FALSE) {
 
     # rtdf_name -- vector of strings for the filenames containing
     #              rtdf formatted data (.Rdata files)
@@ -142,6 +142,9 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 	#                makes plots wider by 10%
 	# outside_limits_count -- replace "Off the plot" statistic on left side with
 	#                "Outside limits" statistic.
+	# do_xy_outliers -- if doing xy plots, print outlier devices per test
+	#                 THIS HAS NOT BEEN CODED!  just a stub for now!
+	#
 	# -----------------------------------------------------------------------
 
 
@@ -1533,6 +1536,18 @@ PlotRtdf <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
                         } else {
                             my_r = 0.0
                         }
+						if ( do_xy_outliers && (my_r>0.9) ) {
+                            shifts = nom_y - y_vector[valid_xys]
+                            shift_mean = mean(shifts)   
+                            shift_sd = sd(shifts)
+						
+							# any parts above or below the 4sd from linear fit?
+							high_outliers = which(shifts>(2.5*shift_sd))	
+							low_outliers = which(shifts<(-2.5*shift_sd))	
+							
+							#browser()
+						}
+
                         # if dataset is too noisy for accurate lsfit(), use
                         # alternative method:
                         # slope of line based on s_devs, going

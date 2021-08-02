@@ -1,6 +1,6 @@
 # FilterByIndices.R
 #
-# $Id: FilterByIndices.R,v 1.2 2015/04/18 01:49:02 david Exp $
+# $Id: FilterByIndices.R,v 1.3 2021/08/02 00:27:37 david Exp $
 #
 # script that removes or keeps individual devices from the rtdf file
 #
@@ -70,6 +70,7 @@ FilterByIndices <- function(in_file="",indices=NaN,action="remove",
 			TestFlagMatrix = TestFlagMatrix[!selection,]
 		}
 		do_outfile = TRUE
+		keepers = !selection
 		cat(sprintf("%d devices removed (%d devices kept) \n",
 				selected_count,length(selection)-selected_count))
 	}
@@ -80,6 +81,7 @@ FilterByIndices <- function(in_file="",indices=NaN,action="remove",
 			TestFlagMatrix = TestFlagMatrix[selection,]
 		}
 		do_outfile = TRUE
+		keepers = selection
 		cat(sprintf("%d devices kept (%d devices removed) \n",
 				selected_count,length(selection)-selected_count))
 	} 
@@ -105,8 +107,20 @@ FilterByIndices <- function(in_file="",indices=NaN,action="remove",
 			out_file = in_file
 		}
 
-	# keep track of objects loaded, use that list for saving?
+		if(length(which(keepers==TRUE))==0) {
+			do_outfile = FALSE
+			cat(sprintf("No Devices Left!  No RTDF file will be created."))
+		} else if(length(which(keepers==TRUE))==1) {
+			# if we are down to a single device, need to force ResultsMatrix to be a Matrix and not a vector
+			ResultsMatrix = matrix(ResultsMatrix,1,length(ResultsMatrix))
+			if(is.finite(match("TestFlagMatrix",my_objs))) {
+				TestFlagMatrix = matrix(TestFlagMatrix,1,length(TestFlagMatrix))
+			}
+		}
+	}
 
+	# keep track of objects loaded, use that list for saving?
+	if(do_outfile) {
 #		my_list = c("LotInfoFrame","ParametersFrame","DevicesFrame","ResultsMatrix")
 #		if (exists("HbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "HbinInfoFrame"
 #		if (exists("SbinInfoFrame",inherits=FALSE))  my_list[length(my_list)+1] = "SbinInfoFrame"

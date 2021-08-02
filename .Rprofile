@@ -1,6 +1,6 @@
 #########################################################
 #
-# .Rprofile for RADAR version 0.6.9  10mar2019
+# .Rprofile for RADAR version 0.6.9  10mar2021
 #
 #########################################################
 my_dir <- getwd()
@@ -101,6 +101,10 @@ tclvalue(.Radar$.TkRadar.env$default_plot_max_tests) <- -1	# default is 2000
 # ShrinkRetestsGui defaults
 # -------------------------
 #tclvalue(.Radar$.TkRadar.env$default_use_xy_coords) <- 0
+
+# SplitTestsRetestsGui defaults
+# -------------------------
+#tclvalue(.Radar$.TkRadar.env$default_split_tr_use_xy_coords) <- 0
 
 # WaferMapGui defaults
 # --------------------

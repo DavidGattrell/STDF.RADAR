@@ -1,6 +1,6 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.55 2020/12/18 01:30:31 david Exp $
+# $Id: TkRadar.R,v 1.56 2021/08/02 00:29:21 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
@@ -101,6 +101,7 @@ sys.source("ShrinkRetestsGui.R",envir=.TkRadar.env)
 sys.source("SplitBySubstrGui.R",envir=.TkRadar.env)
 sys.source("SplitConditionsGui.R",envir=.TkRadar.env)
 sys.source("SplitSitesGui.R",envir=.TkRadar.env)
+sys.source("SplitTestsRetestsGui.R",envir=.TkRadar.env)
 sys.source("SplitWafersGui.R",envir=.TkRadar.env)
 sys.source("XYWid2PartidGui.R",envir=.TkRadar.env)
 
@@ -1513,6 +1514,20 @@ TkRadar <- function() {
 				tkfocus(splitsites_win)
 			}
 		)
+	tkadd(manip_menu,"command",label="SplitTestsRetests",
+			command=function() {
+				if (exists("splittestsretests_win",envir=.TkRadar.wins,inherits=FALSE)) {
+					splittestsretests_win <- get("splittestsretests_win",envir=.TkRadar.wins)
+				}
+				if (exists("splittestsretests_win") && 
+					as.logical(tkwinfo("exists",splittestsretests_win)))  tkraise(splittestsretests_win)
+				else {
+					SplitTestsRetestsGui()
+					splittestsretests_win <- get("splittestsretests_win",envir=.TkRadar.wins)
+				}
+				tkfocus(splittestsretests_win)
+			}
+		)
 	tkadd(manip_menu,"command",label="SplitWafers",
 			command=function() {
 				if (exists("splitwafers_win",envir=.TkRadar.wins,inherits=FALSE)) {
@@ -1912,6 +1927,10 @@ TkRadar <- function() {
 							if (exists("splitsites_win",envir=.TkRadar.wins,inherits=FALSE)) {
 								splitsites_win <- get("splitsites_win",envir=.TkRadar.wins)
 								tkdestroy(splitsites_win)
+							}
+							if (exists("splittestsretests_win",envir=.TkRadar.wins,inherits=FALSE)) {
+								splittestsretests_win <- get("splittestsretests_win",envir=.TkRadar.wins)
+								tkdestroy(splittestsretests_win)
 							}
 							if (exists("splitwafers_win",envir=.TkRadar.wins,inherits=FALSE)) {
 								splitwafers_win <- get("splitwafers_win",envir=.TkRadar.wins)

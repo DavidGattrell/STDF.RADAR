@@ -1,6 +1,6 @@
 # TkRadarDefaultsGui.R
 #
-# $Id: TkRadarDefaultsGui.R,v 1.27 2020/06/22 23:59:27 david Exp $
+# $Id: TkRadarDefaultsGui.R,v 1.28 2021/08/02 00:32:42 david Exp $
 #
 # Tk/Tcl GUI wrapper for loading and saving .TkRadar files which
 # define default directories and settings for TkRadar sessions
@@ -109,6 +109,9 @@ defaults_set_default_pvsrp_type <- tclVar(0)
 
 # ShrinkRetests
 defaults_set_default_use_xy_coords <- tclVar(0)
+
+# SplitTestsRetests
+defaults_set_default_split_tr_use_xy_coords <- tclVar(0)
 
 # WaferMap
 defaults_set_default_wmap_xleft <- tclVar(0)
@@ -263,6 +266,8 @@ load_default_settings_file <- function() {
 	tclvalue(defaults_set_default_pvsrp_type) <- 0
 
 	tclvalue(defaults_set_default_use_xy_coords) <- 0
+
+	tclvalue(defaults_set_default_split_tr_use_xy_coords) <- 0
 	
 	tclvalue(defaults_set_default_wmap_xleft) <- 0
 	tclvalue(defaults_set_default_wmap_ydown) <- 0
@@ -814,6 +819,15 @@ save_default_settings_file <- function() {
 		cat(the_string,file=out_conn)
 	}
 
+	# SplitTestsRetests
+	if (as.logical(tclObj(defaults_set_default_split_tr_use_xy_coords))) {
+		the_string = "tclvalue(defaults_set_default_split_tr_use_xy_coords) <- 1 \n"
+		cat(the_string,file=out_conn)
+		my_value <- as.integer(tclObj(default_split_tr_use_xy_coords))
+		the_string = sprintf("tclvalue(default_split_tr_use_xy_coords) <- %d \n",my_value)
+		cat(the_string,file=out_conn)
+	}
+
 	# WaferMap
 	if (as.logical(tclObj(defaults_set_default_wmap_xleft))) {
 		the_string = "tclvalue(defaults_set_default_wmap_xleft) <- 1 \n"
@@ -1158,6 +1172,7 @@ TkRadarDefaultsGui <- function() {
 							"PlotRtdf",
 							"ProbeVsReprobe",
 							"ShrinkRetests",
+							"SplitTestsRetests",
 							"WaferMap",
 							"XYWi2Partid")
 
@@ -1194,6 +1209,7 @@ TkRadarDefaultsGui <- function() {
 	tab5 <- ttkframe(tabs)		# PlotRtdf
 	tab12 <- ttkframe(tabs)		# ProbeVsReprobe
 	tab9 <- ttkframe(tabs)		# ShrinkRetests
+	tab14 <- ttkframe(tabs)		# SplitTestsRetests
 	tab6 <- ttkframe(tabs)		# WaferMap
 	tab13 <- ttkframe(tabs)		# XYWid2Partid
 
@@ -2504,6 +2520,20 @@ TkRadarDefaultsGui <- function() {
 	tkpack(use_xy_coords_button,side="left",anchor="n")
 	tkpack(use_xy_coords_frame,side="top",anchor="w",fill="x")
 
+
+	# === SplitTestsRetests tab ===
+	split_tr_use_xy_coords_frame <- tkframe(tab14)
+	set_str_use_xy_coords_button <- tkcheckbutton(split_tr_use_xy_coords_frame,
+						text="Set",
+						variable=defaults_set_default_split_tr_use_xy_coords)
+	tkpack(set_str_use_xy_coords_button,side="left",anchor="n")
+	str_use_xy_coords_button <- tkcheckbutton(split_tr_use_xy_coords_frame,
+						text="default use_xy_coords",
+						variable=default_split_tr_use_xy_coords)
+	tkpack(str_use_xy_coords_button,side="left",anchor="n")
+	tkpack(split_tr_use_xy_coords_frame,side="top",anchor="w",fill="x")
+
+
 	# === ConvertEagleCSV tab ===
 	do_etscsv_summary_frame <- tkframe(tab10)
 	set_etscsv_summary_button <- tkcheckbutton(do_etscsv_summary_frame,
@@ -2691,6 +2721,7 @@ TkRadarDefaultsGui <- function() {
 	tkadd(tabs,tab5,text=" ",state="hidden",text="PlotRtdf")
 	tkadd(tabs,tab12,text=" ",state="hidden",text="ProbeVsReprobe")
 	tkadd(tabs,tab9,text=" ",state="hidden",text="ShrinkRetests")
+	tkadd(tabs,tab14,text=" ",state="hidden",text="SplitTestsRetests")
 	tkadd(tabs,tab6,text=" ",state="hidden",text="WaferMap")
 	tkadd(tabs,tab13,text=" ",state="hidden",text="XYWid2Partid")
 
