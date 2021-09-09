@@ -1,6 +1,6 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.56 2021/08/02 00:29:21 david Exp $
+# $Id: TkRadar.R,v 1.57 2021/09/09 00:03:00 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
@@ -966,7 +966,7 @@ TkRadar <- function() {
 #		if ( (the_release=="Vista") || (the_release=="7") ||
 #				(the_release=="7 x64") ) {
 		if ( (substr(the_release,1,2)!="XP") && (substr(the_release,1,2)!="NT") ) {
-			tclvalue(Bad_Vista) <- 1
+			tclvalue(Bad_Vista) <- 0	# newer R packages auto do the swap, so don't unswap this swap
 		}
 	}
 	

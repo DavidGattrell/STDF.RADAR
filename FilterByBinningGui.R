@@ -1,6 +1,6 @@
 # FilterByBinningGui.R
 #
-# $Id: FilterByBinningGui.R,v 1.4 2009/12/29 20:12:24 David Exp $
+# $Id: FilterByBinningGui.R,v 1.5 2021/09/09 00:00:11 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling FilterByBinning.R
 # called by TkRadar.R
@@ -120,12 +120,23 @@ FilterByBinningGui <- function(...) {
 	assign("filterbybinning_win",filterbybinning_win,envir=.TkRadar.wins)
 	tkwm.title(filterbybinning_win, "FilterByBinning")
 	
+	# these get reset by Default button, so need to be defined first...
+	num_entry_frame <- tkframe(filterbybinning_win)
+	num_entry <- tkentry(num_entry_frame,
+						width=20,
+						background="white",
+						textvariable=filtbin_bins)
+
+
 	bottom_row <- tkframe(filterbybinning_win)
 	default_button <- tkbutton(bottom_row,
 					text="DEFAULTS",
 					#anchor="w",
 					width=12,
-					command=FilterByBinningGui_defaults)
+					command=function() {
+						FilterByBinningGui_defaults()
+						tkconfigure(num_entry,background="white")
+					})
 	tkpack(default_button,side="right")
 
 	ok_button <- tkbutton(bottom_row,
@@ -237,21 +248,38 @@ FilterByBinningGui <- function(...) {
 	tkpack(filt_frame,side="top",anchor="w")
 
 
-	num_entry_frame <- tkframe(filterbybinning_win)
+	#num_entry_frame <- tkframe(filterbybinning_win) .. moved above 
 	num_entry_label <- tklabel(num_entry_frame,
 						width=10,
 						text="bins")
 	tkpack(num_entry_label,side="left")
-	num_entry <- tklabel(num_entry_frame,
-						width=20,
-						relief="sunken",
-						textvariable=filtbin_bins)
 	tkpack(num_entry,side="left",fill="x",expand=1)
-	num_browse <- tkbutton(num_entry_frame,
-						text="Edit",
-						command=function() indices_entry(filtbin_bins))
-	tkpack(num_browse,side="right")
+	tkbind(num_entry,"<KeyRelease>",function() {
+					cmd <- paste(tclObj(filtbin_bins),sep="",collapse=" ")
+					#cat(sprintf("entry...>>%s<< \n",cmd))
+					tmp <- try(eval(parse(text=cmd)),silent=TRUE)
+					if(class(tmp) == "try-error") {
+						# check if legacy RemoveDevicesAtIndices.R syntax... 
+						# if so, we'll handle in run_FilterByIndices
+						my_entry = gsub('[[:blank:]]+',",",cmd)
+						my_entry = gsub(",{2,}",",",my_entry)
+						my_entry = paste("c(",my_entry,")",sep="")
+						tmp = try(eval(parse(text=my_entry)),silent=TRUE)
+						if(class(tmp) != "try-error") {
+							tkconfigure(num_entry,background="white")
+						} else {
+							tkconfigure(num_entry,background="yellow")
+						}
+					} else {
+						if( is.numeric(tmp) ) {
+							tkconfigure(num_entry,background="white")
+						} else {
+							tkconfigure(num_entry,background="yellow")
+						}
+					}
+				})
 	tkpack(num_entry_frame,side="top",anchor="w",fill="x")
+
 
 
 }

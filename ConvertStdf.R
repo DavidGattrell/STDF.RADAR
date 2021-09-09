@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.55 2020/12/18 00:58:20 david Exp $
+# $Id: ConvertStdf.R,v 1.56 2021/09/08 23:58:13 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -121,6 +121,8 @@ assign("Debug4",FALSE,envir=.ConvertStdf.env)		# debugging FTR records
 assign("Debug5",FALSE,envir=.ConvertStdf.env)		# debugging TSR records
 assign("Debug6",FALSE,envir=.ConvertStdf.env)		# debugging long strings
 assign("Debug7",FALSE,envir=.ConvertStdf.env)		# debugging Previous_param_i
+assign("Debug8",FALSE,envir=.ConvertStdf.env)		# debugging bb's stdf file issue
+assign("PRR_count",0,envir=.ConvertStdf.env)		# debugging bb's stdf file issue
 
 assign("Stdf_Version",3,envir=.ConvertStdf.env)		# usually set to 4
 
@@ -2003,7 +2005,7 @@ parse_stdf_record <- function(rec_typ,rec_sub,skip_TSRs,...) {
 			if (timestamp2>(Timestamp1+10.0)) {
 				Timestamp1 <<- timestamp2
 				pct = 100.0 * (Stdf_ptr + Ptr) / Stdf_size
-				cat(sprintf("processing PIR record %d ... ",Device_count+1))
+				cat(sprintf("processing PIR record %d ... ",Device_count))
 				cat(sprintf("at byte %d ... ",(Stdf_ptr + Ptr)))
 				if(Stdf_size_true==1) {
 					cat(sprintf(" %.1f%% through file \n",pct))
@@ -3752,6 +3754,11 @@ parse_TSR_record <- function(rec_len,endy) {
 
     valid_record = TRUE
 
+	if(Debug5) {
+		cat(sprintf("Start parsing TSR Ptr = %d, TSR_count = %d \n",Ptr,TSR_count))
+	}
+
+
     if ( (rec_len<16) || ((rec_len<19)&&(Stdf_Version!=3)) ) {
         valid_record = FALSE
         cat("WARNING: TSR record shorter than expected \n")
@@ -4017,6 +4024,31 @@ parse_TSR_record <- function(rec_len,endy) {
 	
 	
     if (valid_record) {
+		# try to speed things up if there are a lot of TSR records
+		# we would have a good guess by the dimension of the ParametersFrame
+		# pad out an extra 20, just for good measure.
+		# .. on first TSR record, resize these arrays accordingly
+		if( (TSR_count<1) && (TSR_count_siteA<1) ) {
+			big_enough = Parameter_count + 20	
+			if (is.finite(TSR_siteA) && (site_num == TSR_siteA)) {
+				TSRs_siteA_testnum[big_enough] <<- 0
+				TSRs_siteA_testname[big_enough] <<- "bogus"
+				TSRs_siteA_test_typ[big_enough] <<- " "
+				TSRs_siteA_exec_cnt[big_enough] <<- 0
+				TSRs_siteA_fail_cnt[big_enough] <<- 0
+				TSRs_siteA_fixed_exec_cnt[big_enough] <<- 0
+				TSRs_siteA_fixed_fail_cnt[big_enough] <<- 0
+			} 
+			TSRs_testnum[big_enough] <<- 0
+			TSRs_testname[big_enough] <<- "bogus"
+			TSRs_test_typ[big_enough] <<- " "
+			TSRs_exec_cnt[big_enough] <<- 0
+			TSRs_fail_cnt[big_enough] <<- 0
+			TSRs_fixed_exec_cnt[big_enough] <<- 0
+			TSRs_fixed_fail_cnt[big_enough] <<- 0
+		}
+
+
 		raw_test_nam = test_nam
 		if (Duplicate_testnames) {
 			test_nam = sprintf("%s_%d",test_nam,test_num)

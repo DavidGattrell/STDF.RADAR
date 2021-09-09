@@ -1,11 +1,12 @@
 # RemoveAtXYGui.R
 #
-# $Id: RemoveAtXYGui.R,v 1.1 2011/03/09 02:32:55 David Exp $
+# $Id: RemoveAtXYGui.R,v 1.2 2021/09/09 00:05:17 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling RemoveAtXY.R
 # called by TkRadar.R
 #
 # Copyright (C) 2011 David Gattrell
+#               2021 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -35,6 +36,7 @@ assign("rmxy_x_coord",tclVar(-1),envir=.TkRadar.env)
 assign("rmxy_y_coord",tclVar(-1),envir=.TkRadar.env)
 rmxy_in_name <- tclVar("")
 rmxy_in_dir <- tclVar("")
+rmxy_action <- tclVar("remove")	
 
 
 #----------------------------------------------------
@@ -42,6 +44,7 @@ RemoveAtXYGui_defaults <- function() {
 	tclvalue(rmxy_x_coord) <- -1
 	tclvalue(rmxy_y_coord) <- -1
 	tclvalue(rmxy_out_file) <- "screened.rtdf"
+	tclvalue(rmxy_action) <- "remove"
 	in_dir <- paste(tclObj(Rtdf_dir),sep="",collapse=" ")
 	in_name <- paste(tclObj(Rtdf_name),sep="",collapse=" ")
 	if(nchar(in_name)>0) {
@@ -108,6 +111,7 @@ run_RemoveAtXY <-function(done=FALSE,...) {
 	in_file_ <- paste(tclObj(rmxy_in_name),sep="",collapse=" ")
 	x_coord_ <- as.numeric(tclObj(rmxy_x_coord))
 	y_coord_ <- as.numeric(tclObj(rmxy_y_coord))
+	action_ <- as.character(tclObj(rmxy_action))
 	out_file_ <- paste(tclObj(rmxy_out_file),sep="",collapse=" ")
 	in_dir_ <- paste(tclObj(rmxy_in_dir),sep="",collapse=" ")
 	output_dir <- paste(tclObj(Rtdfs_dir),sep="",collapse=" ")
@@ -124,7 +128,7 @@ run_RemoveAtXY <-function(done=FALSE,...) {
 
 	my_expr = substitute(
 		RemoveAtXY(in_file=in_file_,out_file=out_file_,in_dir=in_dir_,
-					x_coord=x_coord_,y_coord=y_coord_)
+					x_coord=x_coord_,y_coord=y_coord_,action=action_)
 	)
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 	tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -173,12 +177,30 @@ run_RemoveAtXY <-function(done=FALSE,...) {
 	assign("removeatxy_win",removeatxy_win,envir=.TkRadar.wins)
 	tkwm.title(removeatxy_win, "RemoveAtXY")
 		
+	# these get reset by Default button, so need to be defined first...
+	xnum_entry_frame <- tkframe(removeatxy_win)
+	xnum_entry <- tkentry(xnum_entry_frame,
+						width=20,
+						background="white",
+						textvariable=rmxy_x_coord)
+
+	ynum_entry_frame <- tkframe(removeatxy_win)
+	ynum_entry <- tkentry(ynum_entry_frame,
+						width=20,
+						background="white",
+						textvariable=rmxy_y_coord)
+
+
 	bottom_row <- tkframe(removeatxy_win)
 	default_button <- tkbutton(bottom_row,
 						text="DEFAULTS",
 						#anchor="w",
 						width=12,
-						command=RemoveAtXYGui_defaults)
+						command=function() {
+							RemoveAtXYGui_defaults()
+							tkconfigure(numX_entry,background="white")
+							tkconfigure(numY_entry,background="white")
+						})
 	tkpack(default_button,side="right")
 
 	ok_button <- tkbutton(bottom_row,
@@ -252,37 +274,94 @@ run_RemoveAtXY <-function(done=FALSE,...) {
 
 	# - - - - - - - - - - - - - - - -
 
-	xnum_entry_frame <- tkframe(removeatxy_win)
+	action_frame <- tkframe(removeatxy_win)
+	action_label <- tklabel(action_frame, text="action")
+	tkpack(action_label,side="left")
+	action_rem <- tkradiobutton(action_frame,
+						text="remove",
+						value="remove",
+						#command=function() parameter_entry(0),  REVISIT
+						variable=rmxy_action)
+	tkpack(action_rem,side="left")
+	#action_keep <- tkradiobutton(action_frame,
+	#					text="keep  ",
+	#					value="keep",
+	#					#command=function() parameter_entry(0),  REVISIT
+	#					variable=filtbin_action)
+	#tkpack(action_keep,side="left")
+	action_rep <- tkradiobutton(action_frame,
+						text="report",
+						value="report",
+						#command=function() parameter_entry(0),  REVISIT
+						variable=rmxy_action)
+	tkpack(action_rep,side="left")
+	tkpack(action_frame,side="top",anchor="w")
+
+	# - - - - - - - - - - - - - - - -
+
 	xnum_entry_label <- tklabel(xnum_entry_frame,
 						width=10,
 						text="x_coord")
 	tkpack(xnum_entry_label,side="left")
-	xnum_entry <- tklabel(xnum_entry_frame,
-						width=20,
-						relief="sunken",
-						textvariable=rmxy_x_coord)
 	tkpack(xnum_entry,side="left",fill="x",expand=1)
-	xnum_browse <- tkbutton(xnum_entry_frame,
-						text="Edit",
-						command=function() integer_entry(rmxy_x_coord))
-	tkpack(xnum_browse,side="right")
+	tkbind(xnum_entry,"<KeyRelease>",function() {
+					cmd <- paste(tclObj(rmxy_x_coord),sep="",collapse=" ")
+					#cat(sprintf("entry...>>%s<< \n",cmd))
+					tmp <- try(eval(parse(text=cmd)),silent=TRUE)
+					if(class(tmp) == "try-error") {
+						# check if legacy RemoveDevicesAtIndices.R syntax... 
+						# if so, we'll handle in run_FilterByIndices
+						my_entry = gsub('[[:blank:]]+',",",cmd)
+						my_entry = gsub(",{2,}",",",my_entry)
+						my_entry = paste("c(",my_entry,")",sep="")
+						tmp = try(eval(parse(text=my_entry)),silent=TRUE)
+						if(class(tmp) != "try-error") {
+							tkconfigure(xnum_entry,background="white")
+						} else {
+							tkconfigure(xnum_entry,background="yellow")
+						}
+					} else {
+						if( is.numeric(tmp) ) {
+								tkconfigure(xnum_entry,background="white")
+						} else {
+							tkconfigure(xnum_entry,background="yellow")
+						}
+					}
+				})
 	tkpack(xnum_entry_frame,side="top",anchor="w",fill="x")
 
 
-	ynum_entry_frame <- tkframe(removeatxy_win)
+
+	#ynum_entry_frame <- tkframe(removeatxy_win)
 	ynum_entry_label <- tklabel(ynum_entry_frame,
 						width=10,
 						text="y_coord")
 	tkpack(ynum_entry_label,side="left")
-	ynum_entry <- tklabel(ynum_entry_frame,
-						width=20,
-						relief="sunken",
-						textvariable=rmxy_y_coord)
 	tkpack(ynum_entry,side="left",fill="x",expand=1)
-	ynum_browse <- tkbutton(ynum_entry_frame,
-						text="Edit",
-						command=function() integer_entry(rmxy_y_coord))
-	tkpack(ynum_browse,side="right")
+	tkbind(ynum_entry,"<KeyRelease>",function() {
+					cmd <- paste(tclObj(rmxy_y_coord),sep="",collapse=" ")
+					#cat(sprintf("entry...>>%s<< \n",cmd))
+					tmp <- try(eval(parse(text=cmd)),silent=TRUE)
+					if(class(tmp) == "try-error") {
+						# check if legacy RemoveDevicesAtIndices.R syntax... 
+						# if so, we'll handle in run_FilterByIndices
+						my_entry = gsub('[[:blank:]]+',",",cmd)
+						my_entry = gsub(",{2,}",",",my_entry)
+						my_entry = paste("c(",my_entry,")",sep="")
+						tmp = try(eval(parse(text=my_entry)),silent=TRUE)
+						if(class(tmp) != "try-error") {
+							tkconfigure(ynum_entry,background="white")
+						} else {
+							tkconfigure(ynum_entry,background="yellow")
+						}
+					} else {
+						if( is.numeric(tmp) ) {
+								tkconfigure(ynum_entry,background="white")
+						} else {
+							tkconfigure(ynum_entry,background="yellow")
+						}
+					}
+				})
 	tkpack(ynum_entry_frame,side="top",anchor="w",fill="x")
 
 	# - - - - - - - - - - - - - - - -
