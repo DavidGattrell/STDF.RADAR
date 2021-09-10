@@ -1,6 +1,6 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.58 2021/09/10 11:33:03 david Exp $
+# $Id: TkRadar.R,v 1.59 2021/09/10 13:59:54 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
@@ -1020,26 +1020,26 @@ TkRadar <- function() {
 
 	settings_frame3 <- tkframe(my_main_win)
 	green_button <- tkbutton(settings_frame3,
-					text="green",
-					width=2,
+					text="  ",
+					#width=3,
 					background="light green",
 					activebackground="light green"
 					)
 	blue_button <- tkbutton(settings_frame3,
-					text="blue",
-					width=2,
+					text="  ",
+					#width=3,
 					background="lightsteelblue2",
 					activebackground="lightsteelblue2"
 					)
 	red_button <- tkbutton(settings_frame3,
-					text="red",
-					width=2,
+					text="  ",
+					#width=3,
 					background="mistyrose",
 					activebackground="mistyrose"
 					)
 	grey_button <- tkbutton(settings_frame3,
-					text="grey",
-					width=2,
+					text="  ",
+					#width=3,
 					background="gray95",
 					activebackground="gray95"
 					)
@@ -1087,10 +1087,14 @@ TkRadar <- function() {
 						tkconfigure(grey_button,background="gray95")
 						tkconfigure(grey_button,activebackground="gray95")
 					})
-	tkpack(green_button,padx="1m",side="left")
-	tkpack(blue_button,padx="1m",side="left")
-	tkpack(red_button,padx="1m",side="left")
-	tkpack(grey_button,padx="1m",side="left")
+	tkpack(green_button,padx="5m",side="left")
+	#tkpack(green_button,side="left")
+	#tkpack(blue_button,padx="1m",side="left")
+	tkpack(blue_button,side="left")
+	tkpack(red_button,padx="5m",side="left")
+	#tkpack(red_button,side="left")
+	#tkpack(grey_button,padx="1m",side="left")
+	tkpack(grey_button,side="left")
 
 	tkpack(settings_frame3, side="top",anchor="w")
 
