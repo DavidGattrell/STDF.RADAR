@@ -1,6 +1,6 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.57 2021/09/09 00:03:00 david Exp $
+# $Id: TkRadar.R,v 1.58 2021/09/10 11:33:03 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
@@ -950,9 +950,16 @@ TkRadar <- function() {
 
 	tclvalue(Output_dir) <- getwd()
 
-
 	my_main_win <- tktoplevel()
-	tkwm.title(my_main_win, "RADAR 0v6p9dev GUI 16Feb2020")
+	tkwm.title(my_main_win, "RADAR 0v6p9dev GUI 10Sep2021")
+
+	# can we have different instances of TkRadar running with different colors to distinquish them?
+	# below commands work.. so this can be done!
+	#tcl("tk_setPalette","light green")
+	#tcl("tk_setPalette","mistyrose")
+	#tcl("tk_setPalette","lightsteelblue2")
+	#tcl("tk_setPalette","lightgray")		# default palette background color
+
 
 	# if user has been stuck with Vista or Windows7 (aka Vista with lipstick),
 	# set flag for alternate behaviour...
@@ -1010,6 +1017,82 @@ TkRadar <- function() {
 						})
 	tkpack(edit_button,side="left")
 	tkpack(settings_frame2, side="top",anchor="w")
+
+	settings_frame3 <- tkframe(my_main_win)
+	green_button <- tkbutton(settings_frame3,
+					text="green",
+					width=2,
+					background="light green",
+					activebackground="light green"
+					)
+	blue_button <- tkbutton(settings_frame3,
+					text="blue",
+					width=2,
+					background="lightsteelblue2",
+					activebackground="lightsteelblue2"
+					)
+	red_button <- tkbutton(settings_frame3,
+					text="red",
+					width=2,
+					background="mistyrose",
+					activebackground="mistyrose"
+					)
+	grey_button <- tkbutton(settings_frame3,
+					text="grey",
+					width=2,
+					background="gray95",
+					activebackground="gray95"
+					)
+	tkbind(green_button,"<ButtonPress>",function() {
+						tcl("tk_setPalette","light green")
+						tkconfigure(green_button,background="light green")
+						tkconfigure(green_button,activebackground="light green")
+						tkconfigure(blue_button,background="lightsteelblue2")
+						tkconfigure(blue_button,activebackground="lightsteelblue2")
+						tkconfigure(red_button,background="mistyrose")
+						tkconfigure(red_button,activebackground="mistyrose")
+						tkconfigure(grey_button,background="gray95")
+						tkconfigure(grey_button,activebackground="gray95")
+					})
+	tkbind(blue_button,"<ButtonPress>",function() {
+						tcl("tk_setPalette","lightsteelblue2")
+						tkconfigure(green_button,background="light green")
+						tkconfigure(green_button,activebackground="light green")
+						tkconfigure(blue_button,background="lightsteelblue2")
+						tkconfigure(blue_button,activebackground="lightsteelblue2")
+						tkconfigure(red_button,background="mistyrose")
+						tkconfigure(red_button,activebackground="mistyrose")
+						tkconfigure(grey_button,background="gray95")
+						tkconfigure(grey_button,activebackground="gray95")
+					})
+	tkbind(red_button,"<ButtonPress>",function() {
+						tcl("tk_setPalette","mistyrose")
+						tkconfigure(green_button,background="light green")
+						tkconfigure(green_button,activebackground="light green")
+						tkconfigure(blue_button,background="lightsteelblue2")
+						tkconfigure(blue_button,activebackground="lightsteelblue2")
+						tkconfigure(red_button,background="mistyrose")
+						tkconfigure(red_button,activebackground="mistyrose")
+						tkconfigure(grey_button,background="gray95")
+						tkconfigure(grey_button,activebackground="gray95")
+					})
+	tkbind(grey_button,"<ButtonPress>",function() {
+						tcl("tk_setPalette","gray95")
+						tkconfigure(green_button,background="light green")
+						tkconfigure(green_button,activebackground="light green")
+						tkconfigure(blue_button,background="lightsteelblue2")
+						tkconfigure(blue_button,activebackground="lightsteelblue2")
+						tkconfigure(red_button,background="mistyrose")
+						tkconfigure(red_button,activebackground="mistyrose")
+						tkconfigure(grey_button,background="gray95")
+						tkconfigure(grey_button,activebackground="gray95")
+					})
+	tkpack(green_button,padx="1m",side="left")
+	tkpack(blue_button,padx="1m",side="left")
+	tkpack(red_button,padx="1m",side="left")
+	tkpack(grey_button,padx="1m",side="left")
+
+	tkpack(settings_frame3, side="top",anchor="w")
 
 	# Converting section
 	#---------------------

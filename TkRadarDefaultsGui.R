@@ -1,6 +1,6 @@
 # TkRadarDefaultsGui.R
 #
-# $Id: TkRadarDefaultsGui.R,v 1.28 2021/08/02 00:32:42 david Exp $
+# $Id: TkRadarDefaultsGui.R,v 1.29 2021/09/10 11:34:08 david Exp $
 #
 # Tk/Tcl GUI wrapper for loading and saving .TkRadar files which
 # define default directories and settings for TkRadar sessions
@@ -1191,7 +1191,8 @@ TkRadarDefaultsGui <- function() {
 
 	tkpack(tabs_listbox,side="left",anchor="n",fill="both",expand=1)
 	tkpack(tabs_scroll,side="right",anchor="n",fill="y")
-	tkpack(tabs_listbox_frame,side="left",anchor="n",fill="both",expand=1)
+	#tkpack(tabs_listbox_frame,side="left",anchor="n",fill="both",expand=1)
+	tkpack(tabs_listbox_frame,side="left",anchor="n",fill="both")
 
 	tkselection.set(tabs_listbox,0)	# set an initial selection
 
@@ -1220,7 +1221,7 @@ TkRadarDefaultsGui <- function() {
 						text="Output_dir")
 	tkpack(outdir_label,side="left")
 	outdir_entry <- tklabel(outdir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=Output_dir)
 	tkpack(outdir_entry,side="left",fill="x",expand=1)
@@ -1236,7 +1237,7 @@ TkRadarDefaultsGui <- function() {
 						text="Rtdfs_dir")
 	tkpack(rtdfdir_label,side="left")
 	rtdfdir_entry <- tklabel(rtdfdir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=Rtdfs_dir)
 	tkpack(rtdfdir_entry,side="left",fill="x",expand=1)
@@ -1256,7 +1257,7 @@ TkRadarDefaultsGui <- function() {
 						text="stdf_dir")
 	tkpack(stdfdir_label,side="left")
 	stdfdir_entry <- tklabel(stdfdir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=stdf_dir)
 	tkpack(stdfdir_entry,side="left",fill="x",expand=1)
@@ -1276,7 +1277,7 @@ TkRadarDefaultsGui <- function() {
 						text="a5xx_dir")
 	tkpack(a5xxdir_label,side="left")
 	a5xxdir_entry <- tklabel(a5xxdir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=a5xx_dir)
 	tkpack(a5xxdir_entry,side="left",fill="x",expand=1)
@@ -1296,7 +1297,7 @@ TkRadarDefaultsGui <- function() {
 						text="edl_dir")
 	tkpack(edl_dir_label,side="left")
 	edl_dir_entry <- tklabel(edl_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=edl_dir)
 	tkpack(edl_dir_entry,side="left",fill="x",expand=1)
@@ -1316,7 +1317,7 @@ TkRadarDefaultsGui <- function() {
 						text="frug_dir")
 	tkpack(frug_dir_label,side="left")
 	frug_dir_entry <- tklabel(frug_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=frug_dir)
 	tkpack(frug_dir_entry,side="left",fill="x",expand=1)
@@ -1336,7 +1337,7 @@ TkRadarDefaultsGui <- function() {
 						text="HP9490_dir")
 	tkpack(hp94_dir_label,side="left")
 	hp94_dir_entry <- tklabel(hp94_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=HP9490_dir)
 	tkpack(hp94_dir_entry,side="left",fill="x",expand=1)
@@ -1356,7 +1357,7 @@ TkRadarDefaultsGui <- function() {
 						text="j9_dir")
 	tkpack(j9_dir_label,side="left")
 	j9_dir_entry <- tklabel(j9_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=j9_dir)
 	tkpack(j9_dir_entry,side="left",fill="x",expand=1)
@@ -1376,7 +1377,7 @@ TkRadarDefaultsGui <- function() {
 						text="kdf_dir")
 	tkpack(kdf_dir_label,side="left")
 	kdf_dir_entry <- tklabel(kdf_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=kdf_dir)
 	tkpack(kdf_dir_entry,side="left",fill="x",expand=1)
@@ -1396,7 +1397,7 @@ TkRadarDefaultsGui <- function() {
 						text="klf_dir")
 	tkpack(klf_dir_label,side="left")
 	klf_dir_entry <- tklabel(klf_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=klf_dir)
 	tkpack(klf_dir_entry,side="left",fill="x",expand=1)
@@ -1416,7 +1417,7 @@ TkRadarDefaultsGui <- function() {
 						text="csv_out_csv_dir")
 	tkpack(csv_dir_label,side="left")
 	csv_dir_entry <- tklabel(csv_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=csv_out_csv_dir)
 	tkpack(csv_dir_entry,side="left",fill="x",expand=1)
@@ -1436,7 +1437,7 @@ TkRadarDefaultsGui <- function() {
 						text="csv94_dir")
 	tkpack(csv94_dir_label,side="left")
 	csv94_dir_entry <- tklabel(csv94_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=csv94_dir)
 	tkpack(csv94_dir_entry,side="left",fill="x",expand=1)
@@ -1456,7 +1457,7 @@ TkRadarDefaultsGui <- function() {
 						text="ets_dir")
 	tkpack(ets_dir_label,side="left")
 	ets_dir_entry <- tklabel(ets_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=ets_dir)
 	tkpack(ets_dir_entry,side="left",fill="x",expand=1)
@@ -1476,7 +1477,7 @@ TkRadarDefaultsGui <- function() {
 						text="csvETS_dir")
 	tkpack(csvETS_dir_label,side="left")
 	csvETS_dir_entry <- tklabel(csvETS_dir_frame,
-						width=80,
+						width=60,
 						relief="sunken",
 						textvariable=csvETS_dir)
 	tkpack(csvETS_dir_entry,side="left",fill="x",expand=1)
