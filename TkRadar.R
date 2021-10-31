@@ -1,11 +1,11 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.59 2021/09/10 13:59:54 david Exp $
+# $Id: TkRadar.R,v 1.60 2021/10/31 20:34:05 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
 #
-# Copyright (C) 2008-2020 David Gattrell
+# Copyright (C) 2008-2021 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by

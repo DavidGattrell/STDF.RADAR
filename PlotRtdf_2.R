@@ -1,11 +1,12 @@
 #  PlotRtdf_2.R
 #
-# $Id: PlotRtdf_2.R,v 1.7 2019/02/01 01:27:42 david Exp $
+# $Id: PlotRtdf_2.R,v 1.8 2021/10/31 20:35:03 david Exp $
 #
 # script used to generate statistics, histograms, and xy plots from Rtdf files
 #
 # Copyright (C) 2018 David Gattrell
 #                    Darren Wadden
+#               2021 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -1080,6 +1081,9 @@ PlotRtdf_2 <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 
 					# loop through multiple datasets that go on same subplot
 					# (expect 2 or 3 datasets)
+					# first loop is just to find peak histogram bin count across all datasets
+					y_max = 0;
+					my_peaks = rep(0,length(my_datasets))
 					for(k in 1:length(my_datasets)) {
 						ds_j = my_datasets[k]
 
@@ -1109,11 +1113,50 @@ PlotRtdf_2 <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 									breaks = breaks * my_hist_range / min_hist_range
 								}
 								hist_obj = hist(results2,breaks=breaks,plot=FALSE)
+								my_peak = max(hist_obj$counts)
+								my_peaks[k] = my_peak
+								if(my_peak > y_max) {
+									y_max = my_peak
+								}
+							}
+						}
+					} # end of for(k datasets
+					# loop through again, this time actually doing the plots
+					first_plot = TRUE
+					for(k in 1:length(my_datasets)) {
+						ds_j = my_datasets[k]
+
+						my_mean = dataset_means[ds_j]
+						my_sdev = dataset_sdevs[ds_j]
+						my_count = dataset_counts[ds_j]
+						results2 = dataset_results[[ds_j]]
+						my_hist_range = dataset_hist_ranges[ds_j]
+						
+						breaks=25
+						if (length(results2)>200)  breaks=50
+						if (length(results2)>0) {
+							if (my_ul<=my_ll) {
 								par(plt=c(0.1,0.95,0.20,0.95))
-								if(k==1) {
+							} else if(my_peaks[k]>0) {
+								if (max(results2) <= min(results2)) {
+									# if bad data or single value, force 200 bins across plot
+									if (min(results2)<my_ll*scale)  bin_ll=min(results2)
+									else  bin_ll = my_ll*scale
+									if (max(results2)>my_ul*scale)  bin_ul=max(results2)
+									else  bin_ul = my_ul*scale
+									bin_width=(bin_ul-bin_ll)/200.0
+									breaks=seq(bin_ll-bin_width,bin_ul+bin_width,by=bin_width)
+									# browser()
+								} else if(sync_mh_bin_widths && is.finite(min_hist_range)) {
+									breaks = breaks * my_hist_range / min_hist_range
+								}
+								hist_obj = hist(results2,breaks=breaks,plot=FALSE)
+								par(plt=c(0.1,0.95,0.20,0.95))
+								if(first_plot == TRUE) {
 									plot(hist_obj,col=MH_colors[k],border=MH_colors[k],
-										xlim=xlim,main="",xlab="",ylab="",
+										xlim=xlim,ylim=c(0,y_max),main="",xlab="",ylab="",
 									    bty="o",mgp=c(2,0.4*scex,0),cex.axis=0.6*scex,xaxs="i")
+									first_plot = FALSE
 								} else {
 									plot(hist_obj,col=MH_colors[k],border=MH_colors[k],
 										xlim=xlim,main="",xlab="",ylab="",
@@ -1145,6 +1188,7 @@ PlotRtdf_2 <- function(rtdf_name="",pdf_name="",param_name="",dataset_name="",
 							}
 						}
 					} # end of for(k datasets
+
 					grid()
 					close.screen(histo_subscreen_num)
 					ytop = ytop - hist_height
