@@ -1,6 +1,6 @@
 # RtdfTransformGui.R
 #
-# $Id: RtdfTransformGui.R,v 1.5 2010/11/24 01:46:18 David Exp $
+# $Id: RtdfTransformGui.R,v 1.6 2021/11/09 02:09:50 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling RtdfTransform.R
 # called by TkRadar.R
@@ -33,6 +33,10 @@ if(!exists(".TkRadar.env"))  .TkRadar.env <- new.env()
 trans_csvfile <- tclVar("transform.csv")
 trans_csv_dir <- tclVar("")
 trans_outfile <- tclVar("transformed.rtdf")
+trans_verbose <- tclVar(0)
+
+# can be controlled in the settings file or the .Rprofile file:
+default_trans_verbose <- tclVar(0)
 
 
 #-----------------------------------------
@@ -40,7 +44,7 @@ RtdfTransformGui_defaults <- function(...) {
 	tclvalue(trans_csvfile) <- "transform.csv"
 	tclvalue(trans_csv_dir) <- ""
 	tclvalue(trans_outfile) <- "transformed.rtdf"
-	
+	tclvalue(trans_verbose) <- tclObj(default_fff_force_update)
 }
 
 
@@ -54,6 +58,8 @@ run_RtdfTransform <-function(done=FALSE,..) {
 	csv_dir_ <- paste(tclObj(trans_csv_dir),sep="",collapse=" ")
 	output_dir <- paste(tclObj(Rtdfs_dir),sep="",collapse=" ")
 
+	verbose_ <- as.logical(tclObj(trans_verbose))
+
 	full_path = output_dir
 	if (nchar(full_path)<1) {
 		full_path <- paste(tclObj(Output_dir),sep="",collapse=" ")
@@ -65,7 +71,8 @@ run_RtdfTransform <-function(done=FALSE,..) {
 
 	my_expr = substitute(
 		RtdfTransform(in_file=in_rtdf,transform_csv=my_csv,
-				out_file=out_rtdf,csv_dir=csv_dir_,in_dir=rtdf_dir_)
+				out_file=out_rtdf,csv_dir=csv_dir_,in_dir=rtdf_dir_,
+				verbose=verbose_)
 	)
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 	tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -252,6 +259,11 @@ RtdfTransformGui <- function(...) {
 	tkpack(outfile_browse,side="right")
 	tkpack(outfile_entry_frame,side="top",anchor="w",fill="x")
 
+
+	update_button <- tkcheckbutton(rtdftransform_win,
+						text="verbose",
+						variable=trans_verbose)
+	tkpack(update_button,side="top",anchor="w")
 
 }
 

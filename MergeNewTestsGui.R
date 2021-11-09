@@ -1,6 +1,6 @@
 # MergeNewTestsGui.R
 #
-# $Id: MergeNewTestsGui.R,v 1.1 2020/12/18 01:20:58 david Exp $
+# $Id: MergeNewTestsGui.R,v 1.2 2021/11/09 02:07:13 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling MergeNewTests.R
 # called by TkRadar.R
@@ -158,7 +158,7 @@ run_MergeNewTests <-function(done=FALSE,...) {
 	cat("Finished!\n")
 
 	# now update Rtdf_name and Rtdf_dir...
-	tclvalue(Rtdf_name) <- out_rtdf
+	tclvalue(Rtdf_name) <- out_file_
 	tclvalue(Rtdf_dir) <- output_dir
 
 	if(done>0) {

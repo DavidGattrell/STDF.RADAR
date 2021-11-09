@@ -1,6 +1,6 @@
 # WaferMap.R
 #
-# $Id: WaferMap.R,v 1.24 2019/08/15 22:16:32 david Exp $
+# $Id: WaferMap.R,v 1.25 2021/11/09 02:10:27 david Exp $
 #
 # reads in rtdf file(s) and generates wafermap(s)
 #
@@ -579,7 +579,7 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 								i_ap = i_ap + 1
 								if(i_ap>=length(avail_pass_colors)) {
 									i_ap = length(avail_pass_colors)
-									ran_out_of_colors = true;
+									ran_out_of_colors = TRUE;
 								}
 								my_color = avail_pass_colors[i_ap]
 							}
@@ -668,7 +668,7 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 								i_af = i_af + 1
 								if(i_af>=length(avail_fail_colors)) {
 									i_af = length(avail_fail_colors)
-									ran_out_of_colors = true;
+									ran_out_of_colors = TRUE;
 								}
 								my_color = avail_fail_colors[i_af]
 							}
@@ -747,7 +747,7 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 								i_ap = i_ap + 1
 								if(i_ap>=length(avail_pass_colors)) {
 									i_ap = length(avail_pass_colors)
-									ran_out_of_colors = true;
+									ran_out_of_colors = TRUE;
 								}
 								my_color = avail_pass_colors[i_ap]
 							}
@@ -805,7 +805,7 @@ WaferMap <- function(rtdf_name="",pdf_name="wafer_map.pdf",type="sbin",
 								i_af = i_af + 1
 								if(i_af>=length(avail_fail_colors)) {
 									i_af = length(avail_fail_colors)
-									ran_out_of_colors = true;
+									ran_out_of_colors = TRUE;
 								}
 								my_color = avail_fail_colors[i_af]
 							}

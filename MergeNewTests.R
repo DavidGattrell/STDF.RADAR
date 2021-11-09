@@ -1,6 +1,6 @@
 # MergeNewTests.R 
 #
-# $Id: MergeNewTests.R,v 1.2 2020/12/18 01:19:24 david Exp $
+# $Id: MergeNewTests.R,v 1.3 2021/11/09 02:06:19 david Exp $
 #
 # script that parses 2 rtdf files, looks for new tests (Parameters) in
 # the 2nd file, then looks for matching devices (either part_id or x/y coord in
@@ -22,6 +22,7 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 	# out_file -- string of rtdf filename you want generated
 	# verbose -- print status and information to console as processing
 	#-------------------------------------------------------------------------------
+	dbg_progress = 0
 
     # if filenames not defined, prompt for them
     #------------------------------------------
@@ -49,6 +50,8 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 	AllParametersFrame = ParametersFrame
 	AllResultsMatrix = ResultsMatrix
 	AllLotInfoFrame = LotInfoFrame
+
+	dbg_progress = 1
 
 	# check if TestFlagMatrix is present
 	valid_testflagmatrix = FALSE
@@ -80,6 +83,8 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 	# WafersFrame
 	# WaferInfoFrame
 
+	dbg_progress = 2
+
 
 	devs = dim(DevicesFrame)[1]
 	if (use_xy_coords) {
@@ -107,6 +112,8 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 	}
 
 
+	dbg_progress = 3
+
 	# load 2nd file into memory...
 	#------------------------------
 	if (in_dir2 != "") {
@@ -129,6 +136,8 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 			new_indices[length(new_indices)+1] = i
 		}
 	}
+
+	dbg_progress = 4
 
 	
 	if(length(new_indices)<1) {
@@ -162,6 +171,8 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 		AllParametersFrame[i1:i2,"plot_ll"] <- my_plot_lls
 		AllParametersFrame[i1:i2,"plot_ul"] <- my_plot_uls
 
+		dbg_progress = 5
+
 		# need to add new columns to AllResultsMatrix
 		dims = dim(AllResultsMatrix)
 		AllResultsMatrix = cbind(AllResultsMatrix,matrix(data=NaN,nrow=dims[1],
@@ -172,6 +183,8 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 						ncol=length(new_indices)))
 		
 		}
+
+		dbg_progress = 6
 
 		# now cross reference the DevicesFrames
 		#----------------------------------------	
@@ -199,6 +212,8 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 			}
 		}
 
+		dbg_progress = 7
+
 		cat(sprintf("%d of %d devices had no matching device in 2nd file\n",
 					unmatched_devs,devs))
 
@@ -211,6 +226,8 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 	}
 
 	
+	dbg_progress = 8
+
 	# move data to standard rtdf object names
 	#-----------------------------------------
     LotInfoFrame = AllLotInfoFrame

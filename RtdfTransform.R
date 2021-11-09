@@ -1,6 +1,6 @@
 # RtdfTransform.R
 #
-# $Id: RtdfTransform.R,v 1.3 2019/02/01 02:06:52 david Exp $
+# $Id: RtdfTransform.R,v 1.4 2021/11/09 02:08:01 david Exp $
 #
 # script that transforms parameters in an RTDF file.
 # typically used for getting bench data into a format to compare against ATE data,
@@ -31,7 +31,8 @@
 #  gmail.com
 #
 #----------------------------------------------------------
-RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_dir="") {
+RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_dir="",
+						  verbose=FALSE) {
 
 	# in_file -- string for filename of rtdf file to transform.  
 	#
@@ -59,13 +60,15 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 	#				new_value = shift + [10/20 * log] (multiplier * orig_value^power)
 	#
 	# csv_dir -- if transform_csv is in a different directory, this is the
-	#			  absolute path to that directory, else = ""
+	#			    absolute path to that directory, else = ""
 	#
 	# out_file -- optional explicit output file name.  If empty,
 	#				the output defaults to transformed.rtdf
 	#
 	# in_dir -- if in_file is in a different directory, this is the
-	#			  absolute path to that directory
+	#			    absolute path to that directory
+	# verbose -- if true, will list tests in original RTDF file that aren't
+	#               included in the output RTDF file
     #--------------------------------------------------------------------
 
     # define scaler prefixes
@@ -133,10 +136,12 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 
 	orig_ParametersFrame = ParametersFrame
 	orig_ResultsMatrix = ResultsMatrix
-	if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+	if(match("TestFlagMatrix",my_objects,nomatch=0)) {
 		orig_TestFlagMatrix = TestFlagMatrix
 	}
+	ParamFrame_fields = names(ParametersFrame)
 	orig_testname_list = as.character(ParametersFrame[["testname"]])
+	transformed_tests = rep(FALSE,length(orig_testname_list))
 
 
 	# build new ParametersFrame and ResultsMatrix
@@ -147,6 +152,7 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 		else  my_testname = testnames[i]
 		index = match(my_testname,orig_testname_list,nomatch=0)
 		if (index>0) {
+			transformed_tests[index] = TRUE
 			if(is.finite(tnums[i]))  tnum = tnums[i]
 			else  tnum = orig_ParametersFrame[[index,"testnum"]]
 			if(prefixes[i]=="")  scaler = orig_ParametersFrame[[index,"scaler"]]
@@ -160,6 +166,11 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 			} else {
 				ll = orig_ParametersFrame[[index,"ll"]]
 				ul = orig_ParametersFrame[[index,"ul"]]
+			}
+			# if exist, pull 
+			if(is.finite(match("ll_ge",ParamFrame_fields))) {
+				ll_ge = orig_ParametersFrame[[index,"ll_ge"]]
+				ul_ge = orig_ParametersFrame[[index,"ul_ge"]]
 			}
 			m = multipliers[i]
 			p = powers[i]
@@ -175,7 +186,7 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 			} else {
 				results = s + m*orig_ResultsMatrix[,index]^p
 			}
-			if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+			if(match("TestFlagMatrix",my_objects,nomatch=0)) {
 				testflags = orig_TestFlagMatrix[,index]
 			}
 			if (j==1) {
@@ -185,8 +196,12 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 				Parameters_units = my_units
 				Parameters_ll = ll
 				Parameters_ul = ul
+				if(is.finite(match("ll_ge",ParamFrame_fields))) {
+					Parameters_ll_ge = ll_ge
+					Parameters_ul_ge = ul_ge
+				}
 				ResultsMatrix = results
-				if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+				if(match("TestFlagMatrix",my_objects,nomatch=0)) {
 					TestFlagMatrix = testflags
 				}
 			} else {
@@ -196,8 +211,12 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 				Parameters_units[j] = my_units
 				Parameters_ll[j] = ll
 				Parameters_ul[j] = ul
+				if(is.finite(match("ll_ge",ParamFrame_fields))) {
+					Parameters_ll_ge[j] = ll_ge
+					Parameters_ul_ge[j] = ul_ge
+				}
 				ResultsMatrix = cbind(ResultsMatrix,results)
-				if(match("TestFlagMatrix",my_objs,nomatch=0)) {
+				if(match("TestFlagMatrix",my_objects,nomatch=0)) {
 					TestFlagMatrix = cbind(TestFlagMatrix,testflags)
 				}
 			}
@@ -219,8 +238,31 @@ RtdfTransform <- function(in_file="",transform_csv="",out_file="",csv_dir="",in_
 	ParametersFrame[1:tests,"units"] <- Parameters_units
 	ParametersFrame[1:tests,"ll"] <- Parameters_ll
 	ParametersFrame[1:tests,"ul"] <- Parameters_ul
+	if(is.finite(match("ll_ge",ParamFrame_fields))) {
+		ParametersFrame[1:tests,"ll_ge"] <- Parameters_ll_ge
+		ParametersFrame[1:tests,"ul_ge"] <- Parameters_ul_ge
+	}
 	ParametersFrame[1:tests,"plot_ll"] <- rep(NaN,tests)
 	ParametersFrame[1:tests,"plot_ul"] <- rep(NaN,tests)
+
+
+	# how many tests were not 'transformed'?
+	not_done = which(transformed_tests==FALSE)
+	if(length(not_done)>0) {
+		cat(sprintf("\n%d tests were not transformed!\n",length(not_done)))
+		if(verbose) {
+			for (i in 1:length(not_done)) {
+				cat(sprintf("skipped %s\n",orig_testname_list[not_done[i]]))
+			}
+		}
+	}
+	if(length(testnames)==1) {
+		# if we are down to a single test, need to force ResultsMatrix to be a Matrix and not a vector
+		ResultsMatrix = matrix(ResultsMatrix,length(ResultsMatrix),1)
+		if(is.finite(match("TestFlagMatrix",my_objects))) {
+			TestFlagMatrix = matrix(TestFlagMatrix,length(TestFlagMatrix),1)
+		}
+	}
 
 
 	# save Rtdf file
