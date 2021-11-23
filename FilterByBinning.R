@@ -1,6 +1,6 @@
 # FilterByBinning.R
 #
-# $Id: FilterByBinning.R,v 1.4 2017/08/11 00:55:53 david Exp $
+# $Id: FilterByBinning.R,v 1.5 2021/11/23 23:52:12 david Exp $
 #
 # script that reads in an rtdf file and generates a new rtdf
 # file that only includes devices that match the specified
@@ -8,6 +8,8 @@
 #
 #
 # Copyright (C) 2009-10 David Gattrell
+#               2017
+#               2021
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -65,10 +67,13 @@ FilterByBinning <- function(in_file="",action="keep",bin_type="hbin",
     if (length(indices)>0) {
 		cat(sprintf("%d of %d Devices match the binning criteria\n",
 			length(indices),length(binning) ))
-		
+	
+		do_force_matrix = FALSE
+
 		if(action=="keep") {
 			DevicesFrame = DevicesFrame[indices,]
 			ResultsMatrix = ResultsMatrix[indices,]
+			if (length(indices) < 2)  do_force_matrix = TRUE
 			if (exists("TestFlagMatrix",inherits=FALSE))  TestFlagMatrix = TestFlagMatrix[indices,]
 			do_write = TRUE
 		} else if (action=="remove") {
@@ -77,8 +82,14 @@ FilterByBinning <- function(in_file="",action="keep",bin_type="hbin",
 			DevicesFrame = DevicesFrame[keepers,]
 			ResultsMatrix = ResultsMatrix[keepers,]
 			if (exists("TestFlagMatrix",inherits=FALSE))  TestFlagMatrix = TestFlagMatrix[keepers,]
+
 			do_write = TRUE
-			do_write = TRUE
+			if(length(which(keepers==TRUE))==0) {
+				do_write = FALSE
+				cat(sprintf("No Devices Left!  No RTDF file will be created."))
+			} else if(length(which(keepers==TRUE))==1) {
+				do_force_matrix = TRUE
+			}
 		} else {
 			device_names = DevicesFrame[indices,"part_id"]
 			for (i in 1:length(indices)) {
@@ -86,6 +97,15 @@ FilterByBinning <- function(in_file="",action="keep",bin_type="hbin",
 					indices[i],device_names[i],bin_type,binning[indices[i]]))
 			}
 			do_write = FALSE
+		}
+
+		if (do_force_matrix) {
+			# if only one device left, need to explicitly set as Matrix, else will be Vector
+			ResultsMatrix = matrix(ResultsMatrix,1,length(ResultsMatrix))
+			if(is.finite(match("TestFlagMatrix",my_objs))) {
+				TestFlagMatrix = matrix(TestFlagMatrix,1,length(TestFlagMatrix))
+			}
+			
 		}
 
 		if (do_write) {
