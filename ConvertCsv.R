@@ -1,11 +1,11 @@
 #  ConvertCsv.R
 #
-# $Id: ConvertCsv.R,v 1.17 2019/07/01 20:10:39 david Exp $
+# $Id: ConvertCsv.R,v 1.18 2022/03/05 23:42:01 david Exp $
 #
 #  R script that reads either csv or rtdf files and generates
 #  the equivalent rtdf or csv version.  
 #
-# Copyright (C) 2009-15 David Gattrell
+# Copyright (C) 2009-22 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -113,6 +113,7 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 		# with rows being tests, cols being devices
 
 		# check if start_t/finish_t are in ascii format.. "2002-12-02 09:18:54 EST"
+		#    or  "12/02/02 09:18 AM"
 		if( length(grep(":",my_csv[4,3]))>0 ) {
 			tokens = strsplit(my_csv[4,3]," ")[[1]]
 			# ignore timezone, not valid / reliable 
@@ -154,9 +155,9 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			
 			# correct for daylight savings... needed?
 			my_time = as.POSIXlt(unix_t,origin=ISOdatetime(1970,1,1,0,0,0))
-			if(my_time[["isdst"]]) {
-				unix_t = unix_t - 3600	# an assumption here!
-			}
+			#if(my_time[["isdst"]]) {
+			#	unix_t = unix_t - 3600	# an assumption here!
+			#}
 			my_csv[4,3] = unix_t
 		}
 		if( length(grep(":",my_csv[9,3]))>0 ) {
@@ -178,7 +179,7 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 
 			# correct for daylight savings... needed?
 			my_time = as.POSIXlt(unix_t,origin=ISOdatetime(1970,1,1,0,0,0))
-			if(my_time[["isdst"]])  unix_t = unix_t - 3600
+			#if(my_time[["isdst"]])  unix_t = unix_t - 3600
 
 			my_csv[9,3] = unix_t
 		}
@@ -193,7 +194,10 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 						tester_id=my_csv[7,3],
 						handler=my_csv[8,3],
 						finish_t=as.numeric(my_csv[9,3]),
-						job_rev=my_csv[10,3]
+						job_rev=my_csv[10,3],
+						loadboard_id=my_csv[2,6],
+						dib_board_id=my_csv[3,6],
+						probecard_id=my_csv[4,6]
 						)
 		LotInfoFrame = data.frame(rbind(my_list))
 
@@ -332,6 +336,7 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 	    save(list=my_list, file=out_name)
 
 	} else {
+		# ====== in_type is RTDF =======
 		if (in_dir != "") {
 			my_dir = getwd()
 			setwd(in_dir)
@@ -359,6 +364,12 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 		lif_names = names(LotInfoFrame)
 		valid_job_rev = FALSE
 		if(match("job_rev",lif_names,nomatch=0)>0)  valid_job_rev = TRUE  
+		valid_lb_id = FALSE
+		if(match("loadboard_id",lif_names,nomatch=0)>0)  valid_lb_id = TRUE  
+		valid_dib_id = FALSE
+		if(match("dib_board_id",lif_names,nomatch=0)>0)  valid_dib_id = TRUE  
+		valid_pc_id = FALSE
+		if(match("probecard_id",lif_names,nomatch=0)>0)  valid_pc_id = TRUE  
 
 		# does this rtdf file have ll_ge and ul_ge fields in its ParametersFrame?
 		valid_lim_eq_data = FALSE
@@ -389,16 +400,30 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			cat("\n",file=csv_conn)
 
 			# dump DevicesFrame and LotInfoFrame stuff
-			the_string = sprintf("0.2,lotid,%s,,,,,%s,part_id,",
+			if(valid_lb_id) {
+				the_string = sprintf("0.2,lotid,%s,,ld_id,%s,,%s,part_id,",
+						as.character(LotInfoFrame[[1,"lotid"]]),
+						as.character(LotInfoFrame[[1,"loadboard_id"]]),
+						add_2cols)
+			} else {
+				the_string = sprintf("0.2,lotid,%s,,,,,%s,part_id,",
 						as.character(LotInfoFrame[[1,"lotid"]]),
 						add_2cols)
+			}
 			cat(the_string,file=csv_conn)
 			cat(as.character(DevicesFrame[["part_id"]]),file=csv_conn,sep=",")
 			cat("\n",file=csv_conn)
 			
-			the_string = sprintf("0.3,sublotid,%s,,,,,%s,temp,",
+			if(valid_dib_id) {
+				the_string = sprintf("0.3,sublotid,%s,,dib_id,%s,,%s,temp,",
+						as.character(LotInfoFrame[[1,"sublotid"]]),
+						as.character(LotInfoFrame[[1,"dib_board_id"]]),
+						add_2cols)
+			} else {
+				the_string = sprintf("0.3,sublotid,%s,,,,,%s,temp,",
 						as.character(LotInfoFrame[[1,"sublotid"]]),
 						add_2cols)
+			}
 			cat(the_string,file=csv_conn)
 			tmp = as.character(DevicesFrame[["temp"]])
 			tmp[which(is.na(DevicesFrame[["temp"]]))]=""
@@ -419,8 +444,15 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 				# don't track timezone info, it isn't reliable.
 				#start_t = paste(start_t," ",my_tz,sep="")
 			}
-			the_string = sprintf("0.4,start_t,%s,,,,,%s,x_coord,",
+			if(valid_pc_id) {
+				the_string = sprintf("0.4,start_t,%s,,pc_id,%s,,%s,x_coord,",
+						start_t, 
+						as.character(LotInfoFrame[[1,"probecard_id"]]),
+						add_2cols)
+			} else {
+				the_string = sprintf("0.4,start_t,%s,,,,,%s,x_coord,",
 						start_t, add_2cols)
+			}
 			cat(the_string,file=csv_conn)
 			tmp = as.character(DevicesFrame[["x_coord"]])
 			tmp[which(is.na(DevicesFrame[["x_coord"]]))]=""
@@ -456,9 +488,16 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			cat(as.character(DevicesFrame[["soft_bin"]]),file=csv_conn,sep=",")
 			cat("\n",file=csv_conn)
 
-			the_string = sprintf("0.8,handler,%s,,,,,%s,hard_bin,",
+			# when handler_type is populated and handler is not...
+			if(as.character(LotInfoFrame[[1,"handler"]])=="") {
+				the_string = sprintf("0.8,handler,%s,,,,,%s,hard_bin,",
+						as.character(LotInfoFrame[[1,"handler_type"]]),
+						add_2cols)
+			} else {
+				the_string = sprintf("0.8,handler,%s,,,,,%s,hard_bin,",
 						as.character(LotInfoFrame[[1,"handler"]]),
 						add_2cols)
+			}
 			cat(the_string,file=csv_conn)
 			cat(as.character(DevicesFrame[["hard_bin"]]),file=csv_conn,sep=",")
 			cat("\n",file=csv_conn)
@@ -665,6 +704,12 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			} else {
 				job_rev = ""
 			}
+			# when handler_type is populated and handler is not...
+			if(as.character(LotInfoFrame[["handler"]])=="") {
+				handler_id = as.character(LotInfoFrame[["handler_type"]][1])
+			} else {
+				handler_id = as.character(LotInfoFrame[["handler"]][1])
+			}
 			the_string = sprintf("0.3,%s,%s,%s,%s,%s,%s,%s,%s,%s%s,testname,",
 					as.character(LotInfoFrame[[1,"lotid"]][1]),
 					as.character(LotInfoFrame[[1,"sublotid"]][1]),
@@ -672,7 +717,8 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 					as.character(LotInfoFrame[[1,"program"]][1]),
 					as.character(LotInfoFrame[[1,"tester_type"]][1]),
 					as.character(LotInfoFrame[[1,"tester_id"]][1]),
-					as.character(LotInfoFrame[[1,"handler"]][1]),
+					#as.character(LotInfoFrame[[1,"handler"]][1]),
+					handler_id,
 					finish_t[1],
 					job_rev,
 					cond_commas
@@ -700,13 +746,27 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			cat("\n",file=csv_conn)
 			scale = 10^scaler
 
-			the_string = sprintf("0.5,,,,,,,,,%s,units,",cond_commas)
-			cat(the_string,file=csv_conn)
+			if(valid_dib_id) {
+				the_string = sprintf("0.5,lb_id,dib_id,pc_id,,,,,,%s,units,",cond_commas)
+				cat(the_string,file=csv_conn)
+			} else {
+				the_string = sprintf("0.5,,,,,,,,,%s,units,",cond_commas)
+				cat(the_string,file=csv_conn)
+			}
 			cat(as.character(ParametersFrame[["units"]]),file=csv_conn,sep=",")
 			cat("\n",file=csv_conn)
 
-			the_string = sprintf("0.6,,,,,,,,,%s,ll,",cond_commas)
-			cat(the_string,file=csv_conn)
+			if(valid_dib_id) {
+				the_string = sprintf("0.6,%s,%s,%s,,,,,,%s,ll,",
+						as.character(LotInfoFrame[[1,"loadboard_id"]]),
+						as.character(LotInfoFrame[[1,"dib_board_id"]]),
+						as.character(LotInfoFrame[[1,"probecard_id"]]),
+						cond_commas)
+				cat(the_string,file=csv_conn)
+			} else {
+				the_string = sprintf("0.6,,,,,,,,,%s,ll,",cond_commas)
+				cat(the_string,file=csv_conn)
+			}
 			ll = as.character(as.numeric(ParametersFrame[["ll"]])*scale)
 			ll[which(is.na(ParametersFrame[["ll"]]))] = ""
 			cat(ll,file=csv_conn,sep=",")

@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.56 2021/09/08 23:58:13 david Exp $
+# $Id: ConvertStdf.R,v 1.57 2022/03/03 02:40:41 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -9,6 +9,7 @@
 #               2012 Chad Erven
 #               2018 David Gattrell
 #               2020 David Gattrell
+#               2022 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -36,7 +37,14 @@
 #                         ,"program"]]
 #                         ,"tester_type"]]
 #                         ,"tester_id"]]
+#                         ,"handler_type"]]
 #                         ,"handler"]]
+#                         ,"loadboard_type"]]
+#                         ,"loadboard_id"]]
+#                         ,"dib_board_type"]]
+#                         ,"dib_board_id"]]
+#                         ,"probecard_type"]]
+#                         ,"probecard_id"]]
 #  HbinInfoFrame  (optional)
 #      HbinInfoFrame[[index,"hbin_num"]]
 #                          ,"hbin_cnt"]]
@@ -188,7 +196,11 @@ assign("LotInfoFrame",data.frame(rbind(
 		list( lotid="", sublotid="",
                 start_t=NaN, program="",
                 tester_type="", tester_id="",
-                handler="")
+                handler_type="",handler="",
+                loadboard_type="",loadboard_id="",
+                dib_board_type="",dib_board_id="",
+                probecard_type="",probecard_id=""
+				)
 		)),envir=.ConvertStdf.env)
 
 #assign("DevicesFrame",data.frame(rbind(
@@ -464,7 +476,14 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	LotInfoFrame[["program"]] <<- ""
 	LotInfoFrame[["tester_type"]] <<- ""
 	LotInfoFrame[["tester_id"]] <<- ""
+	LotInfoFrame[["handler_type"]] <<- ""
 	LotInfoFrame[["handler"]] <<- ""
+	LotInfoFrame[["loadboard_type"]] <<- ""
+	LotInfoFrame[["loadboard_id"]] <<- ""
+	LotInfoFrame[["dib_board_type"]] <<- ""
+	LotInfoFrame[["dib_board_id"]] <<- ""
+	LotInfoFrame[["probecard_type"]] <<- ""
+	LotInfoFrame[["probecard_id"]] <<- ""
 
     Pin_names <<- NA
     Valid_WCR <<- FALSE
@@ -1499,36 +1518,50 @@ print_summary <- function(stdf_name,out_file,just_fail_tests_summary) {
         cat(my_string,file=out_file)
         my_string = "------------------------------------------------------------------------\n"
         cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Lot ID:       ",as.character(LotInfoFrame[["lotid"]]),"\n",sep="")
+        my_string = paste("Lot ID:        ",as.character(LotInfoFrame[["lotid"]]),"\n",sep="")
         cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Sublot ID:    ",as.character(LotInfoFrame[["sublotid"]]),"\n",sep="")
+        my_string = paste("Sublot ID:     ",as.character(LotInfoFrame[["sublotid"]]),"\n",sep="")
         cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Part Type:    ",as.character(LotInfoFrame[["part_typ"]]),"\n",sep="")
-        cat(my_string,file=out_file,append=TRUE)
-
-		my_string = paste("Test Program: ",as.character(LotInfoFrame[["program"]]),"\n",sep="")
-        cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Job Revision: ",as.character(LotInfoFrame[["job_rev"]]),"\n",sep="")
+        my_string = paste("Part Type:     ",as.character(LotInfoFrame[["part_typ"]]),"\n",sep="")
         cat(my_string,file=out_file,append=TRUE)
 
-		my_string = paste("Tester Type:  ",as.character(LotInfoFrame[["tester_type"]]),"\n",sep="")
+		my_string = paste("Test Program:  ",as.character(LotInfoFrame[["program"]]),"\n",sep="")
         cat(my_string,file=out_file,append=TRUE)
-		my_string = paste("Tester ID:    ",as.character(LotInfoFrame[["tester_id"]]),"\n",sep="")
-        cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Exec Type:    ",as.character(LotInfoFrame[["exec_typ"]]),"\n",sep="")
-        cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Exec Version: ",as.character(LotInfoFrame[["exec_ver"]]),"\n",sep="")
-        cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Handler ID:   ",as.character(LotInfoFrame[["handler"]]),"\n",sep="")
-        cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Operator:     ",as.character(LotInfoFrame[["oper_nam"]]),"\n",sep="")
+        my_string = paste("Job Revision:  ",as.character(LotInfoFrame[["job_rev"]]),"\n",sep="")
         cat(my_string,file=out_file,append=TRUE)
 
-		my_string = paste("Test Code:    ",as.character(LotInfoFrame[["test_cod"]]),"\n",sep="")
+		my_string = paste("Tester Type:   ",as.character(LotInfoFrame[["tester_type"]]),"\n",sep="")
         cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Mode Code:    ",as.character(LotInfoFrame[["mode_cod"]]),"\n",sep="")
+		my_string = paste("Tester ID:     ",as.character(LotInfoFrame[["tester_id"]]),"\n",sep="")
         cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Retest Code:  ",as.character(LotInfoFrame[["rtst_cod"]]),"\n",sep="")
+        my_string = paste("Exec Type:     ",as.character(LotInfoFrame[["exec_typ"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("Exec Version:  ",as.character(LotInfoFrame[["exec_ver"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("Handler Type:  ",as.character(LotInfoFrame[["handler_type"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("Handler ID:    ",as.character(LotInfoFrame[["handler"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("Loadboard Type:",as.character(LotInfoFrame[["loadboard_type"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("Loadboard ID:  ",as.character(LotInfoFrame[["loadboard_id"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("DIB Type:      ",as.character(LotInfoFrame[["dib_board_type"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("DIB ID:        ",as.character(LotInfoFrame[["dib_board_id"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("ProbeCard Type:",as.character(LotInfoFrame[["probecard_type"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("ProbeCard ID:  ",as.character(LotInfoFrame[["probecard_id"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("Operator:      ",as.character(LotInfoFrame[["oper_nam"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+
+		my_string = paste("Test Code:     ",as.character(LotInfoFrame[["test_cod"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("Mode Code:     ",as.character(LotInfoFrame[["mode_cod"]]),"\n",sep="")
+        cat(my_string,file=out_file,append=TRUE)
+        my_string = paste("Retest Code:   ",as.character(LotInfoFrame[["rtst_cod"]]),"\n",sep="")
         cat(my_string,file=out_file,append=TRUE)
 
 		start_t = ISOdatetime(1970,1,1,0,0,0) + as.numeric(LotInfoFrame[["start_t"]])
@@ -1541,9 +1574,9 @@ print_summary <- function(stdf_name,out_file,just_fail_tests_summary) {
             my_tz = as.character(my_tzs)
         }
         #my_string = paste("Start Time:   ",start_t," ",my_tz,"\n",sep="")
-        my_string = paste("Start Time:   ",start_t,"\n",sep="")		# timezone info is bogus!
+        my_string = paste("Start Time:    ",start_t,"\n",sep="")		# timezone info is bogus!
         cat(my_string,file=out_file,append=TRUE)
-        my_string = paste("Finish Time:  ",finish_t,"\n",sep="")
+        my_string = paste("Finish Time:   ",finish_t,"\n",sep="")
         cat(my_string,file=out_file,append=TRUE)
         my_string = "------------------------------------------------------------------------\n"
         cat(my_string,file=out_file,append=TRUE)
@@ -2548,8 +2581,8 @@ parse_MIR_record <- function(rec_len,endy) {
     } 
 
 
-    # now update LotInfoFrame
-    #---------------------------------
+    # now update LotInfoFrame with MIR info
+    #--------------------------------------
     if (valid_record) {
 		# sometimes 93K files have \r at end of string, remove these
 		lot_id = sub("\r","",lot_id)
@@ -2557,7 +2590,11 @@ parse_MIR_record <- function(rec_len,endy) {
         my_list = list( lotid=lot_id, sublotid=sblot_id,
                     start_t=start_t, program=job_nam,
                     tester_type=tstr_typ, tester_id=node_nam,
-                    handler=hand_id, finish_t="",
+                    handler_type="",handler="", 
+                    loadboard_type="",loadboard_id="", 
+                    dib_board_type="",dib_board_id="", 
+                    probecard_type="",probecard_id=prb_card, 
+					finish_t="",
 					mode_cod=mode_cod,rtst_cod=rtst_cod,
 					part_typ=part_typ,job_rev=job_rev,
 					oper_nam=oper_nam,
@@ -2727,8 +2764,16 @@ parse_SDR_record <- function(rec_len,endy) {
 
 
 	if (valid_record) {
-
+		# update with info pulled from SDR
+		#---------------------------------
+		LotInfoFrame[1,"handler_type"] <<- hand_typ
 		LotInfoFrame[1,"handler"] <<- hand_id
+		LotInfoFrame[1,"loadboard_type"] <<- load_typ
+		LotInfoFrame[1,"loadboard_id"] <<- load_id
+		LotInfoFrame[1,"dib_board_type"] <<- dib_typ
+		LotInfoFrame[1,"dib_board_id"] <<- dib_id
+		LotInfoFrame[1,"probecard_type"] <<- card_typ
+		LotInfoFrame[1,"probecard_id"] <<- card_id
 	}
 }
 
