@@ -1,6 +1,6 @@
 #  ConvertEDL.R
 #
-# $Id: ConvertEDL.R,v 1.13 2014/08/03 00:11:47 david Exp $
+# $Id: ConvertEDL.R,v 1.14 2022/07/28 01:26:32 david Exp $
 #
 #  R script that reads in an EDL file and converts it into a
 #  set of R data.frames/matrix aka rtdf format.
@@ -265,7 +265,7 @@ ConvertEDL <- function(edl_name="",rtdf_name="",auto_93k=TRUE,
 				# mu of EG4090 causes issues in linux? add useBytes=TRUE
 				temp = sub("^Assign: ([^[:space:]]+) = \"(.+)","\\1\n\\2",tmp,
 						useBytes=TRUE)
-				temp = strsplit(temp,"\n")
+				temp = strsplit(temp,"\n",useBytes=TRUE)
 				field = temp[[1]][1]
 				string = temp[[1]][2]
 				# remove trailing quote if present
@@ -600,7 +600,9 @@ ConvertEDL <- function(edl_name="",rtdf_name="",auto_93k=TRUE,
 				lo_limit=NaN
 				hi_limit=NaN
 				# subtests... extract testnameB
-				temp = sub("^-------- ([^:]+).+",":\\1",Edl[line])
+				#temp = sub("^-------- ([^:]+).+",":\\1",Edl[line])
+				# if smar v7, adds "Test Name:  " in front, so remove it if it is there
+				temp = sub("^-------- (Test Name:  )?([^:]+).+",":\\2",Edl[line])
 				if (do_testnameC) {
 					if (length(grep("[lL]ow",temp))>0) {
 						testnameC = " low"	
