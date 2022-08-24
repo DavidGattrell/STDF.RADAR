@@ -7,7 +7,7 @@
 #  Analysis
 #  Resources
 #
-# $Id: Radar.R,v 1.28 2021/08/02 00:28:56 david Exp $
+# $Id: Radar.R,v 1.29 2022/08/24 01:01:35 david Exp $
 #
 # This script loads the various RADAR command scripts until such
 # time as it gets put into a proper R package.
@@ -70,6 +70,7 @@ sys.source("FilterByBinning.R",envir=.Radar)
 sys.source("FilterByIndices.R",envir=.Radar)
 sys.source("FindFirstFails.R",envir=.Radar)
 sys.source("Fingerprint.R",envir=.Radar)
+sys.source("Fix_93K_enableMPR_false_PTRs.R",envir=.Radar)
 sys.source("RobustFilter.R",envir=.Radar)
 sys.source("Rtdf2Deducer.R",envir=.Radar)
 sys.source("SplitConditions.R",envir=.Radar)

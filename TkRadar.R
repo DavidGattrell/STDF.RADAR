@@ -1,6 +1,6 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.60 2021/10/31 20:34:05 david Exp $
+# $Id: TkRadar.R,v 1.61 2022/08/24 01:02:07 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
@@ -88,6 +88,7 @@ sys.source("FilterByResultGui.R",envir=.TkRadar.env)
 #source("FilterDevicesGui.R") obsoleted by FilterByResult
 sys.source("FindFirstFailsGui.R",envir=.TkRadar.env)
 sys.source("FingerprintGui.R",envir=.TkRadar.env)
+sys.source("Fix_93K_enableMPR_false_PTRs_Gui.R",envir=.TkRadar.env)
 #sys.source("JustBin1sGui.R",envir=.TkRadar.env) obsoleted by FilterByBinning
 sys.source("MergeNewTestsGui.R",envir=.TkRadar.env)
 sys.source("MergeRtdfGui.R",envir=.TkRadar.env)
@@ -1447,6 +1448,20 @@ TkRadar <- function() {
 				tkfocus(fingerprint_win)
 			}
 		)
+	tkadd(manip_menu,"command",label="Fix_93K_enableMPR_false_PTRs",
+			command=function() {
+				if (exists("fix_93k_mpr_win",envir=.TkRadar.wins,inherits=FALSE)) {
+					fix_93k_mpr_win <- get("fix_93k_mpr_win",envir=.TkRadar.wins)
+				}
+				if (exists("fix_93k_mpr_win") && 
+					as.logical(tkwinfo("exists",fix_93k_mpr_win)))  tkraise(fix_93k_mpr_win)
+				else {
+					Fix_93K_enableMPR_false_PTRs_Gui()
+					fix_93k_mpr_win <- get("fix_93k_mpr_win",envir=.TkRadar.wins)
+				}
+				tkfocus(fix_93k_mpr_win)
+			}
+		)
 	tkadd(manip_menu,"command",label="MergeNewTests",
 			command=function() {
 				if (exists("mergetests_win",envir=.TkRadar.wins,inherits=FALSE)) {
@@ -1974,6 +1989,10 @@ TkRadar <- function() {
 							if (exists("fingerprint_win",envir=.TkRadar.wins,inherits=FALSE)) {
 								fingerprint_win <- get("fingerprint_win",envir=.TkRadar.wins)
 								tkdestroy(fingerprint_win)
+							}
+							if (exists("fix_93k_mpr_win",envir=.TkRadar.wins,inherits=FALSE)) {
+								fix_93k_mpr_win <- get("fix_93k_mpr_win",envir=.TkRadar.wins)
+								tkdestroy(fix_93k_mpr_win)
 							}
 							if (exists("mergetests_win",envir=.TkRadar.wins,inherits=FALSE)) {
 								mergetests_win <- get("mergetests_win",envir=.TkRadar.wins)
