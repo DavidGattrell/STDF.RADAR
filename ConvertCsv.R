@@ -1,6 +1,6 @@
 #  ConvertCsv.R
 #
-# $Id: ConvertCsv.R,v 1.19 2022/03/08 01:31:57 david Exp $
+# $Id: ConvertCsv.R,v 1.20 2022/09/09 01:17:25 david Exp $
 #
 #  R script that reads either csv or rtdf files and generates
 #  the equivalent rtdf or csv version.  
@@ -492,6 +492,8 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			if(as.character(LotInfoFrame[[1,"handler"]])=="") {
 				# replace carriage returns that mess things up with spaces
 				handler_typ = gsub("[[:space:]]"," ",as.character(LotInfoFrame[[1,"handler_type"]]))
+				# replace commas that mess things up with spaces
+				handler_typ = gsub(","," ",handler_typ)
 				the_string = sprintf("0.8,handler,%s,,,,,%s,hard_bin,",
 						handler_typ,
 						add_2cols)
@@ -709,6 +711,8 @@ ConvertCsv <- function(in_name="",out_name="",rows_are_tests=TRUE,in_dir="",
 			# when handler_type is populated and handler is not...
 			if(as.character(LotInfoFrame[["handler"]])=="") {
 				handler_id = gsub("[[:space:]]"," ",as.character(LotInfoFrame[["handler_type"]][1]))
+				# replace commas that mess things up with spaces
+				handler_id = gsub(","," ",handler_id)
 			} else {
 				handler_id = as.character(LotInfoFrame[["handler"]][1])
 			}
