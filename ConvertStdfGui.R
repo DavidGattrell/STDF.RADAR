@@ -1,6 +1,6 @@
 # ConvertStdfGui.R
 #
-# $Id: ConvertStdfGui.R,v 1.27 2020/12/18 01:15:53 david Exp $
+# $Id: ConvertStdfGui.R,v 1.28 2022/09/29 00:20:16 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
@@ -51,6 +51,7 @@ auto_flex <- tclVar(1)
 keep_alarmed_values <- tclVar(0)
 do_raw_tsrs <- tclVar(0)
 do_FTR_fail_cycle <- tclVar(1)
+MPR_use_rtnStat_vs_testFlag <- tclVar(1)
 use_testorder <- tclVar(0)
 save_testorder <- tclVar(0)
 mult_limits <- tclVar(0)
@@ -79,6 +80,7 @@ default_do_testflag_matrix <- tclVar(0)			# per user customizing
 default_keep_alarmed_values <- tclVar(0)	
 default_do_raw_tsrs <- tclVar(0)	
 default_do_FTR_fail_cycle <- tclVar(1)	
+default_MPR_use_rtnStat_vs_testFlag <- tclVar(1)	
 default_use_testorder <- tclVar(0)
 default_save_testorder <- tclVar(0)
 default_mult_limits <- tclVar(0)
@@ -269,6 +271,7 @@ ConvertStdfGui_defaults <- function() {
 	tclvalue(keep_alarmed_values) <- tclObj(default_keep_alarmed_values)
 	tclvalue(do_raw_tsrs) <- tclObj(default_do_raw_tsrs)
 	tclvalue(do_FTR_fail_cycle) <- tclObj(default_do_FTR_fail_cycle)
+	tclvalue(MPR_use_rtnStat_vs_testFlag) <- tclObj(default_MPR_use_rtnStat_vs_testFlag)
 	tclvalue(use_testorder) <- tclObj(default_use_testorder)
 	tclvalue(save_testorder) <- tclObj(default_save_testorder)
 	tclvalue(mult_limits) <- tclObj(default_mult_limits)
@@ -303,6 +306,7 @@ run_ConvertStdf <-function(done=FALSE,...) {
 	keep_alarmed_values_ <- as.logical(tclObj(keep_alarmed_values))
 	do_raw_tsrs_ <- as.logical(tclObj(do_raw_tsrs))
 	do_FTR_fail_cycle_ <- as.logical(tclObj(do_FTR_fail_cycle))
+	MPR_use_rtnStat_vs_testFlag_ <- as.logical(tclObj(MPR_use_rtnStat_vs_testFlag))
 	use_testorder_ <- as.logical(tclObj(use_testorder))
 	save_testorder_ <- as.integer(tclObj(save_testorder))
 	mult_limits_ <- as.integer(tclObj(mult_limits))
@@ -333,7 +337,7 @@ run_ConvertStdf <-function(done=FALSE,...) {
 						keep_alarmed_values=keep_alarmed_values_,
 						raw_TSRs=do_raw_tsrs_,do_FTR_fail_cycle=do_FTR_fail_cycle_,
 						use_testorder_matrix=use_testorder_,save_testorder_matrix=save_testorder_,
-						mult_limits=mult_limits_)
+						mult_limits=mult_limits_,MPR_use_rtnStat_vs_testFlag=MPR_use_rtnStat_vs_testFlag_)
 		)
 		tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 		tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -593,6 +597,11 @@ ConvertStdfGui <- function() {
 						text="do_FTR_fail_cycle",
 						variable=do_FTR_fail_cycle)
 	tkpack(do_FTR_fcycles_button,side="top",anchor="w")
+
+	mpr_use_rtnStat_button <- tkcheckbutton(convertstdf_win,
+						text="MPR_use_rtnStat_vs_testFlag",
+						variable=MPR_use_rtnStat_vs_testFlag)
+	tkpack(mpr_use_rtnStat_button,side="top",anchor="w")
 
 	testorder_frame <- tkframe(convertstdf_win)
 	testorder_label <- tklabel(testorder_frame, text="TestOrderMatrix:")

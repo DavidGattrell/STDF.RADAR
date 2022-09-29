@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.57 2022/03/03 02:40:41 david Exp $
+# $Id: ConvertStdf.R,v 1.58 2022/09/29 00:18:32 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -222,6 +222,7 @@ assign("ResultsMatrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
 
 assign("TestFlagMatrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
 assign("Do_testflag_matrix",FALSE,envir=.ConvertStdf.env) # flag to enable/disable extra object
+assign("Do_MPR_use_rtnStat_vs_testFlag",FALSE,envir=.ConvertStdf.env) # flag to override TEST_FLG in MPRs
 
 assign("TestOrderMatrix",array(NaN, dim=c(0,0)),envir=.ConvertStdf.env)
 assign("Do_test_order_matrix",FALSE,envir=.ConvertStdf.env) # flag to enable/disable extra object
@@ -335,7 +336,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 						skip_TSRs=FALSE,raw_TSRs=FALSE,parse_PRR_part_txt=TRUE,
 						do_FTR_fail_cycle=TRUE,
 						use_testorder_matrix=FALSE,save_testorder_matrix=FALSE,
-						mult_limits=0) {
+						mult_limits=0,MPR_use_rtnStat_vs_testFlag=TRUE) {
     # stdf_name - name of stdf formatted file to convert to rtdf format
     # rtdf_name - name to give to rtdf formatted file
     # auto_93k  - if stdf is from HP/Agilent/Verigy 93K, try to auto fix
@@ -407,6 +408,8 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	#             check limits as well as testname and track if limits change during run,
 	#             if so, generate output files per sets of limits up to the value of 
 	#             mult_limits, <20 is probably the limit of sanity
+	# MPR_use_rtnStat_vs_testFlag -- FALSE = historical, all tests in MPR are marked as fail
+	#             TRUE: use RTN_STAT>3 to set bit7 of TEST_FLAG for each test in MPR
     #---------------------------------------------
 	#attach(.ConvertStdf.env) #...environment() is better approach?
 
@@ -438,6 +441,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	ResultsMatrix <<- array(NaN, dim=c(0,0))
 	TestFlagMatrix <<- array(NaN, dim=c(0,0))
 	Do_testflag_matrix <<- do_testflag_matrix
+	Do_MPR_use_rtnStat_vs_testFlag <<- MPR_use_rtnStat_vs_testFlag
 	TestOrderMatrix <<- array(NaN, dim=c(0,0))
 	Do_test_order_matrix <<- 0	
 	Use_test_order_matrix <<- 0
@@ -5456,6 +5460,10 @@ parse_MPR_record <- function(rec_len,endy) {
         rtn_stat = readBin(Stdf[Ptr:(Ptr+j2)],integer(),n=j2,size=1,signed=FALSE)
         Ptr <<- Ptr + j2
         rec_len = rec_len - j2
+		# need to split into vector of 4 bits
+		my_4lsbs = rtn_stat %% 16
+		my_4msbs = floor(rtn_stat / 16)
+		rtn_stat = c(rbind(my_4lsbs,my_4msbs))
     } 
 
     if (rec_len >= k4) {
@@ -6123,7 +6131,16 @@ parse_MPR_record <- function(rec_len,endy) {
 				# update ResultsMatrix
 				#----------------------
 				ResultsMatrix[device_count,par_index] <<- rtn_rslt[j]
-				if(Do_testflag_matrix)  TestFlagMatrix[device_count,par_index] <<- testflag
+				if(Do_testflag_matrix) {
+					if(Do_MPR_use_rtnStat_vs_testFlag && (rtn_stat[j]<4) ) {
+						# need some bitwise math to clear bit 7 of test_flg
+						# .. ok really bit 1 of testflag
+						TestFlagMatrix[device_count,par_index] <<- as.integer(
+							as.raw(testflag)&as.raw(253))	 
+					} else {
+						TestFlagMatrix[device_count,par_index] <<- testflag
+					}
+				}
 				Test_order_counter <<- Test_order_counter + 1
 				if(Do_test_order_matrix)  TestOrderMatrix[device_count,par_index] <<- Test_order_counter
 
