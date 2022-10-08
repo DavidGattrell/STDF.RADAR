@@ -1,11 +1,11 @@
 # FindFirstFailsGui.R
 #
-# $Id: FindFirstFailsGui.R,v 1.4 2020/12/18 01:18:14 david Exp $
+# $Id: FindFirstFailsGui.R,v 1.5 2022/10/08 17:31:02 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
 #
-# Copyright (C) 2013 David Gattrell
+# Copyright (C) 2013,2022 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ fff_out_name <- tclVar("")
 fff_force_update <- tclVar(0)
 fff_force_limits <- tclVar(0)
 fff_fails_count <- tclVar(1)
+fff_fails_indices <- tclVar(1)
 
 fff_append_ff <- tclVar(1)		# auto create output names as "..._ff.rtdf"
 
@@ -51,6 +52,7 @@ fff_in_dir <- tclVar("")
 default_fff_force_update <- tclVar(0)			# per user customizing
 default_fff_force_limits <- tclVar(0)			# per user customizing
 default_fff_fails_count <- tclVar(1)			# per user customizing
+default_fff_fails_indices <- tclVar(1)			# per user customizing
 default_fff_append_ff <- tclVar(1)				# per user customizing
 
 #----------------------------------------------------
@@ -59,6 +61,7 @@ FindFirstFailsGui_defaults <- function() {
 	tclvalue(fff_force_update) <- tclObj(default_fff_force_update)
 	tclvalue(fff_force_limits) <- tclObj(default_fff_force_limits)
 	tclvalue(fff_fails_count) <- tclObj(default_fff_fails_count)
+	tclvalue(fff_fails_indices) <- tclObj(default_fff_fails_indices)
 	append_ff_flag <- as.logical(tclObj(default_fff_append_ff))
 	tclvalue(fff_append_ff) <- append_ff_flag
 
@@ -227,6 +230,7 @@ run_FindFirstFails <-function(done=FALSE,...) {
 	force_update_ <- as.logical(tclObj(fff_force_update))
 	force_use_limits_ <- as.logical(tclObj(fff_force_limits))
 	add_fails_count_ <- as.logical(tclObj(fff_fails_count))
+	add_fails_indices_ <- as.logical(tclObj(fff_fails_indices))
 
 	output_dir <- paste(tclObj(Rtdfs_dir),sep="",collapse=" ")
 	in_dir_ <- paste(tclObj(fff_in_dir),sep="",collapse=" ")
@@ -247,6 +251,7 @@ run_FindFirstFails <-function(done=FALSE,...) {
 						force_update=force_update_,
 						force_use_limits=force_use_limits_,
 						add_fails_count=add_fails_count_,
+						add_fails_indices=add_fails_indices_,
 						in_dir=in_dir_)
 		)
 		tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
@@ -443,6 +448,11 @@ FindFirstFailsGui <- function() {
 						text="fails_count",
 						variable=fff_fails_count)
 	tkpack(count_button,side="top",anchor="w")
+
+	indices_button <- tkcheckbutton(findfirstfails_win,
+						text="fails_indices",
+						variable=fff_fails_indices)
+	tkpack(indices_button,side="top",anchor="w")
 
 }
 

@@ -1,6 +1,6 @@
 # FindFirstFails.R
 #
-# $Id: FindFirstFails.R,v 1.1 2013/10/06 21:35:24 david Exp $
+# $Id: FindFirstFails.R,v 1.2 2022/10/08 17:27:38 david Exp $
 #
 # generates a "first_fail_test" field in the DevicesFrame based on
 # either the TestFlagMatrix object or, if not present, the ResultsMatrix
@@ -8,7 +8,7 @@
 #
 # part of RADAR scripts, see sites.google.com/site/stdfradar
 #
-# Copyright (C) 2013 David Gattrell
+# Copyright (C) 2013,2022 David Gattrell
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@
 #--------------------------------------------------------------------
 FindFirstFails <- function(in_file="",out_file="",force_update=FALSE,
 					force_use_limits=FALSE,add_fails_count=TRUE,
-					in_dir="") {
+					add_fails_indices=TRUE,in_dir="") {
 
     # in_file  - RTDF file to look in
 	# out_file - the name of the RTDF file to create (unless action
@@ -47,6 +47,7 @@ FindFirstFails <- function(in_file="",out_file="",force_update=FALSE,
 	# add_fails_count - also add a field to the DevicesFrame that
 	#            includes the number of tests that fail (maybe useful
 	#            when datalogging in continue-on-fail mode)
+	# add_fails_indices - string of failing test indices, space separated
 	# in_dir    - directory to look for in_file if not same as
 	#             pwd.
     #----------------------------------
@@ -80,6 +81,7 @@ FindFirstFails <- function(in_file="",out_file="",force_update=FALSE,
 	part_count = dim(DevicesFrame)[1]
 	first_fail_test = rep("",part_count)
 	fail_test_count = rep(0,part_count)
+	fail_indices = rep("",part_count)
 
 	if(update) {
 		if( test_flag_matrix_found && !force_use_limits ) {
@@ -91,6 +93,8 @@ FindFirstFails <- function(in_file="",out_file="",force_update=FALSE,
 					# if so, non-gating tests remove from lists
 					first_fail_test[i] = ParametersFrame[[fail_tests[1],"testname"]]
 					fail_test_count[i] = length(fail_tests)
+					fail_indices[i] = paste(fail_tests, collapse=" ")
+					#browser()
 				} else {
 					# check to see if device is a fail
 					# 
@@ -115,6 +119,7 @@ FindFirstFails <- function(in_file="",out_file="",force_update=FALSE,
 				if(length(fail_tests)>0) {
 					first_fail_test[i] = ParametersFrame[[fail_tests[1],"testname"]]
 					fail_test_count[i] = length(fail_tests)
+					fail_indices[i] = paste(fail_tests, collapse=" ")
 				} else {
 				}
 			}
@@ -124,6 +129,9 @@ FindFirstFails <- function(in_file="",out_file="",force_update=FALSE,
 		DevicesFrame[["first_fail_test"]] = first_fail_test
 		if(add_fails_count) {
 			DevicesFrame[["fail_test_count"]] = fail_test_count
+		}
+		if(add_fails_indices) {
+			DevicesFrame[["fail_test_indices"]] = fail_indices
 		}
 	}
 
