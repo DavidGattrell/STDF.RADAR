@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.58 2022/09/29 00:18:32 david Exp $
+# $Id: ConvertStdf.R,v 1.59 2023/02/20 18:38:25 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -155,6 +155,7 @@ assign("Do_FTR_fail_cycle",FALSE,envir=.ConvertStdf.env)		# flag to change FTR r
 assign("Duplicate_testnames",FALSE,envir=.ConvertStdf.env) # if T testname = testtxt_tnum else testname = testtxt
 assign("Use_MPR_invalid_pf_data",FALSE,envir=.ConvertStdf.env) # Credence weirdness
 
+assign("Auto_ETS",TRUE,envir=.ConvertStdf.env) 		# if PGR length is 0, figure out what it really is.
 assign("Auto_flex",TRUE,envir=.ConvertStdf.env) 	# remove channels from testnames, keeps multisite testnames consistent
 assign("Keep_alarmed_values",FALSE,envir=.ConvertStdf.env) 	# if alarm detected, still update ResultsMatrix if TRUE
 
@@ -336,7 +337,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 						skip_TSRs=FALSE,raw_TSRs=FALSE,parse_PRR_part_txt=TRUE,
 						do_FTR_fail_cycle=TRUE,
 						use_testorder_matrix=FALSE,save_testorder_matrix=FALSE,
-						mult_limits=0,MPR_use_rtnStat_vs_testFlag=TRUE) {
+						mult_limits=0,MPR_use_rtnStat_vs_testFlag=TRUE,auto_ETS=TRUE) {
     # stdf_name - name of stdf formatted file to convert to rtdf format
     # rtdf_name - name to give to rtdf formatted file
     # auto_93k  - if stdf is from HP/Agilent/Verigy 93K, try to auto fix
@@ -472,6 +473,7 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 	Good_guesses2 <<- 0
 	Demangle <<- 0
 	Auto_flex <<- auto_flex
+	Auto_ETS <<- auto_ETS
 	Keep_alarmed_values <<- keep_alarmed_values
 	
 	LotInfoFrame[["lotid"]] <<- ""
@@ -737,10 +739,37 @@ ConvertStdf <- function(stdf_name="",rtdf_name="",auto_93k=TRUE,do_summary=TRUE,
 				rec_len = readBin(Stdf[Ptr:(Ptr+1)],integer(),n=1,size=2,
 											endian=Endy,signed=FALSE)
 				if ((Ptr+3+rec_len) <= in_bytes) {
-					# if the next record is completely contained in the portion of the stdf
-					# file we have loaded into memory, then we'll be using this rec_len,
-					# and we can advance the pointer accordingly
-					Ptr <<- Ptr+2
+					if( (rec_len<1) && Executive_type=="Eagle" && Auto_ETS ) {
+						# at least Eagle Vision MST - 2019 has a bug where it reports a rec_len of
+						# 0 for some PGR records... need to figure out the REAL record length!
+						
+						rec_typ = readBin(Stdf[Ptr+2],integer(),n=1,size=1,signed=FALSE)
+						rec_sub = readBin(Stdf[Ptr+3],integer(),n=1,size=1,signed=FALSE)
+						if( (rec_typ==1) && (rec_sub==62) ) {
+							# looks like a broken PGR record here
+							# it mistakenly doesn't count the GRP_INDX, GRP_NAM, INDX_CNT fields
+							grp_indx = readBin(Stdf[(Ptr+4):(Ptr+5)],integer(),n=1,size=2,endian=Endy,signed=FALSE)
+        					str_len = readBin(Stdf[Ptr+6],integer(),n=1,size=1,signed=FALSE)
+							# str_len of chars/bytes
+							# indx_cnt  = 2 more bytes
+
+							#ok, corrected rec_len is...
+							rec_len = 5 + str_len
+							cat(sprintf("Fixing Eagle PGR 0 rec_len to %d at byte %d \n",rec_len,Stdf_ptr + Ptr))
+							if((Ptr+3+rec_len) <= in_bytes) {
+								Ptr <<- Ptr+2
+							} else {
+								rec_len = in_bytes + 1
+							}
+						} else {
+							Ptr <<- Ptr+2
+						}
+					} else {
+						# if the next record is completely contained in the portion of the stdf
+						# file we have loaded into memory, then we'll be using this rec_len,
+						# and we can advance the pointer accordingly
+						Ptr <<- Ptr+2
+					}
 				} else {
 					rec_len = in_bytes + 1
 				}
@@ -2637,7 +2666,7 @@ parse_SDR_record <- function(rec_len,endy) {
     valid_record = TRUE
 
 
-    if (rec_len<20) {
+    if (rec_len<3) {
         valid_record = FALSE
         cat("WARNING: SDR record shorter than expected \n")
         #bit_bucket = readBin(STDF,integer(),n=rec_len,size=1)
