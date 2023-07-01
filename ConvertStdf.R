@@ -1,6 +1,6 @@
 #  ConvertStdf.R
 #
-# $Id: ConvertStdf.R,v 1.59 2023/02/20 18:38:25 david Exp $
+# $Id: ConvertStdf.R,v 1.60 2023/07/01 19:56:06 david Exp $
 #
 #  R script that reads in an STDF file and converts it into a
 #  set of R data.frames/matrix:
@@ -1863,6 +1863,12 @@ readSTDFstring <- function(bytes) {
             #       nchar(chars),str_len))
             #}
             my_string = paste(chars, collapse=NULL)
+			# R 4.3 .. June/2023 we hit a unicode? issue with 93K 6.5 broken
+			# exec_typ / exec_ver ... below 2 lines fix this, don't appear
+			# to break anything else.
+			Encoding(my_string) <- "latin1"
+			my_string <- iconv(my_string,"latin1","UTF-8",sub='')
+
             bytes = bytes - str_len
         } else {
             my_string = ""
