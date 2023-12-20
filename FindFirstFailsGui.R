@@ -1,6 +1,6 @@
 # FindFirstFailsGui.R
 #
-# $Id: FindFirstFailsGui.R,v 1.5 2022/10/08 17:31:02 david Exp $
+# $Id: FindFirstFailsGui.R,v 1.6 2023/12/20 01:41:16 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling ConvertStdf.R
 # called by TkRadar.R
@@ -195,11 +195,11 @@ fff_out_rtdf_browser <-function(...) {
 	if (nchar(init_dir)>0) {
 		name <- tclvalue(tkgetSaveFile(
 				initialdir=init_dir,
-				initialfile=orig_name,
+				#initialfile=orig_name,
 				filetypes=my_str))
 	} else {
 		name <- tclvalue(tkgetSaveFile(
-				initialfile=orig_name,
+				#initialfile=orig_name,
 				filetypes=my_str))
 	}
 	# the tkgetSaveFile returns the full path!

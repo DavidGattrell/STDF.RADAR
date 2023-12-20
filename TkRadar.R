@@ -1,6 +1,6 @@
 # TkRadar.R
 #
-# $Id: TkRadar.R,v 1.61 2022/08/24 01:02:07 david Exp $
+# $Id: TkRadar.R,v 1.62 2023/12/20 01:49:26 david Exp $
 #
 # top level Tk/Tcl GUI wrapper for calling Radar.R scripts
 # calls various xxxxxGui.R Tk gui wrappers
@@ -952,7 +952,7 @@ TkRadar <- function() {
 	tclvalue(Output_dir) <- getwd()
 
 	my_main_win <- tktoplevel()
-	tkwm.title(my_main_win, "RADAR 0v6p9dev GUI 10Sep2021")
+	tkwm.title(my_main_win, "RADAR 0v6p9dev GUI 19Dec2023")
 
 	# can we have different instances of TkRadar running with different colors to distinquish them?
 	# below commands work.. so this can be done!
