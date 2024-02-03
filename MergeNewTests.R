@@ -1,6 +1,6 @@
 # MergeNewTests.R 
 #
-# $Id: MergeNewTests.R,v 1.3 2021/11/09 02:06:19 david Exp $
+# $Id: MergeNewTests.R,v 1.4 2024/02/03 17:43:59 david Exp $
 #
 # script that parses 2 rtdf files, looks for new tests (Parameters) in
 # the 2nd file, then looks for matching devices (either part_id or x/y coord in
@@ -11,7 +11,7 @@
 #
 #---------------------------------------------------------------------------
 MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_coords=FALSE,
-						out_file="",verbose=TRUE) {
+						use_pass_bin_from_file2=FALSE, out_file="",verbose=TRUE) {
 
 	# in_file1 -- the original file
 	# in_file2 -- a file that contains additional tests for the same devices
@@ -19,6 +19,8 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 	# in_dir2 -- absolute path for where to find in_file2
 	# use_xy_coords -- if set to TRUE, use x_coord,y_coord rather than part_id when
 	#            matching devices between the 2 input files
+	# use_pass_bin_from_file2 -- if set to TRUE, if die passes in file1 and in file2,
+	#			 use pass bin from file2
 	# out_file -- string of rtdf filename you want generated
 	# verbose -- print status and information to console as processing
 	#-------------------------------------------------------------------------------
@@ -207,6 +209,37 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 			if(length(idx)>0) {
 				# copy the results for the new tests to the AllResultsMatrix
 				AllResultsMatrix[i,i1:i2] = ResultsMatrix[idx[1],new_indices]
+
+				if(valid_testflagmatrix && is.finite(match("TestFlagMatrix",my_objs)) ) {
+					AllTestFlagMatrix[i,i1:i2] = TestFlagMatrix[idx[1],new_indices]
+				}
+
+				# update Binning info in AllDevicesFrame
+
+				###########   REVISIT!!   ##################
+				
+				# ... if 1st file die is a pass...
+				# if 2nd file is a fail..
+				# 	update sbin/hbin to that of 2nd file
+				#
+				# if 2nd file is a pass AND use_pass_bin_from_file2 is set...
+				# 	update sbin/hbin to that of 2nd file
+
+				# REVISIT .. assumption that hard_bin ==1 is one and only hbin pass bin..
+				# .. also not sanity check on multiple matches in file 2  (length of idx)
+				if( as.integer(AllDevicesFrame[[i,"hard_bin"]])==1 ) {
+					#browser()
+					if( as.integer(DevicesFrame[[idx[1],"hard_bin"]])==1 ) {
+						if(use_pass_bin_from_file2>0) {
+							AllDevicesFrame[[i,"hard_bin"]] = DevicesFrame[[idx[1],"hard_bin"]]
+							AllDevicesFrame[[i,"soft_bin"]] = DevicesFrame[[idx[1],"soft_bin"]]
+						}
+					} else {
+						AllDevicesFrame[[i,"hard_bin"]] = DevicesFrame[[idx[1],"hard_bin"]]
+						AllDevicesFrame[[i,"soft_bin"]] = DevicesFrame[[idx[1],"soft_bin"]]
+					}
+				}
+
 			} else {
 				unmatched_devs = unmatched_devs + 1
 			}
@@ -218,11 +251,42 @@ MergeNewTests <- function(in_file1="",in_file2="",in_dir1="",in_dir2="",use_xy_c
 					unmatched_devs,devs))
 
 
-		# now update Binning in DevicesFrame and xBinInfoFrames
+		# now update Binning in xBinInfoFrames
 		#------------------------------------------------------
-		# look for parts that pass the original file, but fail 2nd file
-		# REVISIT .. not coded yet!
+		if (AllSbin_valid && is.finite(match("SbinInfoFrame",my_objs))) {
+			# merge SbinInfoFrame...
+			tmp_SbinInfoFrame = rbind(AllSbinInfoFrame,SbinInfoFrame)		# combined, with duplication
+			sbin_info_nums = as.integer(tmp_SbinInfoFrame[["sbin_num"]])
 
+			# determine which sbins we now have, and their counts
+			soft_bins = as.integer(AllDevicesFrame[["soft_bin"]])
+			bin_counts = table(soft_bins)
+			bin_nums = as.integer(names(bin_counts))
+			bin_counts = as.integer(bin_counts)
+
+			# only keep the unique sbins we need, update the counts
+			tmp_indices = sapply(bin_nums,function(x) {which(sbin_info_nums==x)[1]})
+			AllSbinInfoFrame = tmp_SbinInfoFrame[tmp_indices,]
+			AllSbinInfoFrame[["sbin_cnt"]] = bin_counts
+		}
+
+		if (AllHbin_valid && is.finite(match("HbinInfoFrame",my_objs))) {
+			# merge HbinInfoFrame...
+			tmp_HbinInfoFrame = rbind(AllHbinInfoFrame,HbinInfoFrame)		# combined, with duplication
+			hbin_info_nums = as.integer(tmp_HbinInfoFrame[["hbin_num"]])
+
+			# determine which hbins we now have, and their counts
+			hard_bins = as.integer(DevicesFrame[["hard_bin"]])
+			bin_counts = table(hard_bins)
+			bin_nums = as.integer(names(bin_counts))
+			bin_counts = as.integer(bin_counts)
+
+			# only keep the unique hbins we need, update the counts
+			tmp_indices = sapply(bin_nums,function(x) {which(hbin_info_nums==x)[1]})
+			AllHbinInfoFrame = tmp_HbinInfoFrame[tmp_indices,]
+			AllHbinInfoFrame[["hbin_cnt"]] = bin_counts
+		}
+		
 	}
 
 	

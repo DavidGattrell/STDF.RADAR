@@ -1,6 +1,6 @@
 # MergeNewTestsGui.R
 #
-# $Id: MergeNewTestsGui.R,v 1.2 2021/11/09 02:07:13 david Exp $
+# $Id: MergeNewTestsGui.R,v 1.3 2024/02/03 17:51:55 david Exp $
 #
 # Tk/Tcl GUI wrapper for calling MergeNewTests.R
 # called by TkRadar.R
@@ -34,18 +34,21 @@ mnts_infile1 <- tclVar("")
 mnts_infile2 <- tclVar("")
 mnts_outfile <- tclVar("mergedtests.rtdf")
 mnts_use_xy_coords <- tclVar(0)
+mnts_use_2nd_pass_bin <- tclVar(0)
 
 mnts_in1_dir <- tclVar("")
 mnts_in2_dir <- tclVar("")
 
 # these defaults can be controlled in the .Rprofile file:
 default_mnts_use_xy_coords <- tclVar(0)
+default_mnts_use_2nd_pass_bin <- tclVar(0)
 
 
 #-----------------------------------------
 MergeNewTestsGui_defaults <- function(...) {
 
 	tclvalue(mnts_use_xy_coords) <- tclObj(default_mnts_use_xy_coords)
+	tclvalue(mnts_use_2nd_pass_bin) <- tclObj(default_mnts_use_2nd_pass_bin)
 
 	tclvalue(mnts_in1_dir) <- tclObj(Rtdfs_dir)
 	tclvalue(mnts_infile1) <- ""
@@ -111,6 +114,7 @@ run_MergeNewTests <-function(done=FALSE,...) {
 	out_file_ <- paste(tclObj(mnts_outfile),sep="",collapse=" ")
 	output_dir <- paste(tclObj(Rtdfs_dir),sep="",collapse=" ")
 	use_xy_coords_ <- as.logical(tclObj(mnts_use_xy_coords))
+	use_pass_bin_from_file2_ <- as.logical(tclObj(mnts_use_2nd_pass_bin))
 
 	full_path = output_dir
 	if (nchar(full_path)<1) {
@@ -127,7 +131,8 @@ run_MergeNewTests <-function(done=FALSE,...) {
 					out_file=out_file_,
 					in_dir1=in_dir1_,
 					in_dir2=in_dir2_,
-					use_xy_coords=use_xy_coords_)
+					use_xy_coords=use_xy_coords_,
+					use_pass_bin_from_file2=use_pass_bin_from_file2_)
 	)
 	tkradar_logfile <- paste(tclObj(TkRadar_logfile),sep="",collapse=" ")
 	tkradar_verbose <- as.integer(tclObj(TkRadar_verbose))
@@ -266,6 +271,13 @@ MergeNewTestsGui <- function(...) {
 						text="use_xy_coords",
 						variable=mnts_use_xy_coords)
 	tkpack(mnts_xy_button,side="top",anchor="w")
+
+	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	mnts_pass_button <- tkcheckbutton(mergetests_win,
+						text="use_pass_bin_from_file2",
+						variable=mnts_use_2nd_pass_bin)
+	tkpack(mnts_pass_button,side="top",anchor="w")
 
 	# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
